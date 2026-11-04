@@ -103,6 +103,7 @@ function corrShell(c) {
       <section><h3>Qué muestra</h3>${c.plain}</section>
       <section class="cx-thread"><h3>En el hilo</h3>${c.thread}</section>
     </div>
+    <button type="button" class="tech-open" aria-expanded="false">Ver cómo se construye y la matemática</button>
     <div class="cx-tech">
       <section class="cx-build"><h3>Cómo se construye en Excel</h3><ol>${c.build.map((b) => `<li>${b}</li>`).join('')}</ol>
         <h3>Precauciones</h3>${c.caveat}</section>
@@ -218,7 +219,34 @@ const kinds = {
   }
 };
 
+/* ================= Hilo visible y mini-índice ================= */
+const SYM = { mito: '✕', debil: '○', ruido: '○', extremos: '◐', tendencia: '◐', interaccion: '◆', relacion: '◆' };
+const THREAD_CH = ['mitos', 'tamano', 'color', 'contexto', 'geogebra', 'combinar', 'conclusion'];
+function renderThread(chId) {
+  const bar = $('thread'), k = THREAD_CH.indexOf(chId);
+  if (k < 0) { bar.hidden = true; return; }
+  const seen = CORR.filter((c) => THREAD_CH.indexOf(c.chapter) <= k);
+  const mitos = seen.filter((c) => c.verdict === 'mito').length;
+  let estado = 'Ninguna regla simple alcanza';
+  if (k <= 0) estado = 'Las reglas populares no funcionan';
+  if (chId === 'geogebra') estado = 'El tamaño informa, pero no decide';
+  if (k >= THREAD_CH.indexOf('combinar')) estado = 'Combinar rasgos ≈ identificar la especie';
+  bar.innerHTML = `<p class="th-q"><span>Pregunta</span>¿Se puede saber si un hongo es comestible mirándolo?</p>
+    <div class="th-chips">${seen.map((c) => `<a href="#/${c.chapter}/${c.id}" class="chip v-${c.verdict}${c.chapter === chId ? ' here' : ''}" title="${corrNum(c)}. ${c.title}: ${VEREDICTOS[c.verdict]}"><i>${SYM[c.verdict]}</i>${corrNum(c)}</a>`).join('')}
+      <span class="th-count">${seen.length} de ${CORR.length} correlaciones${mitos ? ` · ${mitos} mitos` : ''}</span></div>
+    <p class="th-state"><span>Hasta acá</span>${estado}</p>`;
+  bar.hidden = false;
+}
+function renderMiniIndex(chapterEl) {
+  const list = [...chapterEl.querySelectorAll('.corr[data-corr]')].map((ph) => CORR.find((c) => c.id === ph.dataset.corr)).filter(Boolean);
+  if (list.length < 2 || chapterEl.querySelector('.mini-index')) return;
+  const nav = document.createElement('nav'); nav.className = 'mini-index'; nav.setAttribute('aria-label', 'En este capítulo');
+  nav.innerHTML = `<p>En este capítulo</p><ol>${list.map((c) => `<li><a href="#/${c.chapter}/${c.id}"><span class="mi-n">${corrNum(c)}</span>${c.title}<span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span></a></li>`).join('')}</ol>`;
+  chapterEl.querySelector('.dek').after(nav);
+}
+
 function renderChapterCorr(chapterEl) {
+  renderMiniIndex(chapterEl);
   chapterEl.querySelectorAll('.corr[data-corr]').forEach((ph) => {
     const c = CORR.find((x) => x.id === ph.dataset.corr); if (!c) return;
     ph.innerHTML = corrShell(c);
@@ -459,6 +487,7 @@ function route() {
   document.title = (id === 'portada' ? '' : chapters[i].dataset.title + ' · ') + '¿Comestible a simple vista?';
   window.scrollTo(0, 0);
   if (!done.has(id)) { done.add(id); renderChapterCorr(chapters[i]); inits[id]?.(); }
+  renderThread(id);
   if (anchor) requestAnimationFrame(() => document.getElementById('corr-' + anchor)?.scrollIntoView({ block: 'start' }));
   $('toc').classList.remove('open'); $('toc-toggle').setAttribute('aria-expanded', 'false');
   onScroll();
@@ -477,5 +506,27 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' && i > 0) location.hash = '#/' + ids[i - 1];
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { chartDefaults(); charts.forEach((c) => c.update()); });
+/* ================= Modo de lectura: divulgativa / técnica ================= */
+function setMode(m, save = true) {
+  document.body.classList.toggle('mode-div', m === 'div');
+  document.body.classList.toggle('mode-tec', m === 'tec');
+  document.querySelectorAll('.mode button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
+  if (save) try { localStorage.setItem('lectura', m); } catch { /* sin almacenamiento */ }
+}
+document.querySelectorAll('.mode button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+// Las fichas técnicas fijas (capítulos 6, 7 y 9) también reciben su botón
+document.querySelectorAll('.read-tech').forEach((rt) => {
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'tech-open'; btn.setAttribute('aria-expanded', 'false');
+  btn.textContent = 'Ver cómo se calculó'; rt.querySelector('.tech')?.before(btn);
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.tech-open'); if (!b) return;
+  const host = b.closest('.cx, .read-tech'); const open = host.classList.toggle('show-tech');
+  b.setAttribute('aria-expanded', String(open));
+  b.textContent = open ? 'Ocultar la parte técnica' : (host.classList.contains('cx') ? 'Ver cómo se construye y la matemática' : 'Ver cómo se calculó');
+});
+let savedMode = 'div'; try { savedMode = localStorage.getItem('lectura') || 'div'; } catch { /* */ }
+setMode(savedMode, false);
+
 renderCorrMaps();
 route();

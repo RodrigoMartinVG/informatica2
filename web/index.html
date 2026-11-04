@@ -22,6 +22,11 @@
     <p class="toc-sub">Taller de Informática II · 2026</p>
     <button class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-list">Índice</button>
   </div>
+  <div class="mode" role="radiogroup" aria-label="Nivel de lectura">
+    <span class="mode-l">Lectura</span>
+    <button role="radio" data-mode="div" aria-checked="true">Divulgativa</button>
+    <button role="radio" data-mode="tec" aria-checked="false">Técnica</button>
+  </div>
   <nav id="toc-list">
     <p class="toc-group">Planteo</p>
     <a href="#/portada"><span>—</span>Portada</a>
@@ -45,6 +50,8 @@
 </aside>
 
 <main id="doc" tabindex="-1">
+
+<div class="thread" id="thread" hidden aria-label="Hilo de la investigación"></div>
 
 <!-- ============================ PORTADA ============================ -->
 <article class="chapter cover" data-id="portada" data-title="Portada">
