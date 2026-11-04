@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presentación · ¿Comestible a simple vista?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --paper: #f8f6f1; --ink: #17161a; --ink-2: #4a4843; --ink-3: #85817a; --rule: #dedad0; --accent: #2f5d50; --ed: #2a78d6; --tox: #eb6834; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #22211e; color: var(--ink); font-family: "Source Serif 4", Georgia, serif; overflow: hidden; }
+    .deck { position: fixed; inset: 0; display: grid; place-items: center; }
+    .slide { position: absolute; width: min(100vw, 177.78vh); height: min(56.25vw, 100vh); background: var(--paper); padding: 4.5% 6% 6%; display: none; flex-direction: column; overflow: hidden; }
+    .slide.on { display: flex; }
+    .k { font: 600 clamp(10px, 1.1vw, 15px) "IBM Plex Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 .6em; }
+    h1 { font-size: clamp(26px, 4.4vw, 64px); line-height: 1.08; margin: 0 0 .35em; font-weight: 700; }
+    h2 { font-size: clamp(20px, 3vw, 44px); line-height: 1.12; margin: 0 0 .5em; font-weight: 600; }
+    p { font-size: clamp(13px, 1.55vw, 23px); line-height: 1.45; margin: 0 0 .6em; color: var(--ink-2); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4%; flex: 1; min-height: 0; align-items: center; }
+    .row.wide { grid-template-columns: 1.4fr 1fr; }
+    .big { font: 700 clamp(30px, 6vw, 92px)/1 "Source Serif 4", serif; color: var(--ink); }
+    .big small { display: block; font: 500 clamp(11px, 1.15vw, 17px)/1.3 "IBM Plex Sans", sans-serif; color: var(--ink-3); margin-top: .4em; letter-spacing: .02em; }
+    .tox { color: var(--tox); } .ed { color: var(--ed); } .acc { color: var(--accent); }
+    .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3%; margin-top: auto; border-top: 2px solid var(--ink); padding-top: 2%; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4%; border-top: 2px solid var(--ink); padding-top: 3%; }
+    .chart { position: relative; height: 100%; min-height: 0; }
+    img { max-width: 100%; max-height: 100%; display: block; }
+    .verdict { display: inline-block; font: 600 clamp(10px, 1vw, 14px) "IBM Plex Sans", sans-serif; letter-spacing: .08em; text-transform: uppercase; border: 1.5px solid currentColor; padding: .3em .7em; margin-top: .4em; }
+    .warn { background: #fbf3dc; border-left: 4px solid #d8b75a; padding: 1.2% 2%; font: 600 clamp(13px, 1.5vw, 22px) "IBM Plex Sans", sans-serif; color: var(--ink); margin-top: auto; }
+    .foot { position: absolute; left: 6%; right: 6%; bottom: 2.5%; display: flex; justify-content: space-between; font: 500 clamp(9px, .9vw, 13px) "IBM Plex Mono", monospace; color: var(--ink-3); }
+    .notes { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(20,20,18,.94); color: #f2efe8; font: 15px/1.5 "IBM Plex Sans", sans-serif; padding: 14px 24px; display: none; max-height: 34vh; overflow: auto; }
+    .notes.on { display: block; }
+    .bar { position: fixed; top: 10px; right: 12px; display: flex; gap: 6px; opacity: .25; transition: opacity .2s; z-index: 5; }
+    .bar:hover, .bar:focus-within { opacity: 1; }
+    .bar button, .bar a { font: 500 12px "IBM Plex Sans", sans-serif; background: #f8f6f1; color: #17161a; border: 0; padding: 6px 10px; cursor: pointer; text-decoration: none; }
+    ul.list { margin: 0; padding-left: 1.1em; } ul.list li { font-size: clamp(13px, 1.5vw, 22px); line-height: 1.45; color: var(--ink-2); margin-bottom: .4em; }
+  </style>
+</head>
+<body>
+  <div class="bar" role="toolbar" aria-label="Controles">
+    <button id="prev" aria-label="Anterior">←</button>
+    <button id="next" aria-label="Siguiente">→</button>
+    <button id="fs">Pantalla completa (F)</button>
+    <button id="nt">Notas (N)</button>
+    <a href="./#/portada">Volver al informe</a>
+  </div>
+  <main class="deck" id="deck" aria-live="polite">
+
+    <section class="slide" data-notes="Presentar la pregunta y los datos. Aclarar desde el principio que son 61.069 hongos simulados a partir de 173 especies reales: eso va a explicar el giro del final.">
+      <p class="k">Taller de Informática II · Rodrigo Vidal</p>
+      <h1>¿Se puede saber si un hongo es comestible mirándolo?</h1>
+      <div style="flex:1; min-height:0; display:flex; align-items:center"><img src="img/render/render_todas.jpg" alt="Las seis formas de hongo a escala"></div>
+      <div class="nums">
+        <div class="big">61.069<small>hongos analizados</small></div>
+        <div class="big">173<small>especies de origen</small></div>
+        <div class="big tox">55,5 %<small>venenosos: la línea de base</small></div>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="Las dos creencias populares más difundidas. Si un rasgo sirviera, las dos cifras de cada par serían muy distintas. Acá quedan pegadas al 55,5 %.">
+      <p class="k">1 · Las creencias populares</p>
+      <h2>El anillo y la magulladura no sirven: son mitos</h2>
+      <div class="row">
+        <div class="pair"><div class="big tox">61 %<small>venenosos con anillo</small></div><div class="big">54 %<small>venenosos sin anillo</small></div></div>
+        <div class="pair"><div class="big tox">53 %<small>venenosos que se magullan</small></div><div class="big">56 %<small>venenosos que no</small></div></div>
+      </div>
+      <p>Las cuatro cifras quedan a pocos puntos del 55,5 % de toda la muestra. <span class="verdict tox">Mito</span></p>
+    </section>
+
+    <section class="slide" data-notes="Hoja Toxicidad - Tamaño por Rangos. Truco de Excel: el promedio de toxico (1/0) es la proporción de venenosos. La tendencia es clara, pero nunca baja de 35 %.">
+      <p class="k">2 · El tamaño</p>
+      <h2>Cuanto más chico el sombrero, más riesgo, pero nunca hay garantía</h2>
+      <div class="row wide"><div class="chart"><canvas id="d-rangos"></canvas></div>
+        <div><div class="big tox">65–80 %<small>venenosos con sombrero de hasta 4 cm</small></div><p style="margin-top:1em">Desde unos 9 cm baja a 40–50 % y se mantiene. Ningún tamaño baja de 35 %.</p><span class="verdict">Tendencia</span></div></div>
+    </section>
+
+    <section class="slide" data-notes="Color del tallo: la variable cualitativa que más separa. Pero el tallo blanco, el más común, tiene 43 % de venenosos. Superficie sedosa o fibrosa: alerta fuerte (y táctil).">
+      <p class="k">3 · Color y textura</p>
+      <h2>Las señales fuertes están en los extremos, donde hay pocos hongos</h2>
+      <div class="row wide"><div class="chart"><canvas id="d-tallo"></canvas></div>
+        <div><div class="big tox">92 %<small>venenosos con superficie sedosa</small></div><div class="big" style="margin-top:.5em">43 %<small>venenosos con tallo blanco, el más común</small></div><span class="verdict">Señal en los extremos</span></div></div>
+    </section>
+
+    <section class="slide" data-notes="Dos modelos en GeoGebra. FitLine: el tallo crece 1,8 mm por cm de sombrero, igual en los dos grupos (r = 0,76). FitLog: p(3) = 62 %, p(15) = 45 %. Límite: cerca de 0 la curva supera 1.">
+      <p class="k">4 · Modelización en GeoGebra</p>
+      <h2>p(x) = 0,740 − 0,109·ln(x): el riesgo baja, pero se aplana</h2>
+      <div class="row wide"><div class="chart"><canvas id="d-m2"></canvas></div>
+        <div><div class="big tox">62 %<small>p(3): sombrero de 3 cm</small></div><div class="big" style="margin-top:.5em">45 %<small>p(15): sombrero de 15 cm</small></div>
+          <p style="margin-top:1em">Modelo 1 (FitLine): el tallo crece 1,83 mm/cm en venenosos y 1,79 en comestibles. Las proporciones no los distinguen.</p></div></div>
+    </section>
+
+    <section class="slide" data-notes="El giro. Sumando rasgos como campos de una tabla dinámica, casi todos los hongos quedan en grupos puros. Pero es porque hay 173 especies: combinar rasgos es identificar la especie.">
+      <p class="k">5 · Combinar rasgos</p>
+      <h2>Con todos los rasgos juntos, el 99,8 % queda en grupos “puros”</h2>
+      <div class="row wide"><div class="chart"><canvas id="d-prog"></canvas></div>
+        <div><p>Pero los datos salen de <b>173 especies</b>. Combinar muchos rasgos es, en el fondo, <b>identificar la especie</b>: lo que hace un micólogo.</p><p>En el mundo hay miles de especies, con parecidos peligrosos.</p><span class="verdict acc">El giro</span></div></div>
+    </section>
+
+    <section class="slide" data-notes="Proyección: los rasgos táctiles informan tanto como los colores. Propuestas: modelos 3D impresos a escala con textura, gráficos sonificados, informes accesibles.">
+      <p class="k">6 · Más allá de la vista</p>
+      <h2>Lo que se toca informa tanto como lo que se ve</h2>
+      <div class="row">
+        <div class="pair"><div class="big acc">38 %<small>grupos puros con 4 rasgos táctiles</small></div><div class="big">28 %<small>con los 3 colores</small></div></div>
+        <ul class="list"><li>Modelos 3D impresos a escala, con la textura en relieve</li><li>Gráficos que se escuchan (sonificación)</li><li>Informes con texto y tablas para lector de pantalla</li></ul>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="Cerrar con la respuesta y la advertencia. Mencionar los límites: datos simulados, 173 especies, celdas vacías.">
+      <p class="k">Conclusión</p>
+      <h1>Con una regla simple, no. Con muchos rasgos, eso ya es identificar la especie.</h1>
+      <ul class="list"><li>Los mitos (anillo, magulladura) no informan.</li><li>Los rasgos útiles solo funcionan en los extremos.</li><li>Las proporciones del hongo son iguales en los dos grupos.</li></ul>
+      <p class="warn">Ningún hongo silvestre es seguro por su aspecto. Ante la duda, no se come.</p>
+    </section>
+
+  </main>
+  <div class="notes" id="notes" aria-live="polite"></div>
+  <script src="data.js"></script>
+  <script src="deck.js"></script>
+</body>
+</html>

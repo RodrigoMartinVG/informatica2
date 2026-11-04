@@ -411,3 +411,6 @@ svg.plate.mini { max-width: 150px; margin: 0 auto 6px; }
 .qz-v span { font: 400 .78rem var(--sans); color: var(--ink-3); }
 .quiz-score { font-size: 1rem; margin-top: 14px; max-width: 720px; }
 @media (max-width: 1100px) { .quiz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.toc-tools { margin-top: 24px; display: grid; gap: 6px; }
+.toc-tools .toc-dl { margin: 0 0 0 -10px; }
+@media (max-width: 900px) { .toc-tools { display: none; } .toc.open .toc-tools { display: grid; } .toc.open .toc-tools .toc-dl { display: grid; margin-left: 0; } }
