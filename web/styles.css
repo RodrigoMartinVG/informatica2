@@ -445,3 +445,15 @@ button.toc-dl { font: inherit; font-size: .84rem; background: transparent; curso
   a { color: inherit; text-decoration: none; }
   .g { border: 0; }
 }
+
+/* Modo de lectura: más evidente */
+body.mode-div .tec-only:not(.show-tech) { display: none; }
+.tech-open.solo.show-tech::before { content: "− "; }
+.mode-hint { font: .74rem/1.4 var(--sans); color: var(--ink-3); margin: 6px 0 0; max-width: 230px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; z-index: 60; background: var(--ink); color: var(--paper);
+  font: 500 .86rem/1.4 var(--sans); padding: 10px 16px; max-width: min(92vw, 520px); box-shadow: 0 6px 24px rgba(0,0,0,.2); transition: opacity .25s, transform .25s; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
+.flash { animation: flash 1.4s ease-out; }
+body.mode-tec .mode button[data-mode="tec"], body.mode-div .mode button[data-mode="div"] { font-weight: 600; }
+@media (max-width: 900px) { .mode-hint { display: none; } }
