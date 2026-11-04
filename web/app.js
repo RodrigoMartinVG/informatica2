@@ -306,19 +306,17 @@ function renderChapterCorr(chapterEl) {
 
 /* ================= Chapter initializers (run once, when first shown) ================= */
 const inits = {
-  pregunta() {
-    renderQuiz();
-    // Imagen generada desde el modelo 3D (cámara ortográfica: la posición horizontal es proporcional a la real)
-    const box = $('cover-plate');
-    box.innerHTML = `<img src="img/render/render_todas.jpg" alt="Las seis formas de hongo con tallo, modeladas en 3D con las medidas promedio de los datos y fotografiadas a la misma escala" width="2000" height="760"><div class="cover-labels"></div>`;
-    fetch('img/render/render_todas.json').then((r) => r.json()).then(({ centers }) => {
-      box.querySelector('.cover-labels').innerHTML = R.arquetipos.map((a, i) =>
-        `<a href="#/tres-d" data-id="${a.id}" style="left:${centers[i] * 100}%"><b>${a.nombre}</b><span>${num(a.pct, 1)} %</span></a>`).join('');
-      box.querySelectorAll('a').forEach((l) => l.addEventListener('click', () => setTimeout(() => selectShape(l.dataset.id), 60)));
-    }).catch(() => { box.innerHTML = plateAll(R.arquetipos); });
-  },
+  pregunta() { renderQuiz(); },
 
   datos() {
+    $('base-viz').innerHTML = Array.from({ length: 100 }, (_, i) => `<i class="${i < 55.5 ? 't' : 'e'}${i === 55 ? ' half' : ''}"></i>`).join('');
+    const det = $('c-faltantes').closest('details');
+    const draw = () => { if (det.open && !det.dataset.drawn) { det.dataset.drawn = '1'; drawFaltantes(); } };
+    det.addEventListener('toggle', draw); draw();
+  },
+  excel() { renderHypCharts($('excel')); },
+
+  _faltantes() {
     charts.push(new Chart($('c-faltantes'), {
       type: 'bar',
       data: { labels: R.faltantes.map((f) => f[0]), datasets: [{ data: R.faltantes.map((f) => f[1] / 100), backgroundColor: () => T().ink2, borderRadius: 2, barPercentage: 0.7 }] },
@@ -387,6 +385,7 @@ const inits = {
   },
 
   resultados() {
+    renderHypCharts($('resultados'));
     // (el mapa color × forma ahora es la correlación 14, en corr.js)
     charts.push(new Chart($('c-prog'), {
       type: 'bar',
@@ -436,6 +435,10 @@ const inits = {
         scales: { x: pctAxis(), y: { grid: { display: false }, border: { display: false } } } }
     }));
     $('sonify').onclick = sonify;
+    const ESP = { phalloides: 'Amanita phalloides', campestris: 'Agaricus campestris', pulverulentus: 'Boletus pulverulentus', galerina: 'Galerina marginata', procera: 'Macrolepiota procera', muscaria: 'Amanita muscaria', cantharellus: 'Cantharellus cibarius', mycena: 'Mycena galericulata', conica: 'Hygrocybe conica', gibba: 'Clitocybe gibba', edulis: 'Boletus edulis' };
+    fetch('img/fotos/creditos.json').then((r) => r.json()).then((cr) => {
+      $('credits').innerHTML = Object.entries(cr).map(([k, c]) => `<li><i>${ESP[k] || k}</i>: ${c.autor || 'autor sin dato'} · ${c.licenciaUrl ? `<a href="${c.licenciaUrl}" target="_blank" rel="noopener">${c.licencia}</a>` : c.licencia} · <a href="${c.fuente}" target="_blank" rel="noopener">original</a></li>`).join('');
+    }).catch(() => {});
   },
 
   _formas() {
@@ -458,6 +461,7 @@ const inits = {
   },
 
   'tres-d'() {
+    renderLineup();
     inits._formas();
     const tabs = $('tresd-tabs');
     let cur = 'convexa', viewer = null;
@@ -488,7 +492,28 @@ const inits = {
   }
 };
 
+/* ================= Los seis hongos típicos en fila ================= */
+function renderLineup() {
+  const box = $('cover-plate');
+  box.innerHTML = `<img src="img/render/render_todas.jpg" alt="Las seis formas de hongo con tallo, modeladas en 3D con las medidas promedio de los datos y fotografiadas a la misma escala" width="2000" height="760" loading="lazy"><div class="cover-labels"></div>`;
+  fetch('img/render/render_todas.json').then((r) => r.json()).then(({ centers }) => {
+    box.querySelector('.cover-labels').innerHTML = R.arquetipos.map((a, i) =>
+      `<a href="#shape-tabs" data-id="${a.id}" style="left:${centers[i] * 100}%"><b>${a.nombre}</b><span>${num(a.pct, 1)} %</span></a>`).join('');
+    box.querySelectorAll('a').forEach((l) => l.addEventListener('click', () => selectShape(l.dataset.id)));
+  }).catch(() => { box.innerHTML = plateAll(R.arquetipos); });
+}
+
+/* ================= Gráfico principal de cada hipótesis ================= */
+function renderHypCharts(sec) {
+  sec.querySelectorAll('[data-chart]').forEach((el) => {
+    if (el.dataset.done) return; el.dataset.done = '1';
+    const c = CORR.find((x) => x.id === el.dataset.chart);
+    kinds[c.kind](c, el, document.createElement('div'));
+  });
+}
+
 /* ================= Cuestionario de la portada ================= */
+function drawFaltantes() { inits._faltantes(); }
 function renderQuiz() {
   const Q = R.quiz, answers = [];
   $('quiz').innerHTML = Q.map((q, i) => {
@@ -510,7 +535,7 @@ function renderQuiz() {
     const done = answers.filter((x) => x !== undefined).length;
     if (done === Q.length) {
       const hits = answers.filter(Boolean).length;
-      $('quiz-score').innerHTML = `Acertaste <b>${hits} de ${Q.length}</b>. Los cuatro son convexos y de tallo blanco, y los rasgos que “parecen” peligrosos no coinciden con los que de verdad lo son. El resto de la web muestra por qué. <a href="#/datos">Seguir con los datos →</a>`;
+      $('quiz-score').innerHTML = `Acertaste <b>${hits} de ${Q.length}</b>. Los cuatro son convexos y de tallo blanco, y los rasgos que “parecen” peligrosos no coinciden con los que de verdad lo son. El resto de la web muestra por qué. <a href="#datos">Seguir con los datos →</a>`;
     }
   }));
 }
@@ -519,9 +544,11 @@ function selectShape(id) {
   const a = R.arquetipos.find((x) => x.id === id); if (!a || !$('shape-plate')) return;
   $('shape-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.id === id));
   const view = document.querySelector('#shape-view button.on')?.dataset.v || 'img';
-  $('shape-plate').innerHTML = view === 'img'
+  $('shape-plate').innerHTML = (view === 'img' ? '<p class="sp-k">El típico de los datos</p>' : '') + (view === 'img'
     ? `<img class="shape-img" src="img/render/render_${a.id}.jpg" alt="Hongo de forma ${a.nombre}: sombrero de ${num(a.cap)} cm, tallo de ${num(a.alto)} cm, color ${a.colorCap.split(' ')[0].toLowerCase()}, generado desde los datos">`
-    : plateOne(a);
+    : plateOne(a));
+  const FOTO = { convexa: ['campestris', 'Agaricus campestris'], plana: ['procera', 'Macrolepiota procera (adulto)'], hundida: ['gibba', 'Clitocybe gibba'], campana: ['mycena', 'Mycena galericulata'], esferica: ['edulis', 'Boletus edulis'], conica: ['conica', 'Hygrocybe conica'] }[a.id];
+  $('sh-photo').innerHTML = `<img src="img/fotos/${FOTO[0]}.jpg" alt="Foto de ${FOTO[1]}, un hongo real de forma ${a.nombre.toLowerCase()}" loading="lazy"><figcaption>Una especie real: <i>${FOTO[1]}</i></figcaption>`;
   $('sh-code').textContent = `cap-shape = '${a.codigo}' · ${int(a.n)} hongos · ${num(a.pct)} % de la muestra`;
   $('sh-name').textContent = a.nombre;
   $('sh-dl').innerHTML = [
@@ -571,59 +598,50 @@ function sonify() {
   setTimeout(() => { note.textContent = 'Terminado. El tono baja al principio y después se estabiliza, igual que la curva.'; }, pts.length * dt * 1000 + 300);
 }
 
-/* ================= Router ================= */
-const chapters = [...document.querySelectorAll('.chapter')];
-const ids = chapters.map((c) => c.dataset.id);
+/* ================= Historia continua: carga por partes y línea de etapas ================= */
+const chapters = [...document.querySelectorAll('.act')];
+const ids = chapters.map((c) => c.id);
 const done = new Set();
-// Links de la versión anterior (capítulos) → etapas
-const OLD = { portada: 'pregunta', investigacion: 'datos', mitos: 'excel', tamano: 'excel', color: 'excel', contexto: 'excel', combinar: 'resultados', conclusion: 'conclusiones', accesibilidad: 'conclusiones', formas: 'tres-d', metodo: 'datos' };
-function route() {
-  const mm = location.hash.match(/^#\/([\w-]+)(?:\/(c\d+))?/) || [];
-  let id = OLD[mm[1]] || mm[1]; const anchor = mm[2];
-  if (!ids.includes(id)) id = 'pregunta';
-  if (mm[1] && mm[1] !== id) history.replaceState(null, '', `#/${id}${anchor ? '/' + anchor : ''}`);
-  chapters.forEach((c) => (c.hidden = c.dataset.id !== id));
-  const i = ids.indexOf(id), prev = chapters[i - 1], next = chapters[i + 1];
-  $('pager').innerHTML = (prev ? `<a class="prev" href="#/${prev.dataset.id}"><small>← Parte ${i}</small><b>${prev.dataset.title}</b></a>` : '') +
-    (next ? `<a class="next" href="#/${next.dataset.id}"><small>Parte ${i + 2} →</small><b>${next.dataset.title}</b></a>` : '');
-  document.title = (i === 0 ? '' : chapters[i].dataset.title + ' · ') + '¿Comestible a simple vista?';
-  window.scrollTo(0, 0);
-  if (!done.has(id)) { done.add(id); renderChapterCorr(chapters[i]); inits[id]?.(); addGlossary(chapters[i]); }
-  renderStages(id);
-  if (anchor) requestAnimationFrame(() => { const d = document.getElementById('corr-' + anchor); if (d) { d.open = true; d.scrollIntoView({ block: 'start' }); } });
-  onScroll();
+function initAct(sec) {
+  if (done.has(sec.id)) return; done.add(sec.id);
+  renderChapterCorr(sec); inits[sec.id]?.(); addGlossary(sec);
 }
+// Cada parte se arma cuando está por entrar en pantalla
+const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && initAct(e.target)), { rootMargin: '700px 0px' });
+chapters.forEach((c) => io.observe(c));
+let current = null;
 function onScroll() {
   const h = document.documentElement.scrollHeight - innerHeight;
   $('progress').style.width = (h > 0 ? (scrollY / h) * 100 : 100) + '%';
+  const top = document.querySelector('.topnav').offsetHeight + 40;
+  let cur = chapters[0];
+  for (const c of chapters) if (c.getBoundingClientRect().top <= top) cur = c;
+  if (cur !== current) { current = cur; renderStages(cur.id); }
 }
-addEventListener('hashchange', route);
 addEventListener('scroll', onScroll, { passive: true });
-document.addEventListener('keydown', (e) => {
-  if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
-  const h = (location.hash.match(/^#\/([\w-]+)/) || [])[1]; const i = Math.max(0, ids.indexOf(OLD[h] || h));
-  if (e.key === 'ArrowRight' && ids[i + 1]) location.hash = '#/' + ids[i + 1];
-  if (e.key === 'ArrowLeft' && i > 0) location.hash = '#/' + ids[i - 1];
-});
+// Links de versiones anteriores (#/parte o #/parte/c4) y links a una correlación
+const OLD = { portada: 'pregunta', investigacion: 'datos', mitos: 'excel', tamano: 'excel', color: 'excel', contexto: 'excel', combinar: 'resultados', conclusion: 'conclusiones', accesibilidad: 'conclusiones', formas: 'tres-d', metodo: 'datos' };
+function handleHash() {
+  const mm = location.hash.match(/^#\/([\w-]+)(?:\/(c\d+))?/); if (!mm) return;
+  const id = OLD[mm[1]] || mm[1], target = $(id); if (!target) return;
+  chapters.slice(0, ids.indexOf(id) + 1).forEach(initAct);
+  let el = target;
+  if (mm[2]) { const card = $('corr-' + mm[2]); if (card) { card.closest('details.more')?.setAttribute('open', ''); card.open = true; el = card; } }
+  history.replaceState(null, '', '#' + id);
+  requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
+}
+addEventListener('hashchange', handleHash);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { chartDefaults(); charts.forEach((c) => c.update()); });
 /* ================= Imprimir / PDF: todos los capítulos, con la parte técnica ================= */
 function printAll() {
-  const prev = chapters.map((c) => c.hidden);
-  chapters.forEach((c) => (c.hidden = false));
-  chapters.forEach((c, i) => { const id = ids[i]; if (!done.has(id)) { done.add(id); renderChapterCorr(c); inits[id]?.(); addGlossary(c); } });
+  chapters.forEach(initAct);
   document.querySelectorAll('details').forEach((d) => { d.dataset.wasOpen = d.open ? '1' : ''; d.open = true; });
-  document.body.classList.add('print-all');
-  charts.forEach((c) => c.resize());
-  const restore = () => {
-    document.body.classList.remove('print-all');
-    document.querySelectorAll('details').forEach((d) => { d.open = d.dataset.wasOpen === '1'; });
-    chapters.forEach((c, i) => (c.hidden = prev[i]));
-    removeEventListener('afterprint', restore);
-  };
+  setTimeout(() => { charts.forEach((c) => c.resize()); window.print(); }, 900);
+  const restore = () => { document.querySelectorAll('details').forEach((d) => { d.open = d.dataset.wasOpen === '1'; }); removeEventListener('afterprint', restore); };
   addEventListener('afterprint', restore);
-  setTimeout(() => window.print(), 700);
 }
 $('print-btn')?.addEventListener('click', printAll);
 
 renderCorrMaps();
-route();
+handleHash();
+onScroll();

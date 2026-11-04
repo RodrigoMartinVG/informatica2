@@ -2,21 +2,25 @@
 
 Informe web interactivo del Taller de Informática II. Pregunta si se puede saber si un hongo es comestible por su aspecto. Está basado en `v5_Hongos_DataSet_Rodrigo_Vidal.xlsx`.
 
-## Estructura: las etapas de la investigación
+## Estructura: una historia en 7 partes
 
-La web tiene 7 partes, en el orden en que se hizo el trabajo. Una línea de etapas, fija arriba, muestra en qué parte se está, y cada parte abre con una ficha (qué pregunta, con qué herramienta, qué resultado).
+La web es una sola página que se lee de arriba abajo, como una historia. La línea de etapas, fija arriba, sigue el avance de la lectura. Cada parte corresponde a una etapa de la investigación:
 
-| # | Parte | Contenido |
+| # | Parte | Qué cuenta |
 | --- | --- | --- |
-| 1 | La pregunta | Portada, cuestionario "¿vos lo comerías?", objetivos, respuesta corta |
-| 2 | Los datos | Fuente, preparación en Excel (fórmulas), versiones, límites, descarga |
-| 3 | Etapa I · Excel | Las correlaciones 1 a 13 como tarjetas plegables: creencias, tamaño, color y textura, dónde y cuándo |
-| 4 | Etapa II · Resultados | Balance de las 14 correlaciones, color × forma (14), el giro (99,8 %), explorador, presentación |
-| 5 | Etapa III · GeoGebra | Modelo 1 (`FitLine`) y modelo 2 (`FitLog`) |
-| 6 | Complementaria · 3D | Las seis formas, revisión de las imágenes de IA, sólido de revolución, volumen, Tinkercad/OpenSCAD |
-| 7 | Conclusiones | Respuesta, aprendizajes, cómo seguir, accesibilidad para personas ciegas, fuentes |
+| 1 | La pregunta | Dos hongos casi iguales (uno mortal, otro comestible), las creencias populares, el cuestionario |
+| 2 | Los datos | La "enciclopedia" de 173 especies, la línea de base del 55,5 %, qué se hizo en Excel, límites |
+| 3 | Etapa I · Excel | Cuatro hipótesis populares (anillo/color al cortar, tamaño, colores, lugar y época) con fotos reales, el gráfico del Excel, un veredicto y un concepto |
+| 4 | Etapa II · Todo junto | Color × forma, el giro del 99,8 % (combinar rasgos = reconocer la especie), el explorador |
+| 5 | Etapa III · GeoGebra | Dos conjeturas escritas como funciones (recta y curva) |
+| 6 | Complementaria · 3D | El hongo típico de cada forma junto a una foto real, el sólido de revolución |
+| 7 | La respuesta | Conclusión, aprendizajes, límites, personas ciegas, fuentes y créditos |
 
-Cada correlación tiene la misma estructura: qué muestra, qué aporta al hilo, cómo se construye en Excel, qué significa matemáticamente y qué precauciones tomar, con su gráfico y una tabla de datos. Los links de la versión anterior (`#/mitos`, `#/tamano/c4`…) redirigen a la parte nueva.
+La parte técnica (cómo se armó cada tabla en Excel, su matemática y las precauciones) queda en las secciones "Para quien quiera más detalle", con las 14 correlaciones completas.
+
+## Fotos reales
+
+`img/fotos/` tiene 11 fotos de Wikimedia Commons (dominio público o Creative Commons). `img/fotos/creditos.json` guarda el autor, la licencia y el link de cada una, y la web los muestra al final.
 
 ## Funciones de lectura
 
