@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flyer · ¿Cuál te comerías?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;1,8..60,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <style>
+    :root {
+      --paper: #f8f6f1; --ink: #17161a; --ink-2: #4a4843; --ink-3: #85817a;
+      --rule: #dedad0; --accent: #2f5d50; --accent-soft: #e3ece8; --tox: #eb6834; --ed: #2a78d6;
+      --serif: "Source Serif 4", Georgia, serif;
+      --sans: "IBM Plex Sans", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #22211e; overflow: hidden; }
+    body { display: grid; place-items: center; }
+
+    /* Lienzo fijo 1920×1080, escalado para entrar en cualquier pantalla */
+    .stage { width: 1920px; height: 1080px; position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: center; }
+    .flyer { width: 100%; height: 100%; background: var(--paper); color: var(--ink);
+      display: grid; grid-template-columns: 840px 1fr; grid-template-rows: 1080px; overflow: hidden; }
+
+    /* Columna de texto */
+    .copy { padding: 88px 72px 80px 100px; min-height: 0; display: flex; flex-direction: column; }
+    .kicker { font: 600 22px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+    .kicker::before { content: ""; display: inline-block; width: 44px; height: 3px; background: var(--accent); vertical-align: middle; margin-right: 16px; }
+    h1 { font: 700 104px/1 var(--serif); letter-spacing: -.02em; margin-top: 52px; }
+    h1 .tox { color: var(--tox); }
+    h1 em { display: block; font-style: italic; font-weight: 600; margin-top: 14px; }
+    .lead { font: 400 32px/1.35 var(--serif); color: var(--ink-2); margin-top: 40px; max-width: 640px; }
+    .lead b { color: var(--ink); font-weight: 700; }
+
+    .cta { margin-top: auto; display: flex; align-items: center; gap: 36px;
+      border-top: 3px solid var(--ink); padding-top: 36px; }
+    .qr { width: 168px; height: 168px; background: #fff; padding: 12px; flex: none; }
+    .qr svg { width: 100%; height: 100%; display: block; }
+    .cta-t { font: 600 22px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .cta-h { font: 700 40px/1.1 var(--serif); margin-top: 8px; }
+    .cta-when { display: inline-block; margin-top: 16px; font: 600 24px var(--sans); color: var(--accent);
+      background: var(--accent-soft); padding: 8px 16px; }
+    .cta-url { font: 500 19px var(--mono); color: var(--ink-2); margin-top: 14px; }
+
+    /* Columna de fotos */
+    .pics { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 100%; min-height: 0; gap: 6px; background: var(--ink); position: relative; }
+    .pic { position: relative; overflow: hidden; min-height: 0; }
+    .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pic::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(10,10,9,.78) 0%, rgba(10,10,9,0) 38%); }
+    .tag { position: absolute; left: 44px; bottom: 44px; z-index: 1; color: #fff; }
+    .tag .l { font: 700 200px/0.8 var(--serif); }
+    .tag .q { font: 500 26px var(--sans); margin-top: 18px; color: rgba(255,255,255,.88); }
+    .vs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+      width: 132px; height: 132px; border-radius: 50%; background: var(--paper); color: var(--ink);
+      display: grid; place-items: center; font: italic 600 46px var(--serif);
+      box-shadow: 0 0 0 6px var(--ink); }
+    .warn { position: absolute; top: 44px; right: 44px; z-index: 2; background: var(--tox); color: #fff;
+      font: 600 22px var(--sans); letter-spacing: .1em; text-transform: uppercase; padding: 12px 20px; }
+    .credit { position: absolute; right: 24px; bottom: 14px; z-index: 2; font: 400 14px var(--sans); color: rgba(255,255,255,.62); }
+
+    .bar { position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; opacity: .3; transition: opacity .2s; z-index: 5; }
+    .bar:hover, .bar:focus-within { opacity: 1; }
+    .bar a, .bar button { font: 500 13px var(--sans); background: #f8f6f1; color: #17161a; border: 0; padding: 7px 12px; cursor: pointer; text-decoration: none; }
+    .shot .bar { display: none; }
+    @page { size: 1920px 1080px; margin: 0; }
+    @media print { html, body { background: none; } .bar { display: none; } .stage { transform: none; left: 0; top: 0; position: static; } }
+  </style>
+</head>
+<body>
+  <div class="bar" role="toolbar" aria-label="Controles">
+    <a href="img/flyer.png" download="flyer_hongos.png">Descargar PNG</a>
+    <button onclick="window.print()">PDF</button>
+    <a href="./">Ir a la web</a>
+  </div>
+
+  <div class="stage" id="stage">
+    <main class="flyer">
+      <section class="copy">
+        <p class="kicker">Informática II · Investigación</p>
+        <h1>Uno es <span class="tox">mortal.</span><em>¿Cuál te comerías?</em></h1>
+        <p class="lead"><b>¿Se puede saber si un hongo es comestible solo con mirarlo?</b> Lo pusimos a prueba con 61.069 hongos, Excel y GeoGebra.</p>
+
+        <div class="cta">
+          <div class="qr" id="qr" role="img" aria-label="Código QR a la web de la investigación"></div>
+          <div>
+            <p class="cta-t">La respuesta, en la</p>
+            <p class="cta-h">Presentación de la investigación</p>
+            <p class="cta-when">Próximamente</p>
+            <p class="cta-url">rodrigomartinvg.github.io/informatica2</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="pics" aria-label="Dos hongos reales para comparar">
+        <figure class="pic">
+          <img src="img/fotos/phalloides.jpg" alt="Hongo A: sombrero verdoso pálido, láminas blancas">
+          <figcaption class="tag"><div class="l">A</div><p class="q">¿Lo comerías?</p></figcaption>
+        </figure>
+        <figure class="pic">
+          <img src="img/fotos/campestris.jpg" alt="Hongo B: sombrero blanco, láminas rosadas">
+          <figcaption class="tag"><div class="l">B</div><p class="q">¿Y este?</p></figcaption>
+        </figure>
+        <div class="vs" aria-hidden="true">o</div>
+        <p class="warn">Los dos tienen anillo</p>
+        <p class="credit">Fotos: George Chernilevsky (dominio público) · Strobilomyces (CC BY-SA 3.0) · Wikimedia Commons</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const URL_WEB = 'https://rodrigomartinvg.github.io/informatica2/';
+    const qr = qrcode(0, 'M'); qr.addData(URL_WEB); qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+
+    if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot');
+    const fit = () => document.getElementById('stage').style.setProperty('--s',
+      Math.min(innerWidth / 1920, innerHeight / 1080));
+    addEventListener('resize', fit); fit();
+  </script>
+</body>
+</html>
