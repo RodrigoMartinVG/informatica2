@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>¿Comestible a simple vista?</title>
-  <meta name="description" content="Informe del Taller de Informática II: ¿se puede saber si un hongo es comestible por su aspecto? Análisis de 61.069 ejemplares en Excel y GeoGebra.">
+  <meta name="description" content="Informe del Taller de Informática II: ¿se puede saber si un hongo es comestible por su aspecto? Análisis de 61.069 ejemplares en Excel y GeoGebra, con modelado 3D.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
@@ -14,50 +14,43 @@
 </head>
 <body>
 <a class="skip" href="#doc">Saltar al contenido</a>
-<div class="progress" aria-hidden="true"><span id="progress"></span></div>
 
-<aside class="toc" id="toc" aria-label="Índice">
-  <div class="toc-head">
-    <a href="#/portada" class="toc-title">¿Comestible a simple vista?</a>
-    <p class="toc-sub">Taller de Informática II · 2026</p>
-    <button class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-list">Índice</button>
+<header class="topnav">
+  <div class="topnav-row">
+    <a href="#/pregunta" class="brand">¿Comestible a simple vista?<small>Taller de Informática II · Rodrigo Vidal</small></a>
+    <div class="tools">
+      <a href="presentacion.html" title="Presentación de 8 diapositivas">▶ Presentación</a>
+      <a href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download title="Excel v5, 16 MB">↓ Excel</a>
+      <button type="button" id="print-btn" title="Imprimir o guardar en PDF">⎙ PDF</button>
+    </div>
   </div>
-  <nav id="toc-list">
-    <p class="toc-group">Planteo</p>
-    <a href="#/portada"><span>—</span>Portada</a>
-    <a href="#/investigacion"><span>1</span>La investigación y sus límites</a>
-    <p class="toc-group">Rasgo por rasgo</p>
-    <a href="#/mitos"><span>2</span>Dos creencias populares</a>
-    <a href="#/tamano"><span>3</span>Tamaño y proporciones</a>
-    <a href="#/color"><span>4</span>Color y textura</a>
-    <a href="#/contexto"><span>5</span>Dónde y cuándo</a>
-    <p class="toc-group">Modelos y síntesis</p>
-    <a href="#/geogebra"><span>6</span>Modelización en GeoGebra</a>
-    <a href="#/combinar"><span>7</span>Combinar rasgos</a>
-    <a href="#/conclusion"><span>8</span>Conclusión</a>
-    <a href="#/accesibilidad"><span>9</span>Más allá de la vista</a>
-    <p class="toc-group">Anexos</p>
-    <a href="#/formas"><span>A</span>Las seis formas</a>
-    <a href="#/tres-d"><span>B</span>Del dibujo al 3D</a>
-    <a href="#/metodo"><span>C</span>Fórmulas y fuentes</a>
+  <nav class="stages" aria-label="Etapas de la investigación">
+    <ol id="stages">
+      <li><a href="#/pregunta"><span class="sn">1</span><span class="sl">La pregunta</span></a></li>
+      <li><a href="#/datos"><span class="sn">2</span><span class="sl">Los datos</span></a></li>
+      <li><a href="#/excel"><span class="sn">3</span><span class="sl"><small>Etapa I</small>Excel</span></a></li>
+      <li><a href="#/resultados"><span class="sn">4</span><span class="sl"><small>Etapa II</small>Resultados</span></a></li>
+      <li><a href="#/geogebra"><span class="sn">5</span><span class="sl"><small>Etapa III</small>GeoGebra</span></a></li>
+      <li><a href="#/tres-d"><span class="sn">6</span><span class="sl"><small>Complementaria</small>Modelado 3D</span></a></li>
+      <li><a href="#/conclusiones"><span class="sn">7</span><span class="sl">Conclusiones</span></a></li>
+    </ol>
   </nav>
-  <div class="toc-tools">
-    <a class="toc-dl" href="presentacion.html"><span>▶</span>Modo presentación (8 diapositivas)</a>
-    <a class="toc-dl" href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download><span>↓</span>Descargar el Excel (v5, 16 MB)</a>
-    <button type="button" class="toc-dl" id="print-btn"><span>⎙</span>Imprimir o guardar en PDF</button>
-  </div>
-</aside>
+  <p class="thread-line" id="thread-line" aria-live="polite"></p>
+  <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+</header>
 
 <main id="doc" tabindex="-1">
 
-<div class="thread" id="thread" hidden aria-label="Hilo de la investigación"></div>
-
-<!-- ============================ PORTADA ============================ -->
-<article class="chapter cover" data-id="portada" data-title="Portada">
-  <p class="kicker">Taller de Informática II · Licenciatura en Matemática · UAI</p>
+<!-- ============================ 1 · LA PREGUNTA ============================ -->
+<article class="chapter cover" data-id="pregunta" data-title="La pregunta" data-short="¿Se puede saber si un hongo es comestible mirándolo?">
+  <p class="kicker">Parte 1 · Planteo</p>
   <h1>¿Se puede saber si un hongo es comestible mirándolo?</h1>
-  <p class="dek">Un recorrido rasgo por rasgo por 61.069 hongos para poner a prueba una idea muy difundida: que el aspecto de un hongo alcanza para saber si se puede comer.</p>
-  <p class="byline">Rodrigo Vidal</p>
+  <p class="dek">Un recorrido por 61.069 hongos para poner a prueba una idea muy difundida: que el aspecto de un hongo alcanza para saber si se puede comer.</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Alcanzan las características observables de un hongo para saber si se puede comer, y cuáles aportan información de verdad?</div>
+    <div><span>Con qué</span>Una propuesta de investigación con objetivos, etapas y herramientas</div>
+    <div><span>Resultado</span>Una pregunta que se puede medir con datos</div>
+  </div>
 
   <figure class="cover-plate" id="cover-plate"></figure>
   <p class="caption">Las seis formas de sombrero con tallo, modeladas en 3D con las medidas promedio de los datos, el color más frecuente y la superficie más común, todas a la misma escala. Juntas son el 94,3 % de la muestra.</p>
@@ -69,29 +62,50 @@
     <p class="quiz-score" id="quiz-score" aria-live="polite"></p>
   </section>
 
+  <h2>Por qué esta pregunta</h2>
+  <p>Hay muchas reglas populares para reconocer un hongo venenoso: que tiene anillo, que cambia de color al cortarlo, que tiene colores llamativos. Si alguna fuera cierta, debería notarse en los datos: los hongos con ese rasgo tendrían que ser venenosos en una proporción mucho mayor que el resto.</p>
+
+  <h2>Objetivos</h2>
+  <ul class="learned">
+    <li><b>General:</b> determinar qué características de un hongo se asocian con su toxicidad.</li>
+    <li>Comparar las medidas físicas entre comestibles y venenosos.</li>
+    <li>Identificar qué variables cualitativas discriminan y cuáles no.</li>
+    <li>Modelizar la relación entre las variables numéricas.</li>
+    <li>Comunicar los resultados a un público no especializado.</li>
+  </ul>
+
+  <h2>Cómo está organizada esta web</h2>
+  <p>Cada parte es una etapa de la investigación, en el orden en que se hizo. La línea de arriba muestra en qué etapa estás.</p>
+  <ol class="steps">
+    <li><b>Los datos.</b> De dónde salen, cómo se prepararon en Excel y qué límites tienen.</li>
+    <li><b>Etapa I · Excel.</b> Las 14 correlaciones de las tablas dinámicas, rasgo por rasgo.</li>
+    <li><b>Etapa II · Resultados.</b> Qué sale de juntar todo: los veredictos y la combinación de rasgos.</li>
+    <li><b>Etapa III · GeoGebra.</b> Dos relaciones escritas como funciones.</li>
+    <li><b>Etapa complementaria · 3D.</b> Las seis formas llevadas a objetos.</li>
+    <li><b>Conclusiones.</b> La respuesta, sus límites y cómo podría servir a personas ciegas.</li>
+  </ol>
+
   <div class="abstract">
-    <h2 class="label">Resumen</h2>
-    <p>Para cada característica observable (anillo, tamaño, forma, color, textura, hábitat) comparamos qué parte de los hongos es venenosa contra el promedio de la muestra, que es de <b>55,5 %</b>. Usamos tablas dinámicas en Excel y dos modelos en GeoGebra.
-      Ningún rasgo por sí solo separa los dos grupos: los mejores dejan de todas formas un margen de error que, con hongos, no se puede aceptar.
+    <h2 class="label">La respuesta corta</h2>
+    <p>Ningún rasgo por sí solo separa los dos grupos: los mejores dejan de todas formas un margen de error que, con hongos, no se puede aceptar.
       Al combinar muchos rasgos, en estos datos casi todos los hongos quedan en grupos “puros”. Pero eso pasa porque los datos provienen de solo 173 especies: combinar rasgos es, en el fondo, identificar la especie, y para eso hace falta un especialista.</p>
   </div>
 
   <aside class="notice" role="note"><b>Advertencia.</b> Este es un trabajo estadístico con fines educativos. Nada de lo que aparece acá sirve para decidir si un hongo real se puede comer.</aside>
-
-  <a class="next-big" href="#/investigacion">Empezar por la investigación →</a>
 </article>
 
-<!-- ============================ 1 ============================ -->
-<article class="chapter" data-id="investigacion" data-title="La investigación y sus límites">
-  <p class="kicker">Capítulo 1</p>
-  <h1>La investigación y sus límites</h1>
-  <p class="dek">Qué preguntamos, con qué datos lo respondimos y hasta dónde se puede confiar en la respuesta.</p>
+<!-- ============================ 2 · LOS DATOS ============================ -->
+<article class="chapter" data-id="datos" data-title="Los datos" data-short="61.069 hongos simulados a partir de 173 especies; el 55,5 % son venenosos.">
+  <p class="kicker">Parte 2 · Preparación</p>
+  <h1>Los datos</h1>
+  <p class="dek">De dónde salen, cómo se prepararon en Excel y hasta dónde se puede confiar en ellos.</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Con qué datos trabajamos y cuánto podemos confiar en ellos?</div>
+    <div><span>Con qué</span>Excel: <code>SI</code>, <code>SI.CONJUNTO</code>, <code>CONTAR.SI</code>, <code>PROMEDIO</code></div>
+    <div><span>Resultado</span>61.069 hongos simulados de 173 especies, con un 55,5 % de venenosos como línea de base</div>
+  </div>
 
-  <h2>La pregunta</h2>
-  <p>Hay muchas reglas populares para reconocer un hongo venenoso: que tiene anillo, que cambia de color al cortarlo, que tiene colores llamativos. Si alguna fuera cierta, debería notarse en los datos: los hongos con ese rasgo tendrían que ser venenosos en una proporción mucho mayor que el resto.</p>
-  <p>Planteamos entonces una pregunta que se puede medir: <em>¿alcanzan las características observables de un hongo para saber si se puede comer, y cuáles de ellas aportan información de verdad?</em></p>
-
-  <h2>Los datos</h2>
+  <h2>La fuente</h2>
   <div class="two">
     <div>
       <p>Usamos el <em>Secondary Mushroom Dataset</em> (Wagner, Heider y Hattab, 2021), publicado en el repositorio de aprendizaje automático de la UCI. Los autores partieron de una guía de campo con <b>173 especies</b> reales, donde cada medida aparece como un rango (por ejemplo, “sombrero de 5 a 10 cm”). Con ese material generaron <b>61.069 hongos simulados</b>, sorteando valores dentro de los rangos de cada especie.</p>
@@ -106,17 +120,37 @@
       <div><dt>Comestibles</dt><dd>27.181 <small>(44,5 %)</small></dd></div>
     </dl>
   </div>
-  <p>El 55,5 % de venenosos es la <b>línea de base</b> de todo el informe. Si una característica no aleja ese número de forma clara, no ayuda a decidir.</p>
+  <p>El 55,5 % de venenosos es la <b>línea de base</b> de todo el trabajo. Si una característica no aleja ese número de forma clara, no ayuda a decidir.</p>
 
-  <h2>El método</h2>
-  <ol class="steps">
-    <li><b>Excel: preparación.</b> Los datos traen códigos de una letra (<code>x</code>, <code>n</code>, <code>t</code>…). Agregamos columnas que los traducen con <code>SI</code> y <code>SI.CONJUNTO</code>, y otras derivadas: <code>Con tallo</code>, <code>Grande/Chico</code> y <code>toxico (1/0)</code>. Una celda de control comprueba que <code>SUMA / CONTAR = PROMEDIO</code>.</li>
-    <li><b>Excel: tablas dinámicas.</b> Armamos una hoja por pregunta, cada una con su tabla dinámica, su gráfico y un texto de lectura.</li>
-    <li><b>GeoGebra: modelización.</b> Los datos no tienen fechas, así que no hay serie temporal. Modelizamos en cambio la relación entre medidas: una recta (<code>FitLine</code>) y una curva logarítmica (<code>FitLog</code>).</li>
-    <li><b>Complementario: modelado 3D.</b> Las seis formas principales, con sus medidas promedio, llevadas a Tinkercad y OpenSCAD (anexo B).</li>
-  </ol>
+  <h2>La preparación en Excel</h2>
+  <p>Los datos traen códigos de una letra (<code>x</code>, <code>n</code>, <code>t</code>…). Agregamos columnas que los traducen y otras derivadas que después usan las tablas dinámicas. Una celda de control comprueba que los cálculos sean coherentes.</p>
+  <div class="table-wrap">
+  <table class="formulas">
+    <thead><tr><th>Para qué</th><th>Fórmula</th></tr></thead>
+    <tbody>
+      <tr><td>Cantidad de hongos</td><td><code>=CONTAR(H2:H61070)</code> → 61.069</td></tr>
+      <tr><td>Venenosos</td><td><code>=CONTAR.SI(F2:F61070;"p")</code> → 33.888</td></tr>
+      <tr><td>Parte de venenosos</td><td><code>=CONTAR.SI(F2:F61070;"p")/B6</code> → 0,555</td></tr>
+      <tr><td>Diámetro: suma, máximo, mínimo, promedio</td><td><code>=SUMA(H2:H61070)</code>, <code>=MAX(…)</code>, <code>=MIN(…)</code>, <code>=PROMEDIO(…)</code></td></tr>
+      <tr><td>Control de consistencia</td><td><code>=SI(ABS((B2/B6)-B5)&lt;=0,01;"OK";"FAIL")</code> (suma / cantidad = promedio)</td></tr>
+      <tr><td>Clase legible</td><td><code>=SI(F2="p";"Venenoso";"Comestible")</code></td></tr>
+      <tr><td>Grande o chico</td><td><code>=SI(H2&gt;=10;"Grande";"Chico")</code></td></tr>
+      <tr><td>Forma</td><td><code>=SI(J2="b";"Campana";SI(J2="c";"Cónica";SI(J2="x";"Convexa"; … "Otras")))</code></td></tr>
+      <tr><td>Hábitat, estación, color del tallo, superficie</td><td><code>=SI.CONJUNTO(AB2="g";"Pastos"; … ;VERDADERO;"Sin dato")</code></td></tr>
+      <tr><td>¿Tiene tallo?</td><td><code>=SI(S2&gt;0;"Sí";"No")</code></td></tr>
+      <tr><td>Tóxico como número</td><td><code>=SI(F2="p";1;0)</code>: su promedio es la proporción de venenosos</td></tr>
+    </tbody>
+  </table>
+  </div>
 
-  <h2>Límites</h2>
+  <h2>Versiones de la planilla</h2>
+  <ul class="learned">
+    <li><b>v3</b> (solo lectura): datos traducidos, diccionario y las dos primeras preguntas (tamaño y forma, color y forma), con 3 gráficos.</li>
+    <li><b>v4</b>: se suman hábitat y estación, color del tallo, superficie, mitos, tamaño por rangos, la correlación sombrero-tallo y la hoja de datos para GeoGebra. Son 13 gráficos y una segmentación por estación.</li>
+    <li><b>v5</b>: tiene la misma estructura de hojas que v4, con ajustes. Es la versión que usa esta web. <a class="dl" href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download>Descargar (16 MB)</a></li>
+  </ul>
+
+  <h2>Los límites</h2>
   <p>Antes de mirar resultados, conviene saber qué <em>no</em> pueden decir estos datos.</p>
   <div class="limits">
     <div><h3>Son simulados</h3><p>Los 61.069 hongos no se juntaron en el campo. Las proporciones reflejan cómo se generaron los datos, no qué tan comunes son esos hongos en la naturaleza.</p></div>
@@ -126,141 +160,74 @@
     <div><h3>No dice la especie</h3><p>Ninguna columna indica a qué especie pertenece cada hongo, así que no podemos comprobar los resultados especie por especie.</p></div>
     <div><h3>Promedios frágiles</h3><p>Unos 400 sombreros gigantes (más de 25 cm, casi todos de una especie) alcanzan para mover promedios y pendientes. Los marcamos cada vez que pesan.</p></div>
   </div>
-
   <figure class="fig">
     <figcaption><span class="fig-n">Figura 1</span>Celdas vacías por columna en la hoja <code>Data</code></figcaption>
     <div class="chart-box" style="height:300px"><canvas id="c-faltantes" aria-label="Porcentaje de celdas vacías por columna"></canvas></div>
   </figure>
-
-  <h2>Mapa de las correlaciones</h2>
-  <p>El Excel tiene 14 correlaciones, repartidas en 9 hojas de análisis. Cada una aparece en el capítulo correspondiente con la misma estructura: qué muestra (para cualquier lector), qué aporta al hilo, cómo se construye en Excel, qué significa matemáticamente y qué precauciones tomar.</p>
-  <div class="table-wrap"><table class="summary corr-map" data-corr-map="1"></table></div>
-
-  <h2>Para qué podría servir</h2>
-  <p>Saber <em>qué rasgos informan</em> sirve para enseñar y para diseñar materiales. Una pregunta que surgió durante el trabajo: si los rasgos más útiles se pueden percibir con el tacto, ¿qué material de estudio se podría preparar para personas ciegas? El capítulo 9 lo analiza con los mismos datos y propone modelos 3D táctiles y gráficos que se escuchan.</p>
 </article>
 
-<!-- ============================ 2 ============================ -->
-<article class="chapter" data-id="mitos" data-title="Dos creencias populares">
-  <p class="kicker">Capítulo 2 · Rasgo por rasgo</p>
-  <h1>Dos creencias populares</h1>
-  <p class="dek">Empezamos por las reglas que más se repiten. Si alguna funcionara, la pregunta estaría casi respondida.</p>
-  <p>Las dos creencias son <em>“si tiene anillo, es venenoso”</em> y <em>“si cambia de color o suelta líquido al cortarlo, es venenoso”</em>. Las dos se pueden traducir a una columna del dataset (<code>has-ring</code> y <code>does-bruise-or-bleed</code>) y medir con una tabla dinámica.</p>
+<!-- ============================ 3 · ETAPA I · EXCEL ============================ -->
+<article class="chapter" data-id="excel" data-title="Etapa I · Excel" data-short="Ningún rasgo, solo, alcanza: los mitos no informan y las señales están en los extremos.">
+  <p class="kicker">Parte 3 · Etapa I</p>
+  <h1>Excel: rasgo por rasgo</h1>
+  <p class="dek">Una tabla dinámica por pregunta. Cada una compara qué parte de los hongos es venenosa según un rasgo, contra el 55,5 % de toda la muestra.</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Qué rasgos se asocian con la toxicidad, y cuánto?</div>
+    <div><span>Con qué</span>Excel: 9 hojas de análisis, tablas dinámicas, 13 gráficos y una segmentación</div>
+    <div><span>Resultado</span>Ningún rasgo, solo, alcanza. Los mitos no informan y las señales fuertes están en grupos chicos.</div>
+  </div>
+  <p>Cada correlación es una tarjeta: arriba se ven el veredicto y la cifra principal, y al abrirla aparecen el gráfico, la lectura, cómo se construye en Excel y su matemática. En los gráficos de barras, la parte naranja son los venenosos y la línea punteada marca el 55,5 %.</p>
+
+  <h2>Las creencias populares</h2>
+  <p>Las dos reglas que más se repiten: <em>“si tiene anillo, es venenoso”</em> y <em>“si cambia de color al cortarlo, es venenoso”</em>.</p>
   <div class="corr" data-corr="c1"></div>
   <div class="corr" data-corr="c2"></div>
-  <p class="bridge">Las dos reglas populares fallan. Si hay información en el aspecto de un hongo, está en otros rasgos: el tamaño, el color, la textura.</p>
-</article>
 
-<!-- ============================ 3 ============================ -->
-<article class="chapter" data-id="tamano" data-title="Tamaño y proporciones">
-  <p class="kicker">Capítulo 3 · Rasgo por rasgo</p>
-  <h1>Tamaño y proporciones</h1>
-  <p class="dek">Las tres medidas numéricas del dataset (diámetro del sombrero, alto y grosor del tallo) analizadas de cuatro maneras: promedios, rangos y la relación entre ellas.</p>
+  <h2>El tamaño y las proporciones</h2>
+  <p>Las tres medidas numéricas, analizadas con promedios, por rangos y una contra otra.</p>
   <div class="corr" data-corr="c3"></div>
-  <p>Comparar promedios esconde lo que pasa dentro de cada grupo. Las tres correlaciones que siguen agrupan los hongos por tamaño y miran la proporción de venenosos en cada grupo.</p>
   <div class="corr" data-corr="c4"></div>
   <div class="corr" data-corr="c5"></div>
   <div class="corr" data-corr="c6"></div>
-  <p>Por último, en lugar de comparar cada medida con la toxicidad, comparamos dos medidas entre sí.</p>
   <div class="corr" data-corr="c7"></div>
-  <p class="bridge">El tamaño del sombrero es la única medida con una tendencia clara (más chico, más riesgo), y aun así no permite decidir. Las proporciones del hongo son iguales en los dos grupos. Estas dos relaciones son las que modelizamos en GeoGebra (capítulo 6).</p>
-</article>
 
-<!-- ============================ 4 ============================ -->
-<article class="chapter" data-id="color" data-title="Color y textura">
-  <p class="kicker">Capítulo 4 · Rasgo por rasgo</p>
-  <h1>Color y textura</h1>
-  <p class="dek">Los rasgos que más mencionan las guías de campo. Acá aparecen las señales más fuertes del trabajo y, a la vez, la prueba de que ninguna alcanza.</p>
-  <p>Las tres figuras se leen igual. Cada barra es un grupo de hongos y suma 100 %: la parte naranja son los venenosos, y la línea punteada marca el 55,5 % de toda la muestra. Las barras van ordenadas de más a menos riesgo.</p>
+  <h2>El color y la textura</h2>
+  <p>Los rasgos que más mencionan las guías de campo.</p>
   <div class="corr" data-corr="c8"></div>
   <div class="corr" data-corr="c9"></div>
   <div class="corr" data-corr="c10"></div>
-  <p class="bridge">Los tres rasgos muestran el mismo patrón: señales claras en los extremos y, en el medio, la mayoría de los hongos sin información útil.</p>
-</article>
 
-<!-- ============================ 5 ============================ -->
-<article class="chapter" data-id="contexto" data-title="Dónde y cuándo">
-  <p class="kicker">Capítulo 5 · Rasgo por rasgo</p>
-  <h1>Dónde y cuándo</h1>
-  <p class="dek">El hábitat y la estación no son parte del aspecto del hongo, pero quien lo encuentra los conoce. ¿Agregan algo?</p>
+  <h2>Dónde y cuándo</h2>
+  <p>No son parte del aspecto, pero quien encuentra un hongo los conoce.</p>
   <div class="corr" data-corr="c11"></div>
   <div class="corr" data-corr="c12"></div>
   <div class="corr" data-corr="c13"></div>
 
-  <h2>Resumen de la parte rasgo por rasgo</h2>
-  <p>Cada correlación, con su veredicto respecto de la pregunta.</p>
+  <p class="bridge">Ningún rasgo, mirado solo, permite decidir. Quedan dos caminos: combinar rasgos (Etapa II) o modelizar las medidas numéricas (Etapa III).</p>
+</article>
+
+<!-- ============================ 4 · ETAPA II · RESULTADOS ============================ -->
+<article class="chapter" data-id="resultados" data-title="Etapa II · Resultados" data-short="Combinar rasgos lleva al 99,8 % de grupos puros, pero eso es identificar la especie.">
+  <p class="kicker">Parte 4 · Etapa II</p>
+  <h1>Resultados: qué sale de juntar todo</h1>
+  <p class="dek">Primero, el balance de las 14 correlaciones. Después, la pregunta que queda abierta: si un rasgo no alcanza, ¿alcanzan varios a la vez?</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Qué dicen las correlaciones en conjunto? ¿Alcanza con combinar rasgos?</div>
+    <div><span>Con qué</span>Excel (tablas con varios campos), un cálculo adicional y la presentación de 8 diapositivas</div>
+    <div><span>Resultado</span>Combinando todos los rasgos, el 99,8 % queda en grupos puros. Pero eso es identificar la especie.</div>
+  </div>
+
+  <h2>El balance de las 14 correlaciones</h2>
   <div class="table-wrap"><table class="summary corr-map" data-corr-map="1"></table></div>
-  <p class="bridge">Ningún rasgo, mirado solo, permite decidir. Quedan dos caminos: modelizar las medidas numéricas (capítulo 6) o combinar rasgos (capítulo 7).</p>
-</article>
 
-<!-- ============================ 6 ============================ -->
-<article class="chapter" data-id="geogebra" data-title="Modelización en GeoGebra">
-  <p class="kicker">Capítulo 6 · Modelos</p>
-  <h1>Modelización en GeoGebra</h1>
-  <p class="dek">Dos preguntas que se pueden escribir como funciones: ¿cómo crece el tallo con el sombrero? ¿cómo cambia el riesgo con el tamaño?</p>
-
-  <h2>Cómo se armaron los puntos</h2>
-  <p>Llevar 61.069 puntos a GeoGebra no es práctico, y además el gráfico se vuelve ilegible. En la hoja <code>Datos GeoGebra</code> resumimos los hongos en grupos de 1 cm de sombrero. Cada grupo aporta un punto: su centro en <i>x</i> (0,5; 1,5; 2,5…) y su promedio en <i>y</i>. Los grupos con menos de 100 hongos se descartan, para que ningún punto dependa de unos pocos casos. Cada conjunto de puntos queda escrito como una lista lista para pegar en GeoGebra:</p>
-  <pre class="code">Todos = {(0.5, 1.18), (1.5, 2.40), (2.5, 4.69), … , (21.5, 43.43)}
-f(x) = FitLine(Todos)</pre>
-
-  <h2>Modelo 1 · Una recta: el tallo crece con el sombrero</h2>
-  <figure class="fig">
-    <figcaption><span class="fig-n">Figura 2</span>Grosor promedio del tallo (mm) según el diámetro del sombrero (cm)</figcaption>
-    <div class="chart-box tall"><canvas id="c-m1" aria-label="Modelo 1: rectas de ajuste del grosor del tallo"></canvas></div>
-    <div class="model-ctl">
-      <div class="formula" id="m1-formula"></div>
-      <label class="slider"><span>Sombrero de <output id="m1-x">8</output> cm</span><input type="range" id="m1-range" min="1" max="26" step="0.5" value="8"></label>
-      <p class="pred" id="m1-pred"></p>
-    </div>
-  </figure>
-  <div class="read-tech">
-    <section class="read"><h3>Lectura</h3>
-      <p>La relación es muy clara: <b>por cada centímetro más de sombrero, el tallo es unos 1,8 mm más grueso</b>. Sobre los hongos individuales, la correlación es r = 0,76. Un hongo grande es grande “en todo”.</p>
-      <p>Lo importante para nuestra pregunta es que las rectas de venenosos (<i>v</i>) y comestibles (<i>c</i>) quedan casi superpuestas: 1,83 contra 1,79 mm por cm. <b>Las proporciones del hongo no permiten distinguirlos.</b></p>
-      <p>Una advertencia: si se incluyen los 396 sombreros gigantes, la pendiente de los comestibles baja a 1,03. Unos pocos casos extremos pueden cambiar mucho un modelo.</p></section>
-    <aside class="tech"><h3>Cómo se calculó</h3><dl>
-      <dt>Comando</dt><dd><code>FitLine(lista)</code>: la recta de mínimos cuadrados. De todas las rectas posibles, elige la que hace más chica la suma de los cuadrados de las distancias verticales a los puntos:<span class="eq">min Σ ( y<sub>i</sub> − (m·x<sub>i</sub> + b) )²</span>Se usan los cuadrados para que las distancias por arriba y por abajo no se cancelen, y para castigar más los errores grandes.</dd>
-      <dt>Rectas</dt><dd><i>f</i> = todos, <i>v</i> = venenosos, <i>c</i> = comestibles. Esta página recalcula las tres con los mismos puntos que se cargaron en GeoGebra.</dd>
-      <dt>r y R²</dt><dd>Calculados en Excel sobre los 59.614 hongos individuales con tallo y sombrero &lt; 25 cm (hoja Correlación Sombrero-Tallo). R² = 0,58: la recta explica un 58 % de la variación del grosor.</dd>
-      <dt>Ojo</dt><dd>Los puntos son promedios: una recta muy ajustada sobre promedios no implica que cada hongo esté cerca de ella.</dd></dl></aside>
-  </div>
-
-  <h2>Modelo 2 · Una curva: el riesgo baja con el tamaño</h2>
-  <figure class="fig">
-    <figcaption><span class="fig-n">Figura 3</span>Parte de venenosos según el diámetro del sombrero, con ajuste logarítmico</figcaption>
-    <div class="chart-box tall"><canvas id="c-m2" aria-label="Modelo 2: curva logarítmica de la proporción de venenosos"></canvas></div>
-    <div class="model-ctl">
-      <div class="formula" id="m2-formula"></div>
-      <label class="slider"><span>Sombrero de <output id="m2-x">3</output> cm</span><input type="range" id="m2-range" min="0.5" max="30" step="0.5" value="3"></label>
-      <p class="pred" id="m2-pred"></p>
-    </div>
-  </figure>
-  <div class="read-tech">
-    <section class="read"><h3>Lectura</h3>
-      <p>La curva baja rápido entre 0 y 8 cm y después casi se aplana. Según el modelo, un sombrero de 3 cm tiene <b>62 %</b> de probabilidad de ser venenoso y uno de 15 cm, <b>45 %</b>. Es la tendencia del capítulo 3 escrita como función.</p>
-      <p>Pero en el rango de los datos (hasta 21,5 cm) la curva nunca baja de 0,40: <b>a cualquier tamaño, al menos 4 de cada 10 son venenosos</b>. El tamaño mejora la estimación, pero no permite decidir.</p></section>
-    <aside class="tech"><h3>Cómo se calculó</h3><dl>
-      <dt>Comando</dt><dd><code>FitLog(Prob)</code>: ajusta <i>p(x) = a + b·ln(x)</i>. El truco es un cambio de variable: con <i>u</i> = ln <i>x</i>, el modelo queda <span class="eq">p = a + b·u</span>que es una recta. Así que GeoGebra aplica mínimos cuadrados a los puntos (ln <i>x</i>, <i>y</i>). Como ln <i>x</i> crece cada vez más despacio, la curva baja rápido al principio y después se aplana.</dd>
-      <dt>Predicción</dt><dd><code>p(3)</code> y <code>p(15)</code> evaluados en la barra de entrada.</dd>
-      <dt>Límite del modelo</dt><dd>Cuando <i>x</i> → 0, ln <i>x</i> → −∞ y la curva <b>supera 1</b>: pasa con sombreros de menos de 1 mm, y se ve en el gráfico de GeoGebra, donde la curva sube hasta 1,1 junto al eje. Una probabilidad no puede ser mayor que 1. El caso no tiene importancia práctica, pero muestra que el modelo no sirve en los bordes del dominio. Un modelo logístico, que siempre queda entre 0 y 1, sería el paso siguiente.</dd></dl></aside>
-  </div>
-</article>
-
-<!-- ============================ 7 ============================ -->
-<article class="chapter" data-id="combinar" data-title="Combinar rasgos">
-  <p class="kicker">Capítulo 7 · Síntesis</p>
-  <h1>Combinar rasgos</h1>
-  <p class="dek">Si un rasgo solo no alcanza, ¿alcanzan varios a la vez? Acá el relato da un giro.</p>
-
-  <h2>Dos rasgos: color y forma</h2>
+  <h2>Dos rasgos a la vez: color y forma</h2>
   <p>La hoja de color tenía una segunda tabla dinámica, con la forma anidada dentro del color. Vista como mapa, muestra algo que los totales escondían.</p>
-  <div class="corr" data-corr="c14"></div>
+  <div class="corr" data-corr="c14" data-open="1"></div>
 
-  <h2>Más rasgos: el giro</h2>
-  <p>Llevamos esa idea al extremo: agregar rasgos, uno por uno, como si sumáramos campos a las filas de la tabla dinámica, y contar qué parte de los hongos queda en un grupo donde <em>todos</em> son de la misma clase.</p>
+  <h2>Todos los rasgos: el giro</h2>
+  <p>Llevamos esa idea al extremo: agregar rasgos uno por uno, como si sumáramos campos a las filas de la tabla dinámica, y contar qué parte de los hongos queda en un grupo donde <em>todos</em> son de la misma clase.</p>
   <figure class="fig">
-    <figcaption><span class="fig-n">Figura 4</span>Parte de los hongos que quedan en grupos 100 % comestibles o 100 % venenosos, a medida que se suman rasgos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
+    <figcaption><span class="fig-n">Figura 2</span>Parte de los hongos que quedan en grupos 100 % comestibles o 100 % venenosos, a medida que se suman rasgos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
     <div class="chart-box"><canvas id="c-prog" aria-label="Parte de hongos en grupos puros según la cantidad de rasgos combinados"></canvas></div>
   </figure>
   <div class="read-tech">
@@ -286,76 +253,84 @@ f(x) = FitLine(Todos)</pre>
       <button type="button" class="btn-text" id="exp-reset">Borrar filtros</button>
     </div>
   </div>
+
+  <h2>La presentación</h2>
+  <p>La Etapa II pide comunicar los resultados en ocho diapositivas. Están armadas con los mismos datos de esta web, con un hallazgo y un gráfico por pantalla, y notas para quien expone.</p>
+  <a class="deck-link" href="presentacion.html"><span>▶</span><b>Abrir la presentación</b><small>8 diapositivas · flechas para avanzar · F pantalla completa · N notas</small></a>
 </article>
 
-<!-- ============================ 8 ============================ -->
-<article class="chapter" data-id="conclusion" data-title="Conclusión">
-  <p class="kicker">Capítulo 8 · Síntesis</p>
-  <h1>Conclusión</h1>
-  <p class="dek">¿Se puede saber si un hongo es comestible mirándolo?</p>
-
-  <div class="answer">
-    <p><b>Con una regla simple, no.</b> Los dos mitos más difundidos (anillo y magulladura) no informan nada. Los rasgos que sí informan (color del tallo, superficie, tamaño, colores llamativos) solo funcionan en los extremos, y en la zona donde está la mayoría de los hongos dejan entre 4 y 6 venenosos de cada 10.</p>
-    <p><b>Con muchos rasgos a la vez, en estos datos casi sí</b>, pero porque combinar muchos rasgos equivale a reconocer una de las 173 especies del conjunto. Eso no es una regla de aspecto: es identificar la especie, una tarea de especialistas, con un mundo real que tiene muchas más especies y parecidos peligrosos.</p>
+<!-- ============================ 5 · ETAPA III · GEOGEBRA ============================ -->
+<article class="chapter" data-id="geogebra" data-title="Etapa III · GeoGebra" data-short="El tallo crece 1,8 mm por cm igual en los dos grupos; el riesgo baja con el tamaño, pero nunca de 40 %.">
+  <p class="kicker">Parte 5 · Etapa III</p>
+  <h1>GeoGebra: dos relaciones como funciones</h1>
+  <p class="dek">Los datos no tienen fechas, así que no hay serie temporal. Modelizamos en cambio la relación entre medidas: ¿cómo crece el tallo con el sombrero? ¿cómo cambia el riesgo con el tamaño?</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Se pueden escribir como funciones las dos relaciones más claras de la Etapa I?</div>
+    <div><span>Con qué</span>GeoGebra: <code>FitLine</code> (recta) y <code>FitLog</code> (curva logarítmica)</div>
+    <div><span>Resultado</span>El tallo crece 1,8 mm por cm, igual en los dos grupos. El riesgo baja con el tamaño, pero nunca de 40 %.</div>
   </div>
 
-  <h2>Lo que aprendimos de los datos</h2>
-  <ul class="learned">
-    <li><b>Los promedios engañan.</b> “Blanco = 51 %” mezclaba grupos de 14 % y de 100 %; un puñado de gigantes movía la pendiente de 1,8 a 1,0.</li>
-    <li><b>Los extremos suelen ser grupos chicos.</b> Casi todos los 0 % y 100 % corresponden a pocas especies.</li>
-    <li><b>Los modelos tienen dominio.</b> La curva logarítmica predice probabilidades mayores que 1 para sombreros muy chicos.</li>
-    <li><b>Las proporciones no distinguen.</b> El tallo crece igual con el sombrero en venenosos y en comestibles.</li>
-  </ul>
+  <h2>Cómo se armaron los puntos</h2>
+  <p>Llevar 61.069 puntos a GeoGebra no es práctico, y además el gráfico se vuelve ilegible. En la hoja <code>Datos GeoGebra</code> resumimos los hongos en grupos de 1 cm de sombrero. Cada grupo aporta un punto: su centro en <i>x</i> (0,5; 1,5; 2,5…) y su promedio en <i>y</i>. Los grupos con menos de 100 hongos se descartan, para que ningún punto dependa de unos pocos casos. Cada conjunto de puntos queda escrito como una lista lista para pegar en GeoGebra:</p>
+  <pre class="code">Todos = {(0.5, 1.18), (1.5, 2.40), (2.5, 4.69), … , (21.5, 43.43)}
+f(x) = FitLine(Todos)</pre>
 
-  <h2>Cómo seguir</h2>
-  <ul class="learned">
-    <li>Repetir el análisis con datos reales de campo, donde las proporciones reflejen la frecuencia natural.</li>
-    <li>Reemplazar el modelo logarítmico por uno logístico, que siempre queda entre 0 y 1.</li>
-    <li>Trabajar con la especie como unidad, usando el dataset primario de 173 especies.</li>
-  </ul>
-
-  <aside class="notice strong" role="note">Ningún hongo silvestre es seguro por su aspecto. Ante la duda, no se come.</aside>
-</article>
-
-<!-- ============================ 9 ============================ -->
-<article class="chapter" data-id="accesibilidad" data-title="Más allá de la vista">
-  <p class="kicker">Capítulo 9 · Proyección</p>
-  <h1>Más allá de la vista</h1>
-  <p class="dek">Si casi todo lo que sabemos de un hongo entra por los ojos, ¿qué queda para quien no ve? Los datos permiten una respuesta concreta.</p>
-
-  <h2>Rasgos que se ven y rasgos que se tocan</h2>
-  <p>Separamos los rasgos del dataset según cómo se perciben. Los <b>táctiles</b> son la forma, el tamaño, la superficie del sombrero y del tallo, el anillo, la raíz y el espaciado de las láminas. Los <b>visuales</b> son los colores y el cambio de color al lastimarse.</p>
+  <h2>Modelo 1 · Una recta: el tallo crece con el sombrero</h2>
   <figure class="fig">
-    <figcaption><span class="fig-n">Figura 5</span>Parte de los hongos en grupos puros, según qué sentido se usa para observarlos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
-    <div class="chart-box short"><canvas id="c-sentidos" aria-label="Comparación entre rasgos táctiles y visuales"></canvas></div>
+    <figcaption><span class="fig-n">Figura 3</span>Grosor promedio del tallo (mm) según el diámetro del sombrero (cm)</figcaption>
+    <div class="chart-box tall"><canvas id="c-m1" aria-label="Modelo 1: rectas de ajuste del grosor del tallo"></canvas></div>
+    <div class="model-ctl">
+      <div class="formula" id="m1-formula"></div>
+      <label class="slider"><span>Sombrero de <output id="m1-x">8</output> cm</span><input type="range" id="m1-range" min="1" max="26" step="0.5" value="8"></label>
+      <p class="pred" id="m1-pred"></p>
+    </div>
   </figure>
   <div class="read-tech">
     <section class="read"><h3>Lectura</h3>
-      <p>Cuatro rasgos que se perciben con el tacto (forma, superficie, tamaño y anillo) separan a más hongos (38 %) que los tres colores juntos (28 %). Con siete rasgos táctiles se llega al 86 %. Además, la señal individual más fuerte de los rasgos comunes, la superficie sedosa o fibrosa, es táctil.</p>
-      <p>Esto <b>no</b> quiere decir que se pueda reconocer un hongo comestible al tacto: valen todas las conclusiones del capítulo 8. Pero muestra que la información morfológica de un hongo es accesible sin la vista, y eso abre posibilidades para la enseñanza.</p></section>
+      <p>La relación es muy clara: <b>por cada centímetro más de sombrero, el tallo es unos 1,8 mm más grueso</b>. Sobre los hongos individuales, la correlación es r = 0,76. Un hongo grande es grande “en todo”.</p>
+      <p>Lo importante para nuestra pregunta es que las rectas de venenosos (<i>v</i>) y comestibles (<i>c</i>) quedan casi superpuestas: 1,83 contra 1,79 mm por cm. <b>Las proporciones del hongo no permiten distinguirlos.</b></p>
+      <p>Una advertencia: si se incluyen los 396 sombreros gigantes, la pendiente de los comestibles baja a 1,03. Unos pocos casos extremos pueden cambiar mucho un modelo.</p></section>
     <aside class="tech"><h3>Cómo se calculó</h3><dl>
-      <dt>Método</dt><dd>El mismo del capítulo 7: combinaciones de rasgos y parte de hongos en grupos 100 % de una clase.</dd>
-      <dt>Táctiles</dt><dd><code>cap-shape</code>, <code>cap-surface</code>, diámetro (en 8 rangos), <code>has-ring</code>; luego <code>stem-surface</code>, <code>stem-root</code>, <code>gill-spacing</code>.</dd>
-      <dt>Visuales</dt><dd><code>cap-color</code>, <code>stem-color</code>, <code>gill-color</code>; luego <code>does-bruise-or-bleed</code>.</dd></dl></aside>
+      <dt>Comando</dt><dd><code>FitLine(lista)</code>: la recta de mínimos cuadrados. De todas las rectas posibles, elige la que hace más chica la suma de los cuadrados de las distancias verticales a los puntos:<span class="eq">min Σ ( y<sub>i</sub> − (m·x<sub>i</sub> + b) )²</span>Se usan los cuadrados para que las distancias por arriba y por abajo no se cancelen, y para castigar más los errores grandes.</dd>
+      <dt>Rectas</dt><dd><i>f</i> = todos, <i>v</i> = venenosos, <i>c</i> = comestibles. Esta página recalcula las tres con los mismos puntos que se cargaron en GeoGebra.</dd>
+      <dt>r y R²</dt><dd>Calculados en Excel sobre los 59.614 hongos individuales con tallo y sombrero &lt; 25 cm (hoja Correlación Sombrero-Tallo). R² = 0,58: la recta explica un 58 % de la variación del grosor.</dd>
+      <dt>Ojo</dt><dd>Los puntos son promedios: una recta muy ajustada sobre promedios no implica que cada hongo esté cerca de ella.</dd></dl></aside>
   </div>
 
-  <h2>Tres propuestas</h2>
-  <div class="proposals">
-    <div><span class="pn">1</span><h3>Modelos 3D táctiles</h3><p>Imprimir en 3D las seis formas a escala real, con las medidas del anexo B, para reconocer con las manos la forma, el tamaño y la proporción. La textura (lisa, escamosa, fibrosa) se puede agregar como relieve en la superficie.</p></div>
-    <div><span class="pn">2</span><h3>Gráficos que se escuchan</h3><p>“Sonificar” un gráfico: cada punto suena como un tono, más agudo cuanto mayor es el valor. Escuchá el modelo 2: la proporción de venenosos baja a medida que crece el sombrero.</p>
-      <button class="btn" id="sonify" type="button">▶ Escuchar el modelo 2</button><p class="note" id="sonify-note" aria-live="polite"></p></div>
-    <div><span class="pn">3</span><h3>Informes accesibles</h3><p>Todo gráfico necesita un texto que lo describa y una tabla que se pueda leer con un lector de pantalla. Esta página está armada así: cada gráfico tiene descripción y los resúmenes están en texto.</p></div>
+  <h2>Modelo 2 · Una curva: el riesgo baja con el tamaño</h2>
+  <figure class="fig">
+    <figcaption><span class="fig-n">Figura 4</span>Parte de venenosos según el diámetro del sombrero, con ajuste logarítmico</figcaption>
+    <div class="chart-box tall"><canvas id="c-m2" aria-label="Modelo 2: curva logarítmica de la proporción de venenosos"></canvas></div>
+    <div class="model-ctl">
+      <div class="formula" id="m2-formula"></div>
+      <label class="slider"><span>Sombrero de <output id="m2-x">3</output> cm</span><input type="range" id="m2-range" min="0.5" max="30" step="0.5" value="3"></label>
+      <p class="pred" id="m2-pred"></p>
+    </div>
+  </figure>
+  <div class="read-tech">
+    <section class="read"><h3>Lectura</h3>
+      <p>La curva baja rápido entre 0 y 8 cm y después casi se aplana. Según el modelo, un sombrero de 3 cm tiene <b>62 %</b> de probabilidad de ser venenoso y uno de 15 cm, <b>45 %</b>. Es la tendencia de la correlación 4 escrita como función.</p>
+      <p>Pero en el rango de los datos (hasta 21,5 cm) la curva nunca baja de 0,40: <b>a cualquier tamaño, al menos 4 de cada 10 son venenosos</b>. El tamaño mejora la estimación, pero no permite decidir.</p></section>
+    <aside class="tech"><h3>Cómo se calculó</h3><dl>
+      <dt>Comando</dt><dd><code>FitLog(Prob)</code>: ajusta <i>p(x) = a + b·ln(x)</i>. El truco es un cambio de variable: con <i>u</i> = ln <i>x</i>, el modelo queda <span class="eq">p = a + b·u</span>que es una recta. Así que GeoGebra aplica mínimos cuadrados a los puntos (ln <i>x</i>, <i>y</i>). Como ln <i>x</i> crece cada vez más despacio, la curva baja rápido al principio y después se aplana.</dd>
+      <dt>Predicción</dt><dd><code>p(3)</code> y <code>p(15)</code> evaluados en la barra de entrada.</dd>
+      <dt>Límite del modelo</dt><dd>Cuando <i>x</i> → 0, ln <i>x</i> → −∞ y la curva <b>supera 1</b>: pasa con sombreros de menos de 1 mm, y se ve en el gráfico de GeoGebra, donde la curva sube hasta 1,1 junto al eje. Una probabilidad no puede ser mayor que 1. El caso no tiene importancia práctica, pero muestra que el modelo no sirve en los bordes del dominio. Un modelo logístico, que siempre queda entre 0 y 1, sería el paso siguiente.</dd></dl></aside>
   </div>
 </article>
 
-<!-- ============================ A ============================ -->
-<article class="chapter" data-id="formas" data-title="Las seis formas">
-  <p class="kicker">Anexo A</p>
-  <h1>Las seis formas</h1>
-  <p class="dek">El hongo “promedio” de cada forma de sombrero, dibujado a partir de los datos, y una revisión de las imágenes que habíamos generado con IA.</p>
+<!-- ============================ 6 · COMPLEMENTARIA · 3D ============================ -->
+<article class="chapter" data-id="tres-d" data-title="Modelado 3D" data-short="Las seis formas son sólidos de revolución: las imágenes y los modelos salen de los datos.">
+  <p class="kicker">Parte 6 · Etapa complementaria</p>
+  <h1>Modelado 3D: de los datos a un objeto</h1>
+  <p class="dek">El hongo “promedio” de cada forma, construido con las medidas reales. De ahí salen las imágenes de esta web, la revisión de las imágenes de IA y los modelos para Tinkercad y OpenSCAD.</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Se pueden llevar las medidas de los datos a un objeto?</div>
+    <div><span>Con qué</span>Tinkercad, OpenSCAD (<code>rotate_extrude</code>) y un modelo 3D en la web</div>
+    <div><span>Resultado</span>Las seis formas con tallo son sólidos de revolución. Las imágenes generadas con IA no eran exactas; las de esta web salen de los datos.</div>
+  </div>
 
-  <h2>Imágenes a partir de los datos</h2>
-  <p>Cada hongo se construye en 3D con el diámetro, el alto y el grosor promedio de su forma (1 cm = 10 mm), el color más frecuente y una textura que imita la superficie más común. Después se “fotografía” con una luz de estudio. También está la lámina técnica con las medidas. Un dato que salió de esto: <b>en las seis formas, el color más frecuente es el marrón con tallo blanco</b>. El hongo “típico” de cada forma no es llamativo.</p>
+  <h2>Las seis formas</h2>
+  <p>Cada hongo se construye en 3D con el diámetro, el alto y el grosor promedio de su forma (1 cm = 10 mm), el color más frecuente y una textura que imita la superficie más común. Después se “fotografía” con una luz de estudio. Un dato que salió de esto: <b>en las seis formas, el color más frecuente es el marrón con tallo blanco</b>. El hongo “típico” de cada forma no es llamativo.</p>
   <div class="shape-bar"><div class="shape-tabs" id="shape-tabs" role="tablist"></div>
     <div class="seg" id="shape-view"><button data-v="img" class="on">Imagen</button><button data-v="plate">Lámina con medidas</button></div></div>
   <div class="shape-card">
@@ -371,29 +346,18 @@ f(x) = FitLine(Todos)</pre>
   <h2>Revisión de las imágenes generadas con IA</h2>
   <p>Para la presentación habíamos generado seis imágenes con IA a partir de las descripciones. Las comparamos con los datos en dos cosas: el color, y la <b>proporción entre el alto del tallo y el diámetro del sombrero</b>, medida aproximadamente sobre cada imagen.</p>
   <div class="review" id="review"></div>
-  <p>Conclusión: dos imágenes hay que <b>corregir</b> (la esférica, por el color y por un artefacto visible, y la de campana, por la proporción del tallo), y dos son aceptables pero muestran el segundo color más común en vez del primero. Por eso este informe usa imágenes generadas desde los datos: salen del mismo modelo 3D del anexo B, así que las medidas y los colores coinciden por construcción. Las imágenes se regeneran con <code>web/tools/render.html</code>.</p>
-</article>
+  <p>Conclusión: dos imágenes hay que <b>corregir</b> (la esférica, por el color y por un artefacto visible, y la de campana, por la proporción del tallo), y dos son aceptables pero muestran el segundo color más común en vez del primero. Las imágenes de esta web salen del mismo modelo 3D que se ve abajo, así que las medidas y los colores coinciden por construcción. Se regeneran con <code>web/tools/render.html</code>.</p>
 
-<!-- ============================ B ============================ -->
-<article class="chapter" data-id="tres-d" data-title="Del dibujo al 3D">
-  <p class="kicker">Anexo B · Extra</p>
-  <h1>Del dibujo al 3D</h1>
-  <p class="dek">¿Se pueden convertir las imágenes en modelos 3D? Las fotos generadas con IA, no directamente. Las láminas, sí: girándolas.</p>
-
-  <h2>Por qué las fotos no alcanzan</h2>
-  <p>Una foto es una sola vista: no tiene profundidad, no tiene escala y las sombras y los artefactos (como la banda de la esférica) se confunden con la forma. Para reconstruir un objeto desde fotos hacen falta decenas de vistas (fotogrametría) o herramientas de IA que “inventan” la parte que no se ve, sin respetar las medidas de los datos.</p>
-
-  <h2>Por qué las láminas sí</h2>
-  <p>Los hongos con tallo son casi simétricos alrededor de un eje vertical. Basta con dibujar <b>la mitad del perfil</b> y hacerla girar 360° alrededor del eje para obtener el sólido: es un <b>sólido de revolución</b>, lo mismo que hace <code>rotate_extrude()</code> en OpenSCAD. En la lámina de abajo, el perfil que gira está marcado en color.</p>
-
+  <h2>Del perfil al sólido</h2>
+  <p>Una foto es una sola vista: no tiene profundidad ni escala, y las sombras y los artefactos se confunden con la forma. En cambio, los hongos con tallo son casi simétricos alrededor de un eje vertical: basta con dibujar <b>la mitad del perfil</b> y hacerla girar 360° para obtener el sólido. Es un <b>sólido de revolución</b>, lo mismo que hace <code>rotate_extrude()</code> en OpenSCAD. En la lámina, el perfil que gira está marcado en color.</p>
   <div class="shape-tabs" id="tresd-tabs" role="tablist"></div>
   <div class="tresd">
     <figure class="fig flat">
-      <figcaption><span class="fig-n">Figura 6</span>El perfil (2D)</figcaption>
+      <figcaption><span class="fig-n">Figura 5</span>El perfil (2D)</figcaption>
       <div id="tresd-plate"></div>
     </figure>
     <figure class="fig flat">
-      <figcaption><span class="fig-n">Figura 7</span>El sólido de revolución (3D)</figcaption>
+      <figcaption><span class="fig-n">Figura 6</span>El sólido de revolución (3D)</figcaption>
       <div class="viewer" id="viewer"><p class="viewer-hint">Arrastrá para girar · rueda para acercar</p></div>
       <div class="viewer-ctl">
         <label class="slider"><span>Divisiones del giro: <output id="steps-o">96</output></span><input type="range" id="steps" min="3" max="96" step="1" value="96"></label>
@@ -415,48 +379,68 @@ f(x) = FitLine(Todos)</pre>
   <p>El repositorio incluye código OpenSCAD paramétrico completo para la convexa y la plana (<code>imagenes_hongos/codigo_scad_1.txt</code> y <code>codigo_scad_2.txt</code>), con las medidas del Excel como parámetros.</p>
 </article>
 
-<!-- ============================ C ============================ -->
-<article class="chapter" data-id="metodo" data-title="Fórmulas y fuentes">
-  <p class="kicker">Anexo C</p>
-  <h1>Fórmulas y fuentes</h1>
-  <p class="dek">Las fórmulas de Excel que sostienen todo el análisis, en el orden en que se usaron.</p>
-
-  <div class="table-wrap">
-  <table class="formulas">
-    <thead><tr><th>Para qué</th><th>Fórmula</th></tr></thead>
-    <tbody>
-      <tr><td>Cantidad de hongos</td><td><code>=CONTAR(H2:H61070)</code> → 61.069</td></tr>
-      <tr><td>Venenosos</td><td><code>=CONTAR.SI(F2:F61070;"p")</code> → 33.888</td></tr>
-      <tr><td>Parte de venenosos</td><td><code>=CONTAR.SI(F2:F61070;"p")/B6</code> → 0,555</td></tr>
-      <tr><td>Diámetro: suma, máximo, mínimo, promedio</td><td><code>=SUMA(H2:H61070)</code>, <code>=MAX(…)</code>, <code>=MIN(…)</code>, <code>=PROMEDIO(…)</code></td></tr>
-      <tr><td>Control de consistencia</td><td><code>=SI(ABS((B2/B6)-B5)&lt;=0,01;"OK";"FAIL")</code> (suma / cantidad = promedio)</td></tr>
-      <tr><td>Clase legible</td><td><code>=SI(F2="p";"Venenoso";"Comestible")</code></td></tr>
-      <tr><td>Grande o chico</td><td><code>=SI(H2&gt;=10;"Grande";"Chico")</code></td></tr>
-      <tr><td>Forma</td><td><code>=SI(J2="b";"Campana";SI(J2="c";"Cónica";SI(J2="x";"Convexa"; … "Otras")))</code></td></tr>
-      <tr><td>Hábitat, estación, color del tallo, superficie</td><td><code>=SI.CONJUNTO(AB2="g";"Pastos"; … ;VERDADERO;"Sin dato")</code></td></tr>
-      <tr><td>¿Tiene tallo?</td><td><code>=SI(S2&gt;0;"Sí";"No")</code></td></tr>
-      <tr><td>Tóxico como número</td><td><code>=SI(F2="p";1;0)</code>: su promedio es la proporción de venenosos</td></tr>
-    </tbody>
-  </table>
+<!-- ============================ 7 · CONCLUSIONES ============================ -->
+<article class="chapter" data-id="conclusiones" data-title="Conclusiones" data-short="Con una regla simple, no. Con muchos rasgos, eso ya es identificar la especie.">
+  <p class="kicker">Parte 7 · Cierre</p>
+  <h1>Conclusiones</h1>
+  <p class="dek">¿Se puede saber si un hongo es comestible mirándolo?</p>
+  <div class="stage-card">
+    <div><span>Qué pregunta</span>¿Entonces, se puede?</div>
+    <div><span>Con qué</span>Lo que dejaron las etapas I, II y III</div>
+    <div><span>Resultado</span>Con una regla simple, no. Con muchos rasgos, eso ya es identificar la especie.</div>
   </div>
 
-  <h2>Versiones del trabajo</h2>
+  <div class="answer">
+    <p><b>Con una regla simple, no.</b> Los dos mitos más difundidos (anillo y magulladura) no informan nada. Los rasgos que sí informan (color del tallo, superficie, tamaño, colores llamativos) solo funcionan en los extremos, y en la zona donde está la mayoría de los hongos dejan entre 4 y 6 venenosos de cada 10.</p>
+    <p><b>Con muchos rasgos a la vez, en estos datos casi sí</b>, pero porque combinar muchos rasgos equivale a reconocer una de las 173 especies del conjunto. Eso no es una regla de aspecto: es identificar la especie, una tarea de especialistas, con un mundo real que tiene muchas más especies y parecidos peligrosos.</p>
+  </div>
+
+  <h2>Lo que aprendimos de los datos</h2>
   <ul class="learned">
-    <li><b>v3</b> (solo lectura): datos traducidos, diccionario y las dos primeras preguntas (tamaño y forma, color y forma), con 3 gráficos.</li>
-    <li><b>v4</b>: se suman hábitat y estación, color del tallo, superficie, mitos, tamaño por rangos, la correlación sombrero-tallo y la hoja de datos para GeoGebra. Son 13 gráficos y una segmentación por estación.</li>
-    <li><b>v5</b>: tiene la misma estructura de hojas que v4, con ajustes. Es la versión que usa este informe.</li>
+    <li><b>Los promedios engañan.</b> “Blanco = 51 %” mezclaba grupos de 14 % y de 100 %; un puñado de gigantes movía la pendiente de 1,8 a 1,0.</li>
+    <li><b>Los extremos suelen ser grupos chicos.</b> Casi todos los 0 % y 100 % corresponden a pocas especies.</li>
+    <li><b>Los modelos tienen dominio.</b> La curva logarítmica predice probabilidades mayores que 1 para sombreros muy chicos.</li>
+    <li><b>Las proporciones no distinguen.</b> El tallo crece igual con el sombrero en venenosos y en comestibles.</li>
   </ul>
 
-  <h2>Descarga</h2>
-  <p><a class="dl" href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download>Descargar v5_Hongos_DataSet_Rodrigo_Vidal.xlsx</a> (16 MB). Es la última versión de la planilla, con las 61.069 filas, las 9 hojas de análisis, la hoja de datos para GeoGebra y el diccionario de códigos.</p>
+  <h2>Cómo seguir</h2>
+  <ul class="learned">
+    <li>Repetir el análisis con datos reales de campo, donde las proporciones reflejen la frecuencia natural.</li>
+    <li>Reemplazar el modelo logarítmico por uno logístico, que siempre queda entre 0 y 1.</li>
+    <li>Trabajar con la especie como unidad, usando el dataset primario de 173 especies.</li>
+  </ul>
+
+  <h2>Más allá de la vista: personas ciegas</h2>
+  <p>Si casi todo lo que sabemos de un hongo entra por los ojos, ¿qué queda para quien no ve? Separamos los rasgos según cómo se perciben. Los <b>táctiles</b> son la forma, el tamaño, la superficie del sombrero y del tallo, el anillo, la raíz y el espaciado de las láminas. Los <b>visuales</b> son los colores y el cambio de color al lastimarse.</p>
+  <figure class="fig">
+    <figcaption><span class="fig-n">Figura 7</span>Parte de los hongos en grupos puros, según qué sentido se usa para observarlos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
+    <div class="chart-box short"><canvas id="c-sentidos" aria-label="Comparación entre rasgos táctiles y visuales"></canvas></div>
+  </figure>
+  <div class="read-tech">
+    <section class="read"><h3>Lectura</h3>
+      <p>Cuatro rasgos que se perciben con el tacto (forma, superficie, tamaño y anillo) separan a más hongos (38 %) que los tres colores juntos (28 %). Con siete rasgos táctiles se llega al 86 %. Además, la señal individual más fuerte de los rasgos comunes, la superficie sedosa o fibrosa, es táctil.</p>
+      <p>Esto <b>no</b> quiere decir que se pueda reconocer un hongo comestible al tacto: valen todas las conclusiones de arriba. Pero muestra que la información morfológica de un hongo es accesible sin la vista, y eso abre posibilidades para la enseñanza.</p></section>
+    <aside class="tech"><h3>Cómo se calculó</h3><dl>
+      <dt>Método</dt><dd>El mismo de la figura 2: combinaciones de rasgos y parte de hongos en grupos 100 % de una clase.</dd>
+      <dt>Táctiles</dt><dd><code>cap-shape</code>, <code>cap-surface</code>, diámetro (en 8 rangos), <code>has-ring</code>; luego <code>stem-surface</code>, <code>stem-root</code>, <code>gill-spacing</code>.</dd>
+      <dt>Visuales</dt><dd><code>cap-color</code>, <code>stem-color</code>, <code>gill-color</code>; luego <code>does-bruise-or-bleed</code>.</dd></dl></aside>
+  </div>
+  <div class="proposals">
+    <div><span class="pn">1</span><h3>Modelos 3D táctiles</h3><p>Imprimir en 3D las seis formas a escala real, con las medidas de la etapa 3D, para reconocer con las manos la forma, el tamaño y la proporción. La textura (lisa, escamosa, fibrosa) se puede agregar como relieve.</p></div>
+    <div><span class="pn">2</span><h3>Gráficos que se escuchan</h3><p>“Sonificar” un gráfico: cada punto suena como un tono, más agudo cuanto mayor es el valor. Escuchá el modelo 2: la proporción de venenosos baja a medida que crece el sombrero.</p>
+      <button class="btn" id="sonify" type="button">▶ Escuchar el modelo 2</button><p class="note" id="sonify-note" aria-live="polite"></p></div>
+    <div><span class="pn">3</span><h3>Informes accesibles</h3><p>Todo gráfico necesita un texto que lo describa y una tabla que se pueda leer con un lector de pantalla. Esta web está armada así: cada gráfico tiene descripción y su tabla de datos.</p></div>
+  </div>
+
+  <aside class="notice strong" role="note">Ningún hongo silvestre es seguro por su aspecto. Ante la duda, no se come.</aside>
 
   <h2>Fuentes</h2>
   <p class="ref">Wagner, D., Heider, D. y Hattab, G. (2021). Mushroom data creation, curation, and simulation to support classification tasks. <i>Scientific Reports</i>, 11, 8134.</p>
   <p class="ref">Secondary Mushroom Dataset. UCI Machine Learning Repository. <a href="https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset" target="_blank" rel="noopener">archive.ics.uci.edu/dataset/848</a></p>
-  <p class="ref">Herramientas: Microsoft Excel, GeoGebra Calculadora Gráfica, Tinkercad, OpenSCAD. Página hecha con Chart.js y three.js.</p>
+  <p class="ref">Herramientas: Microsoft Excel, GeoGebra Calculadora Gráfica, Tinkercad, OpenSCAD. Web hecha con Chart.js y three.js.</p>
 </article>
 
-<nav class="pager" id="pager" aria-label="Navegación entre capítulos"></nav>
+<nav class="pager" id="pager" aria-label="Navegación entre etapas"></nav>
 </main>
 
 <script src="data.js"></script>

@@ -2,18 +2,21 @@
 
 Informe web interactivo del Taller de Informática II. Pregunta si se puede saber si un hongo es comestible por su aspecto. Está basado en `v5_Hongos_DataSet_Rodrigo_Vidal.xlsx`.
 
-## Hilo conductor
+## Estructura: las etapas de la investigación
 
-| Parte | Capítulos |
-| --- | --- |
-| Planteo | Portada · 1. La investigación y sus límites |
-| Rasgo por rasgo | 2. Mitos (anillo, magulladura) · 3. Tamaño · 4. Color y textura · 5. Hábitat y estación |
-| Modelos y síntesis | 6. GeoGebra (`FitLine`, `FitLog`) · 7. Combinar rasgos (el giro: 173 especies) · 8. Conclusión · 9. Accesibilidad para personas ciegas |
-| Anexos | A. Las seis formas y la revisión de las imágenes generadas con IA · B. Del dibujo al 3D (sólidos de revolución, volumen por Pappus) · C. Fórmulas y fuentes |
+La web tiene 7 partes, en el orden en que se hizo el trabajo. Una línea de etapas, fija arriba, muestra en qué parte se está, y cada parte abre con una ficha (qué pregunta, con qué herramienta, qué resultado).
 
-Las **14 correlaciones del Excel** aparecen todas con la misma estructura: qué muestra (para cualquier lector), qué aporta al hilo, cómo se construye en Excel, qué significa matemáticamente y qué precauciones tomar. Cada una incluye su gráfico, una tabla con los datos y un veredicto. El capítulo 1 tiene un mapa con las 14.
+| # | Parte | Contenido |
+| --- | --- | --- |
+| 1 | La pregunta | Portada, cuestionario "¿vos lo comerías?", objetivos, respuesta corta |
+| 2 | Los datos | Fuente, preparación en Excel (fórmulas), versiones, límites, descarga |
+| 3 | Etapa I · Excel | Las correlaciones 1 a 13 como tarjetas plegables: creencias, tamaño, color y textura, dónde y cuándo |
+| 4 | Etapa II · Resultados | Balance de las 14 correlaciones, color × forma (14), el giro (99,8 %), explorador, presentación |
+| 5 | Etapa III · GeoGebra | Modelo 1 (`FitLine`) y modelo 2 (`FitLog`) |
+| 6 | Complementaria · 3D | Las seis formas, revisión de las imágenes de IA, sólido de revolución, volumen, Tinkercad/OpenSCAD |
+| 7 | Conclusiones | Respuesta, aprendizajes, cómo seguir, accesibilidad para personas ciegas, fuentes |
 
-El Excel v5 se puede descargar desde el índice lateral, desde el capítulo 1 y desde el anexo C.
+Cada correlación tiene la misma estructura: qué muestra, qué aporta al hilo, cómo se construye en Excel, qué significa matemáticamente y qué precauciones tomar, con su gráfico y una tabla de datos. Los links de la versión anterior (`#/mitos`, `#/tamano/c4`…) redirigen a la parte nueva.
 
 ## Funciones de lectura
 

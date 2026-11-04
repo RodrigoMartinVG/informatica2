@@ -23,9 +23,9 @@ const M_PROP = `
   <p>Si una categoría tiene muchos hongos, arrastra el promedio hacia ella y no puede alejarse mucho de él. Por eso los valores extremos aparecen casi siempre en grupos chicos.</p>`;
 
 export const CORR = [
-  /* ---------------- Capítulo 2: mitos ---------------- */
+  /* ---------------- mitos ---------------- */
   {
-    id: 'c1', chapter: 'mitos', title: 'El anillo', sheet: 'Mitos - Anillo y Magulladura', kind: 'stack', dim: 'ring',
+    id: 'c1', cifra: '61 % con anillo · 54 % sin', chapter: 'excel', group: 'mitos', title: 'El anillo', sheet: 'Mitos - Anillo y Magulladura', kind: 'stack', dim: 'ring',
     question: '¿Sirve el anillo del tallo para reconocer un hongo venenoso?', verdict: 'mito',
     plain: `<p>El anillo es la “pollerita” que algunos hongos tienen en el tallo, resto de una membrana que cubría las láminas cuando eran jóvenes. Hay quienes dicen que los hongos con anillo son venenosos.</p>
       <p>En los datos, los hongos <b>con anillo</b> son venenosos en un <b>61 %</b> y los <b>sin anillo</b>, en un <b>54 %</b>. Saber que tiene anillo cambia la estimación apenas 5 puntos.</p>`,
@@ -40,7 +40,7 @@ export const CORR = [
     caveat: `<p>Una diferencia de 7 puntos entre los dos grupos no es cero, pero es chica comparada con lo que haría falta para decidir. Además, “tener anillo” agrupa muchos tipos distintos (columna <code>ring-type</code>), que esta hoja no separa.</p>`
   },
   {
-    id: 'c2', chapter: 'mitos', title: 'La magulladura', sheet: 'Mitos - Anillo y Magulladura', kind: 'stack', dim: 'bruise',
+    id: 'c2', cifra: '53 % se magullan · 56 % no', chapter: 'excel', group: 'mitos', title: 'La magulladura', sheet: 'Mitos - Anillo y Magulladura', kind: 'stack', dim: 'bruise',
     question: '¿Es venenoso el hongo que cambia de color o “sangra” al cortarlo?', verdict: 'mito',
     plain: `<p>Algunos hongos se ponen azules, negros o rojizos al tocarlos o cortarlos, y otros sueltan un líquido. La creencia popular dice que eso indica veneno.</p>
       <p>Los que se magullan tienen <b>53 %</b> de venenosos y los que no, <b>56 %</b>: prácticamente lo mismo, y los dos pegados al promedio.</p>`,
@@ -54,9 +54,9 @@ export const CORR = [
     caveat: `<p>Que en estos datos no informe no quiere decir que el cambio de color no sirva para nada: en micología ayuda a identificar ciertas especies. Lo que muestra el dato es que, <em>por sí solo</em>, no dice si un hongo es venenoso.</p>`
   },
 
-  /* ---------------- Capítulo 3: tamaño ---------------- */
+  /* ---------------- tamaño ---------------- */
   {
-    id: 'c3', chapter: 'tamano', title: 'Tamaño y forma', sheet: 'Toxicidad - Tamaño y Forma', kind: 'tamanoForma',
+    id: 'c3', cifra: '7,8 cm comestibles · 5,9 cm venenosos', chapter: 'excel', group: 'tamano', title: 'Tamaño y forma', sheet: 'Toxicidad - Tamaño y Forma', kind: 'tamanoForma',
     question: '¿Los venenosos son más grandes o más chicos que los comestibles? ¿Depende de la forma del sombrero?', verdict: 'interaccion',
     plain: `<p>En general los comestibles son más grandes: su sombrero mide en promedio <b>7,8 cm</b>, contra <b>5,9 cm</b> en los venenosos. Pero depende de la forma: en los esféricos la diferencia es enorme (11,2 contra 5,8 cm), y en los de campana y los cónicos se invierte.</p>
       <p>La barra de “Otras” comestibles (25,2 cm) parece un error, pero no lo es: la inflan unos pocos hongos gigantes de alrededor de 50 cm.</p>`,
@@ -76,10 +76,10 @@ export const CORR = [
     caveat: `<p>Comparar promedios dice cómo es un grupo, no un hongo. En todas las formas hay venenosos grandes y comestibles chicos: la figura de rangos (correlación 4) lo muestra.</p>`
   },
   {
-    id: 'c4', chapter: 'tamano', title: 'Diámetro del sombrero por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'diametro',
+    id: 'c4', cifra: '80 % hasta 1 cm → 40 % desde 9 cm', chapter: 'excel', group: 'tamano', title: 'Diámetro del sombrero por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'diametro',
     question: '¿Cambia la proporción de venenosos a medida que el sombrero es más grande?', verdict: 'tendencia',
     plain: `<p>Agrupando los hongos de a 1 cm de sombrero aparece una tendencia clara: <b>cuanto más chico, más riesgo</b>. Hasta 4 cm, entre 65 % y 80 % son venenosos. Desde unos 9 cm la proporción baja a 40–50 % y se mantiene.</p>`,
-    thread: `<p>Es la mejor pista que da una sola medida numérica, y es la base del Modelo 2 de GeoGebra (capítulo 6). Pero ni en el mejor rango baja de 35 %: el tamaño mejora la estimación, pero no alcanza para decidir.</p>`,
+    thread: `<p>Es la mejor pista que da una sola medida numérica, y es la base del Modelo 2 de GeoGebra (Etapa III). Pero ni en el mejor rango baja de 35 %: el tamaño mejora la estimación, pero no alcanza para decidir.</p>`,
     build: [
       'Columna derivada <code>toxico (1/0)</code>: <code>=SI(F2="p";1;0)</code>.',
       'Tabla dinámica: Filas = <code>cap-diameter</code>, <em>agrupado</em> (inicio 0, fin 25, intervalo 1); Valores = <em>promedio</em> de <code>toxico (1/0)</code>.',
@@ -94,7 +94,7 @@ export const CORR = [
     caveat: `<p>Los saltos no son solo ruido. Como los datos salen de 173 especies, cada especie llena su propio rango de tamaños: un pico puede ser una sola especie.</p>`
   },
   {
-    id: 'c5', chapter: 'tamano', title: 'Alto del tallo por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'alto',
+    id: 'c5', cifra: 'Entre 43 % y 74 %, sin orden', chapter: 'excel', group: 'tamano', title: 'Alto del tallo por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'alto',
     question: '¿Los hongos de tallo más alto son más o menos venenosos?', verdict: 'ruido',
     plain: `<p>El alto del tallo <b>no sigue una regla</b>: la proporción sube y baja entre 43 % y 74 % sin un orden. La única zona clara es la de los tallos de más de 19 cm, que son casi todos comestibles.</p>`,
     thread: `<p>Funciona como contraste: no toda medida “grande o chica” informa. Lo que parece una regla en el extremo (tallos altos, comestibles) es, muy probablemente, una sola especie.</p>`,
@@ -108,7 +108,7 @@ export const CORR = [
     caveat: `<p>Sin la cantidad de hongos por rango no se puede saber cuánto pesa cada punto. Conviene leer el gráfico como una forma general, no punto por punto.</p>`
   },
   {
-    id: 'c6', chapter: 'tamano', title: 'Grosor del tallo por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'grosor',
+    id: 'c6', cifra: 'Baja a 20 % y sube a 80 %', chapter: 'excel', group: 'tamano', title: 'Grosor del tallo por rangos', sheet: 'Toxicidad - Tamaño por Rangos', kind: 'rango', key: 'grosor',
     question: '¿Un tallo más grueso indica algo sobre la toxicidad?', verdict: 'ruido',
     plain: `<p>La proporción de venenosos <b>baja hasta 20 %</b> cerca de los 21 mm de grosor y después <b>vuelve a subir hasta 80 %</b> cerca de los 31 mm. Tiene forma de “U”: ni grueso es seguro ni fino es peligroso.</p>`,
     thread: `<p>Muestra que una relación puede existir sin ser una regla útil. Con el grosor se podría decir “entre 18 y 24 mm hay menos riesgo”, pero no hay una dirección simple.</p>`,
@@ -120,7 +120,7 @@ export const CORR = [
     caveat: `<p>El grosor también depende del diámetro del sombrero (correlación 7). Parte de lo que se ve acá es el efecto del tamaño general del hongo, no del tallo en sí.</p>`
   },
   {
-    id: 'c7', chapter: 'tamano', title: 'Sombrero y tallo', sheet: 'Correlación Sombrero-Tallo', kind: 'corrST',
+    id: 'c7', cifra: 'r = 0,76 · 1,8 mm por cm', chapter: 'excel', group: 'tamano', title: 'Sombrero y tallo', sheet: 'Correlación Sombrero-Tallo', kind: 'corrST',
     question: '¿Los hongos con sombrero más grande tienen el tallo más grueso? ¿Pasa lo mismo en venenosos y comestibles?', verdict: 'relacion',
     plain: `<p>Sí, y mucho: <b>por cada centímetro más de sombrero, el tallo es 1,8 mm más grueso</b>. Un hongo grande es grande “en todo”.</p>
       <p>Pero la proporción es casi idéntica en los dos grupos: 1,83 mm por cm en los venenosos y 1,79 en los comestibles. Las dos líneas del gráfico van casi juntas.</p>`,
@@ -140,9 +140,9 @@ export const CORR = [
     caveat: `<p>Correlación no es causa, y tampoco es clasificación: que <i>r</i> sea alto no ayuda a distinguir, porque los dos grupos siguen la misma recta.</p>`
   },
 
-  /* ---------------- Capítulo 4: color y textura ---------------- */
+  /* ---------------- color y textura ---------------- */
   {
-    id: 'c8', chapter: 'color', title: 'Color del sombrero', sheet: 'Toxicidad - Color y Forma (tabla derecha)', kind: 'stack', dim: 'capColor',
+    id: 'c8', cifra: 'Verde 89 % · Crema 21 %', chapter: 'excel', group: 'color', title: 'Color del sombrero', sheet: 'Toxicidad - Color y Forma (tabla derecha)', kind: 'stack', dim: 'capColor',
     question: '¿Los hongos venenosos predominan en algún color?', verdict: 'extremos',
     plain: `<p>Los colores llamativos concentran venenosos: <b>verde (89 %)</b>, rojo (78 %), rosa (74 %) y naranja (71 %). Pero los colores más comunes (marrón, blanco y gris) quedan casi en la mitad, y son la gran mayoría.</p>
       <p>El único color con clara mayoría de comestibles es el crema, y aun así <b>1 de cada 5 es venenoso</b>.</p>`,
@@ -156,7 +156,7 @@ export const CORR = [
     caveat: `<p>El porcentaje de cada color es un promedio de formas muy distintas. Por ejemplo, “blanco = 51 %” mezcla blancos esféricos (14 %) con blancos cónicos (100 %). La correlación 14 lo muestra.</p>`
   },
   {
-    id: 'c9', chapter: 'color', title: 'Color del tallo', sheet: 'Toxicidad - Color del Tallo', kind: 'stack', dim: 'stemColor',
+    id: 'c9', cifra: 'Sin tallo 100 % · Blanco 43 %', chapter: 'excel', group: 'color', title: 'Color del tallo', sheet: 'Toxicidad - Color del Tallo', kind: 'stack', dim: 'stemColor',
     question: '¿El color del tallo ayuda a distinguir un hongo venenoso de uno comestible?', verdict: 'extremos',
     plain: `<p>Es la característica que más diferencia muestra entre los grupos. Los hongos <b>sin tallo son todos venenosos</b>, y los tallos rosa (87 %), verde (79 %), negro (77 %) y rojo (74 %) también concentran venenosos.</p>
       <p>Pero el tallo blanco, el más común (casi 23.000 hongos), tiene <b>43 %</b>: 4 de cada 10 son venenosos.</p>`,
@@ -170,10 +170,10 @@ export const CORR = [
     caveat: `<p>Los extremos son grupos chicos: 1.059 hongos sin tallo y solo 173 de tallo crema (100 % comestibles). Un 0 % o un 100 % en un grupo chico suele ser una o dos especies, no una regla.</p>`
   },
   {
-    id: 'c10', chapter: 'color', title: 'Superficie del sombrero', sheet: 'Toxicidad - Superficie', kind: 'stack', dim: 'surface',
+    id: 'c10', cifra: 'Sedosa 92 % · Lisa 43 %', chapter: 'excel', group: 'color', title: 'Superficie del sombrero', sheet: 'Toxicidad - Superficie', kind: 'stack', dim: 'surface',
     question: '¿La textura del sombrero (lisa, sedosa, escamosa…) se asocia con la toxicidad?', verdict: 'extremos',
     plain: `<p>Las superficies <b>sedosa (92 %)</b> y <b>fibrosa (83 %)</b> son casi siempre venenosas: es la señal de alarma más fuerte entre los rasgos comunes. La lisa tiene 43 %, así que ser liso no garantiza nada.</p>`,
-    thread: `<p>Agrega una señal fuerte y además táctil, algo que retoma el capítulo 9. Pero el 23 % de la muestra no tiene la superficie cargada, y en ese grupo no hay información.</p>`,
+    thread: `<p>Agrega una señal fuerte y además táctil, algo que retoman las conclusiones, en la parte sobre personas ciegas. Pero el 23 % de la muestra no tiene la superficie cargada, y en ese grupo no hay información.</p>`,
     build: [
       'Columna derivada con <code>SI.CONJUNTO</code> sobre <code>cap-surface</code>: <code>i</code> → Fibrosa, <code>k</code> → Sedosa, <code>s</code> → Lisa…',
       'Las celdas vacías pasan a “Sin dato” por la rama <code>VERDADERO</code>. El código <code>d</code>, que la fuente no documenta, se deja aparte.',
@@ -183,9 +183,9 @@ export const CORR = [
     caveat: `<p>“d” es un código que aparece en 4.432 hongos sin explicación en la fuente. Se muestra, pero no se interpreta.</p>`
   },
 
-  /* ---------------- Capítulo 5: contexto ---------------- */
+  /* ---------------- contexto ---------------- */
   {
-    id: 'c11', chapter: 'contexto', title: 'Hábitat', sheet: 'Toxicidad - Hábitat y Estación', kind: 'stack', dim: 'habitat',
+    id: 'c11', cifra: 'Bosque 54 % (72 % de la muestra)', chapter: 'excel', group: 'contexto', title: 'Hábitat', sheet: 'Toxicidad - Hábitat y Estación', kind: 'stack', dim: 'habitat',
     question: '¿Hay lugares donde predominan los hongos venenosos?', verdict: 'extremos',
     plain: `<p>Los hongos que crecen en <b>caminos</b> son todos venenosos y los de zonas <b>urbanas</b> y <b>desechos</b>, todos comestibles, pero son grupos chicos. Lo importante está en el <b>bosque</b>: ahí crece el 72 % de la muestra, con 54 % de venenosos, casi el promedio exacto.</p>`,
     thread: `<p>El hábitat no es parte del aspecto, pero quien encuentra un hongo lo conoce. Aun así, justo donde más se buscan hongos, el lugar no ayuda.</p>`,
@@ -197,7 +197,7 @@ export const CORR = [
     caveat: `<p>Que los urbanos sean 100 % comestibles con 115 hongos no permite generalizar: probablemente sea una sola especie.</p>`
   },
   {
-    id: 'c12', chapter: 'contexto', title: 'Estación', sheet: 'Toxicidad - Hábitat y Estación', kind: 'stack', dim: 'season',
+    id: 'c12', cifra: 'Verano 58 % · Invierno 39 %', chapter: 'excel', group: 'contexto', title: 'Estación', sheet: 'Toxicidad - Hábitat y Estación', kind: 'stack', dim: 'season',
     question: '¿Hay épocas del año donde predominan los hongos venenosos?', verdict: 'debil',
     plain: `<p>En <b>verano y otoño</b> hay más venenosos (58 %) que en <b>primavera</b> (43 %) e <b>invierno</b> (39 %). La diferencia es de unos 15 puntos.</p>`,
     thread: `<p>Es una pista débil pero coherente: cambia el riesgo general de una salida al campo, aunque no permite decidir sobre un hongo en particular.</p>`,
@@ -209,10 +209,10 @@ export const CORR = [
     caveat: `<p>Los datos no tienen fechas: “estación” es un rasgo asignado a cada especie, no una fecha de recolección.</p>`
   },
   {
-    id: 'c13', chapter: 'contexto', title: 'Hábitat según la estación', sheet: 'Toxicidad - Hábitat y Estación (segmentación)', kind: 'heat', rows: 'habitat', cols: 'season',
+    id: 'c13', cifra: 'Pastos: 30 % en invierno → 75 % en verano', chapter: 'excel', group: 'contexto', title: 'Hábitat según la estación', sheet: 'Toxicidad - Hábitat y Estación (segmentación)', kind: 'heat', rows: 'habitat', cols: 'season',
     question: '¿El efecto del hábitat cambia según la época del año?', verdict: 'interaccion',
     plain: `<p>Sí, en algunos lugares bastante. En <b>pastos</b>, los venenosos pasan de 30 % en invierno a 75 % en verano. En <b>hojas</b>, de 21 % en invierno a 53 % en verano. En el <b>bosque</b>, en cambio, se mueven poco: entre 42 % y 57 %.</p>`,
-    thread: `<p>Es el primer cruce de dos rasgos en el Excel: el efecto de uno <b>depende</b> del otro. Anticipa la idea del capítulo 7: combinando rasgos los grupos se separan más.</p>`,
+    thread: `<p>Es el primer cruce de dos rasgos en el Excel: el efecto de uno <b>depende</b> del otro. Anticipa la idea de la Etapa II: combinando rasgos los grupos se separan más.</p>`,
     build: [
       'Sobre la tabla dinámica de hábitat se agregó una <em>segmentación de datos</em> (“Filtrar hábitat por estación”) conectada al campo <code>season Nombre</code>.',
       'Al hacer clic en una estación, la tabla y su gráfico se recalculan solo con los hongos de esa estación. Para volver, se borra el filtro.',
@@ -224,12 +224,12 @@ export const CORR = [
     caveat: `<p>Varias celdas están vacías (no hay hongos de caminos en invierno, por ejemplo) y otras tienen menos de 50 hongos. Pasá el cursor por cada celda para ver la cantidad.</p>`
   },
 
-  /* ---------------- Capítulo 7: combinar ---------------- */
+  /* ---------------- combinar ---------------- */
   {
-    id: 'c14', chapter: 'combinar', title: 'Color y forma', sheet: 'Toxicidad - Color y Forma (tabla izquierda)', kind: 'heat', rows: 'capColor', cols: 'shape',
+    id: 'c14', cifra: 'Blancos esféricos 14 % · cónicos 100 %', chapter: 'resultados', group: 'combinar', title: 'Color y forma', sheet: 'Toxicidad - Color y Forma (tabla izquierda)', kind: 'heat', rows: 'capColor', cols: 'shape',
     question: '¿El riesgo de un color depende de la forma del sombrero?', verdict: 'interaccion',
     plain: `<p>Dentro de un mismo color, la forma cambia todo. Los <b>blancos esféricos</b> tienen 14 % de venenosos y los <b>blancos cónicos</b>, 100 %. Los marrones cónicos tienen 10 % y los marrones de campana, 78 %.</p>`,
-    thread: `<p>Es la bisagra del relato. Combinando dos rasgos, muchas celdas se acercan a 0 % o a 100 %. Si con dos rasgos pasa eso, ¿qué pasa con todos? La respuesta está en la figura que sigue.</p>`,
+    thread: `<p>Es la bisagra del relato. Combinando dos rasgos, muchas celdas se acercan a 0 % o a 100 %. Si con dos rasgos pasa eso, ¿qué pasa con todos? La respuesta está en la figura 2, más abajo.</p>`,
     build: [
       'Tabla dinámica con <b>dos campos en filas</b>: <code>cap-color Nombre</code> y, anidado, <code>cap-shape Nombre</code>. Columnas = clase; % del total de la fila.',
       'Excel muestra un subtotal por color (“Total Amarillo”, “Total Azul”…), que coincide con la correlación 8.',

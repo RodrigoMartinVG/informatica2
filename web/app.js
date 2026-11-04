@@ -100,39 +100,41 @@ function cross(rd, cd) {
 
 /* ================= Correlaciones: render genérico ================= */
 const corrNum = (c) => CORR.indexOf(c) + 1;
-const chapterTitle = (id) => document.querySelector(`.chapter[data-id="${id}"]`)?.dataset.title || id;
+const GRUPO = { mitos: 'Creencias populares', tamano: 'Tamaño y proporciones', color: 'Color y textura', contexto: 'Dónde y cuándo', combinar: 'Combinación de rasgos' };
 
 function renderCorrMaps() {
   document.querySelectorAll('[data-corr-map]').forEach((t) => {
-    t.innerHTML = '<thead><tr><th>N.º</th><th>Correlación</th><th>Hoja del Excel</th><th>Capítulo</th><th>Veredicto</th></tr></thead><tbody>' +
-      CORR.map((c) => `<tr><td class="num">${corrNum(c)}</td><td><a href="#/${c.chapter}/${c.id}">${c.title}</a><br><small class="muted">${c.question}</small></td><td><small>${c.sheet}</small></td><td><small>${chapterTitle(c.chapter)}</small></td><td><span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span></td></tr>`).join('') + '</tbody>';
+    t.innerHTML = '<thead><tr><th>N.º</th><th>Correlación</th><th>Cifra principal</th><th>Grupo</th><th>Veredicto</th></tr></thead><tbody>' +
+      CORR.map((c) => `<tr><td class="num">${corrNum(c)}</td><td><a href="#/${c.chapter}/${c.id}">${c.title}</a><br><small class="muted">${c.question}</small></td><td><small>${c.cifra}</small></td><td><small>${GRUPO[c.group]}</small></td><td><span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span></td></tr>`).join('') + '</tbody>';
   });
 }
 
-function corrShell(c) {
-  return `<section class="cx" id="corr-${c.id}">
-    <header class="cx-head">
-      <p class="cx-n">Correlación ${corrNum(c)} <span class="cx-sheet">Hoja: ${c.sheet}</span></p>
-      <h2>${c.title}</h2>
-      <p class="cx-q">${c.question}</p>
+function corrShell(c, open) {
+  return `<details class="cx" id="corr-${c.id}"${open ? ' open' : ''}>
+    <summary class="cx-sum">
+      <span class="cx-num">${corrNum(c)}</span>
+      <span class="cx-t"><b>${c.title}</b><small>${c.question}</small></span>
+      <span class="cx-cifra">${c.cifra}</span>
       <span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span>
-      <span class="src">${c.kind === 'heat' ? 'Excel · recalculado desde la hoja Data para mostrar cantidades' : 'Dato del Excel'}</span>
-    </header>
-    <figure class="fig cx-fig">
-      <div class="cx-chart"></div>
-      ${['stack', 'rango', 'corrST'].includes(c.kind) ? `<button type="button" class="listen" data-corr="${c.id}">▶ Escuchar el gráfico</button><span class="listen-note" aria-live="polite"></span>` : ''}
-      <details class="cx-data"><summary>Ver los datos en una tabla</summary><div class="table-wrap"></div></details>
-    </figure>
-    <div class="cx-read">
-      <section><h3>Qué muestra</h3>${c.plain}</section>
-      <section class="cx-thread"><h3>En el hilo</h3>${c.thread}</section>
+    </summary>
+    <div class="cx-body">
+      <p class="cx-meta"><span>Hoja: ${c.sheet}</span><span class="src">${c.kind === 'heat' ? 'Excel · recalculado desde la hoja Data para mostrar cantidades' : 'Dato del Excel'}</span></p>
+      <figure class="fig cx-fig">
+        <div class="cx-chart"></div>
+        ${['stack', 'rango', 'corrST'].includes(c.kind) ? `<button type="button" class="listen" data-corr="${c.id}">▶ Escuchar el gráfico</button><span class="listen-note" aria-live="polite"></span>` : ''}
+        <details class="cx-data"><summary>Ver los datos en una tabla</summary><div class="table-wrap"></div></details>
+      </figure>
+      <div class="cx-read">
+        <section><h3>Qué muestra</h3>${c.plain}</section>
+        <section class="cx-thread"><h3>En el hilo</h3>${c.thread}</section>
+      </div>
+      <div class="cx-tech">
+        <section class="cx-build"><h3>Cómo se construye en Excel</h3><ol>${c.build.map((b) => `<li>${b}</li>`).join('')}</ol>
+          <h3>Precauciones</h3>${c.caveat}</section>
+        <section class="cx-math"><h3>Qué significa matemáticamente</h3>${c.math}</section>
+      </div>
     </div>
-    <div class="cx-tech">
-      <section class="cx-build"><h3>Cómo se construye en Excel</h3><ol>${c.build.map((b) => `<li>${b}</li>`).join('')}</ol>
-        <h3>Precauciones</h3>${c.caveat}</section>
-      <section class="cx-math"><h3>Qué significa matemáticamente</h3>${c.math}</section>
-    </div>
-  </section>`;
+  </details>`;
 }
 
 function chartBox(el, h) { el.innerHTML = `<div class="chart-box" style="height:${h}px"><canvas></canvas></div>`; return el.querySelector('canvas'); }
@@ -242,30 +244,18 @@ const kinds = {
   }
 };
 
-/* ================= Hilo visible y mini-índice ================= */
-const SYM = { mito: '✕', debil: '○', ruido: '○', extremos: '◐', tendencia: '◐', interaccion: '◆', relacion: '◆' };
-const THREAD_CH = ['mitos', 'tamano', 'color', 'contexto', 'geogebra', 'combinar', 'conclusion'];
-function renderThread(chId) {
-  const bar = $('thread'), k = THREAD_CH.indexOf(chId);
-  if (k < 0) { bar.hidden = true; return; }
-  const seen = CORR.filter((c) => THREAD_CH.indexOf(c.chapter) <= k);
-  const mitos = seen.filter((c) => c.verdict === 'mito').length;
-  let estado = 'Ninguna regla simple alcanza';
-  if (k <= 0) estado = 'Las reglas populares no funcionan';
-  if (chId === 'geogebra') estado = 'El tamaño informa, pero no decide';
-  if (k >= THREAD_CH.indexOf('combinar')) estado = 'Combinar rasgos ≈ identificar la especie';
-  bar.innerHTML = `<p class="th-q"><span>Pregunta</span>¿Se puede saber si un hongo es comestible mirándolo?</p>
-    <div class="th-chips">${seen.map((c) => `<a href="#/${c.chapter}/${c.id}" class="chip v-${c.verdict}${c.chapter === chId ? ' here' : ''}" title="${corrNum(c)}. ${c.title}: ${VEREDICTOS[c.verdict]}"><i>${SYM[c.verdict]}</i>${corrNum(c)}</a>`).join('')}
-      <span class="th-count">${seen.length} de ${CORR.length} correlaciones${mitos ? ` · ${mitos} mitos` : ''}</span></div>
-    <p class="th-state"><span>Hasta acá</span>${estado}</p>`;
-  bar.hidden = false;
-}
-function renderMiniIndex(chapterEl) {
-  const list = [...chapterEl.querySelectorAll('.corr[data-corr]')].map((ph) => CORR.find((c) => c.id === ph.dataset.corr)).filter(Boolean);
-  if (list.length < 2 || chapterEl.querySelector('.mini-index')) return;
-  const nav = document.createElement('nav'); nav.className = 'mini-index'; nav.setAttribute('aria-label', 'En este capítulo');
-  nav.innerHTML = `<p>En este capítulo</p><ol>${list.map((c) => `<li><a href="#/${c.chapter}/${c.id}"><span class="mi-n">${corrNum(c)}</span>${c.title}<span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span></a></li>`).join('')}</ol>`;
-  chapterEl.querySelector('.dek').after(nav);
+/* ================= Línea de etapas ================= */
+function renderStages(id) {
+  const i = ids.indexOf(id);
+  document.querySelectorAll('#stages a').forEach((a, k) => {
+    a.classList.toggle('on', k === i); a.classList.toggle('done', k < i);
+    k === i ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current');
+  });
+  const ch = chapters[i];
+  $('thread-line').innerHTML = i === 0
+    ? `<span class="tl-k">La pregunta</span>${ch.dataset.short}`
+    : `<span class="tl-q"><span class="tl-k">Pregunta</span>¿Se puede saber si un hongo es comestible mirándolo? <span class="tl-arrow">→</span> </span><span class="tl-k">${ch.dataset.title}</span>${ch.dataset.short}`;
+  document.querySelector('#stages a.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 /* ================= Glosario ================= */
@@ -299,31 +289,36 @@ function addGlossary(root) {
   }
 }
 
+function drawCorr(ph) {
+  if (ph.dataset.drawn) return; ph.dataset.drawn = '1';
+  const c = CORR.find((x) => x.id === ph.dataset.corr);
+  kinds[c.kind](c, ph.querySelector('.cx-chart'), ph.querySelector('.cx-data .table-wrap'));
+}
 function renderChapterCorr(chapterEl) {
-  renderMiniIndex(chapterEl);
   chapterEl.querySelectorAll('.corr[data-corr]').forEach((ph) => {
     const c = CORR.find((x) => x.id === ph.dataset.corr); if (!c) return;
-    ph.innerHTML = corrShell(c);
-    kinds[c.kind](c, ph.querySelector('.cx-chart'), ph.querySelector('.cx-data .table-wrap'));
+    ph.innerHTML = corrShell(c, ph.dataset.open === '1');
+    const card = ph.querySelector('details.cx');
+    if (card.open) drawCorr(ph);
+    card.addEventListener('toggle', () => { if (card.open) drawCorr(ph); });
   });
-  addGlossary(chapterEl);
 }
 
 /* ================= Chapter initializers (run once, when first shown) ================= */
 const inits = {
-  portada() {
+  pregunta() {
     renderQuiz();
     // Imagen generada desde el modelo 3D (cámara ortográfica: la posición horizontal es proporcional a la real)
     const box = $('cover-plate');
     box.innerHTML = `<img src="img/render/render_todas.jpg" alt="Las seis formas de hongo con tallo, modeladas en 3D con las medidas promedio de los datos y fotografiadas a la misma escala" width="2000" height="760"><div class="cover-labels"></div>`;
     fetch('img/render/render_todas.json').then((r) => r.json()).then(({ centers }) => {
       box.querySelector('.cover-labels').innerHTML = R.arquetipos.map((a, i) =>
-        `<a href="#/formas" data-id="${a.id}" style="left:${centers[i] * 100}%"><b>${a.nombre}</b><span>${num(a.pct, 1)} %</span></a>`).join('');
+        `<a href="#/tres-d" data-id="${a.id}" style="left:${centers[i] * 100}%"><b>${a.nombre}</b><span>${num(a.pct, 1)} %</span></a>`).join('');
       box.querySelectorAll('a').forEach((l) => l.addEventListener('click', () => setTimeout(() => selectShape(l.dataset.id), 60)));
     }).catch(() => { box.innerHTML = plateAll(R.arquetipos); });
   },
 
-  investigacion() {
+  datos() {
     charts.push(new Chart($('c-faltantes'), {
       type: 'bar',
       data: { labels: R.faltantes.map((f) => f[0]), datasets: [{ data: R.faltantes.map((f) => f[1] / 100), backgroundColor: () => T().ink2, borderRadius: 2, barPercentage: 0.7 }] },
@@ -332,7 +327,6 @@ const inits = {
     }));
   },
 
-  // Capítulos 2 a 5: solo correlaciones (se dibujan en renderChapterCorr)
 
   geogebra() {
     const fit = (pts, f = (x) => x) => { const n = pts.length; let sx = 0, sy = 0, sxx = 0, sxy = 0;
@@ -392,7 +386,7 @@ const inits = {
     window.__model2 = lg;
   },
 
-  combinar() {
+  resultados() {
     // (el mapa color × forma ahora es la correlación 14, en corr.js)
     charts.push(new Chart($('c-prog'), {
       type: 'bar',
@@ -423,7 +417,7 @@ const inits = {
       let m;
       if (!n) m = 'Ninguna combinación de la muestra tiene esos rasgos. Probá quitar alguno.';
       else if (!f.length) m = 'Sin filtros: es la muestra completa. La línea punteada marca el 55,5 %.';
-      else if (p === 0 || p === 1) m = `Grupo puro: ${p ? 'todos venenosos' : 'todos comestibles'}. Con ${f.length} rasgo${f.length > 1 ? 's' : ''} y ${int(n)} hongos, probablemente quedaron una o pocas especies. Es lo que muestra la figura 4.`;
+      else if (p === 0 || p === 1) m = `Grupo puro: ${p ? 'todos venenosos' : 'todos comestibles'}. Con ${f.length} rasgo${f.length > 1 ? 's' : ''} y ${int(n)} hongos, probablemente quedaron una o pocas especies. Es lo que muestra la figura 2.`;
       else if (n < 100) m = 'Quedan menos de 100 hongos: el porcentaje no es confiable.';
       else if (Math.abs(p - BASE) < 0.1) m = 'Casi igual al promedio: estos rasgos no ayudan a decidir.';
       else m = p > BASE ? `Más riesgo que el promedio, pero ${Math.round((1 - p) * 100)} de cada 100 son comestibles.` : `Menos riesgo que el promedio, pero ${Math.round(p * 100)} de cada 100 siguen siendo venenosos.`;
@@ -433,7 +427,7 @@ const inits = {
     upd();
   },
 
-  accesibilidad() {
+  conclusiones() {
     const s = R.sentidos;
     charts.push(new Chart($('c-sentidos'), {
       type: 'bar',
@@ -444,7 +438,7 @@ const inits = {
     $('sonify').onclick = sonify;
   },
 
-  formas() {
+  _formas() {
     const tabs = $('shape-tabs');
     R.arquetipos.forEach((a) => { const b = document.createElement('button'); b.dataset.id = a.id; b.setAttribute('role', 'tab'); b.innerHTML = `${a.nombre}<small>${num(a.pct, 1)} %</small>`; b.onclick = () => selectShape(a.id); tabs.appendChild(b); });
     document.querySelectorAll('#shape-view button').forEach((b) => b.onclick = () => {
@@ -464,6 +458,7 @@ const inits = {
   },
 
   'tres-d'() {
+    inits._formas();
     const tabs = $('tresd-tabs');
     let cur = 'convexa', viewer = null;
     const draw = () => {
@@ -515,7 +510,7 @@ function renderQuiz() {
     const done = answers.filter((x) => x !== undefined).length;
     if (done === Q.length) {
       const hits = answers.filter(Boolean).length;
-      $('quiz-score').innerHTML = `Acertaste <b>${hits} de ${Q.length}</b>. Los cuatro son convexos y de tallo blanco, y los rasgos que “parecen” peligrosos no coinciden con los que de verdad lo son. El resto del informe muestra por qué. <a href="#/investigacion">Empezar →</a>`;
+      $('quiz-score').innerHTML = `Acertaste <b>${hits} de ${Q.length}</b>. Los cuatro son convexos y de tallo blanco, y los rasgos que “parecen” peligrosos no coinciden con los que de verdad lo son. El resto de la web muestra por qué. <a href="#/datos">Seguir con los datos →</a>`;
     }
   }));
 }
@@ -580,22 +575,22 @@ function sonify() {
 const chapters = [...document.querySelectorAll('.chapter')];
 const ids = chapters.map((c) => c.dataset.id);
 const done = new Set();
+// Links de la versión anterior (capítulos) → etapas
+const OLD = { portada: 'pregunta', investigacion: 'datos', mitos: 'excel', tamano: 'excel', color: 'excel', contexto: 'excel', combinar: 'resultados', conclusion: 'conclusiones', accesibilidad: 'conclusiones', formas: 'tres-d', metodo: 'datos' };
 function route() {
   const mm = location.hash.match(/^#\/([\w-]+)(?:\/(c\d+))?/) || [];
-  let id = mm[1]; const anchor = mm[2];
-  if (!ids.includes(id)) id = 'portada';
+  let id = OLD[mm[1]] || mm[1]; const anchor = mm[2];
+  if (!ids.includes(id)) id = 'pregunta';
+  if (mm[1] && mm[1] !== id) history.replaceState(null, '', `#/${id}${anchor ? '/' + anchor : ''}`);
   chapters.forEach((c) => (c.hidden = c.dataset.id !== id));
-  document.querySelectorAll('#toc-list a').forEach((a) => { const on = a.getAttribute('href') === '#/' + id; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   const i = ids.indexOf(id), prev = chapters[i - 1], next = chapters[i + 1];
-  const tocLabel = (c) => document.querySelector(`#toc-list a[href="#/${c.dataset.id}"] span`)?.textContent;
-  $('pager').innerHTML = (prev ? `<a class="prev" href="#/${prev.dataset.id}"><small>← Anterior ${tocLabel(prev) !== '—' ? '· ' + tocLabel(prev) : ''}</small><b>${prev.dataset.title}</b></a>` : '') +
-    (next ? `<a class="next" href="#/${next.dataset.id}"><small>Siguiente ${tocLabel(next) !== '—' ? '· ' + tocLabel(next) : ''} →</small><b>${next.dataset.title}</b></a>` : '');
-  document.title = (id === 'portada' ? '' : chapters[i].dataset.title + ' · ') + '¿Comestible a simple vista?';
+  $('pager').innerHTML = (prev ? `<a class="prev" href="#/${prev.dataset.id}"><small>← Parte ${i}</small><b>${prev.dataset.title}</b></a>` : '') +
+    (next ? `<a class="next" href="#/${next.dataset.id}"><small>Parte ${i + 2} →</small><b>${next.dataset.title}</b></a>` : '');
+  document.title = (i === 0 ? '' : chapters[i].dataset.title + ' · ') + '¿Comestible a simple vista?';
   window.scrollTo(0, 0);
-  if (!done.has(id)) { done.add(id); renderChapterCorr(chapters[i]); inits[id]?.(); }
-  renderThread(id);
-  if (anchor) requestAnimationFrame(() => document.getElementById('corr-' + anchor)?.scrollIntoView({ block: 'start' }));
-  $('toc').classList.remove('open'); $('toc-toggle').setAttribute('aria-expanded', 'false');
+  if (!done.has(id)) { done.add(id); renderChapterCorr(chapters[i]); inits[id]?.(); addGlossary(chapters[i]); }
+  renderStages(id);
+  if (anchor) requestAnimationFrame(() => { const d = document.getElementById('corr-' + anchor); if (d) { d.open = true; d.scrollIntoView({ block: 'start' }); } });
   onScroll();
 }
 function onScroll() {
@@ -604,10 +599,9 @@ function onScroll() {
 }
 addEventListener('hashchange', route);
 addEventListener('scroll', onScroll, { passive: true });
-$('toc-toggle').onclick = () => { const o = $('toc').classList.toggle('open'); $('toc-toggle').setAttribute('aria-expanded', o); };
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
-  const i = ids.indexOf((location.hash.match(/^#\/([\w-]+)/) || [])[1] || 'portada');
+  const h = (location.hash.match(/^#\/([\w-]+)/) || [])[1]; const i = Math.max(0, ids.indexOf(OLD[h] || h));
   if (e.key === 'ArrowRight' && ids[i + 1]) location.hash = '#/' + ids[i + 1];
   if (e.key === 'ArrowLeft' && i > 0) location.hash = '#/' + ids[i - 1];
 });
@@ -616,7 +610,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { ch
 function printAll() {
   const prev = chapters.map((c) => c.hidden);
   chapters.forEach((c) => (c.hidden = false));
-  chapters.forEach((c, i) => { const id = ids[i]; if (!done.has(id)) { done.add(id); renderChapterCorr(c); inits[id]?.(); } });
+  chapters.forEach((c, i) => { const id = ids[i]; if (!done.has(id)) { done.add(id); renderChapterCorr(c); inits[id]?.(); addGlossary(c); } });
   document.querySelectorAll('details').forEach((d) => { d.dataset.wasOpen = d.open ? '1' : ''; d.open = true; });
   document.body.classList.add('print-all');
   charts.forEach((c) => c.resize());
