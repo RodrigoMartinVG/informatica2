@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generar imágenes desde los datos</title>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; background: #f6f5f1; color: #1b1a17; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    figure { margin: 0; background: #fff; padding: 8px; border: 1px solid #ddd; }
+    img { width: 100%; display: block; }
+    figcaption { font-size: 13px; margin-top: 6px; }
+    #log { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Imágenes de las seis formas, generadas desde los datos</h1>
+  <p>Esta página arma cada hongo en 3D con las medidas promedio del Excel y el color y la superficie más frecuentes, y lo fotografía con una luz de estudio. Para regenerar las imágenes del informe:</p>
+  <ol>
+    <li>Desde la raíz del repo, levantar el receptor: <code>python3 web/tools/save_server.py</code></li>
+    <li>Abrir esta página desde el servidor del informe: <code>http://localhost:8765/web/tools/render.html</code>. Las imágenes se guardan en <code>web/img/render/</code>.</li>
+  </ol>
+  <p>Sin el receptor, cada imagen se puede descargar a mano con clic derecho.</p>
+  <div class="grid" id="out"></div>
+  <pre id="log"></pre>
+  <script src="../data.js"></script>
+  <script type="module">
+    import { renderStill } from '../viewer3d.js';
+    const A = window.RESEARCH.arquetipos, out = document.getElementById('out'), log = document.getElementById('log');
+    async function save(name, body, type) {
+      try { const r = await fetch(`http://localhost:8766/save?name=${encodeURIComponent(name)}`, { method: 'POST', headers: { 'Content-Type': type }, body }); log.textContent += `${name}: ${r.ok ? 'guardada' : 'error ' + r.status}\n`; }
+      catch { log.textContent += `${name}: sin receptor (no se guardó)\n`; }
+    }
+    const jobs = [...A.map((a) => ({ name: `render_${a.id}.jpg`, opts: { id: a.id, width: 900, height: 900 }, label: a.nombre })), { name: 'render_todas.jpg', opts: { width: 2000, height: 760 }, label: 'Las seis a escala' }];
+    for (const j of jobs) {
+      await new Promise((r) => setTimeout(r, 30));
+      const { url, meta } = renderStill(A, j.opts);
+      out.insertAdjacentHTML('beforeend', `<figure><img src="${url}" alt="${j.label}"><figcaption>${j.label} · ${j.name}</figcaption></figure>`);
+      await save(j.name, await (await fetch(url)).blob(), 'image/jpeg');
+      if (meta) await save('render_todas.json', JSON.stringify(meta), 'application/json');
+    }
+    log.textContent += 'Listo.\n';
+    window.__done = true;
+  </script>
+</body>
+</html>

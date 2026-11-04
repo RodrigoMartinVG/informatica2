@@ -54,7 +54,7 @@
   <p class="byline">Rodrigo Vidal</p>
 
   <figure class="cover-plate" id="cover-plate"></figure>
-  <p class="caption">Las seis formas de sombrero con tallo, dibujadas a la misma escala con las medidas promedio de los datos. Juntas son el 94,3 % de la muestra.</p>
+  <p class="caption">Las seis formas de sombrero con tallo, modeladas en 3D con las medidas promedio de los datos, el color más frecuente y la superficie más común, todas a la misma escala. Juntas son el 94,3 % de la muestra.</p>
 
   <div class="abstract">
     <h2 class="label">Resumen</h2>
@@ -341,9 +341,10 @@ f(x) = FitLine(Todos)</pre>
   <h1>Las seis formas</h1>
   <p class="dek">El hongo “promedio” de cada forma de sombrero, dibujado a partir de los datos, y una revisión de las imágenes que habíamos generado con IA.</p>
 
-  <h2>Láminas a partir de los datos</h2>
-  <p>Cada lámina usa el diámetro, el alto y el grosor promedio de la forma (1 cm = 10 mm) y el color más frecuente. Un dato que salió de esto: <b>en las seis formas, el color más frecuente es el marrón con tallo blanco</b>. El hongo “típico” de cada forma no es llamativo.</p>
-  <div class="shape-tabs" id="shape-tabs" role="tablist"></div>
+  <h2>Imágenes a partir de los datos</h2>
+  <p>Cada hongo se construye en 3D con el diámetro, el alto y el grosor promedio de su forma (1 cm = 10 mm), el color más frecuente y una textura que imita la superficie más común. Después se “fotografía” con una luz de estudio. También está la lámina técnica con las medidas. Un dato que salió de esto: <b>en las seis formas, el color más frecuente es el marrón con tallo blanco</b>. El hongo “típico” de cada forma no es llamativo.</p>
+  <div class="shape-bar"><div class="shape-tabs" id="shape-tabs" role="tablist"></div>
+    <div class="seg" id="shape-view"><button data-v="img" class="on">Imagen</button><button data-v="plate">Lámina con medidas</button></div></div>
   <div class="shape-card">
     <div class="shape-plate" id="shape-plate"></div>
     <div class="shape-info">
@@ -357,7 +358,7 @@ f(x) = FitLine(Todos)</pre>
   <h2>Revisión de las imágenes generadas con IA</h2>
   <p>Para la presentación habíamos generado seis imágenes con IA a partir de las descripciones. Las comparamos con los datos en dos cosas: el color, y la <b>proporción entre el alto del tallo y el diámetro del sombrero</b>, medida aproximadamente sobre cada imagen.</p>
   <div class="review" id="review"></div>
-  <p>Conclusión: dos imágenes hay que <b>corregir</b> (la esférica, por el color y por un artefacto visible, y la de campana, por la proporción del tallo), y dos son aceptables pero muestran el segundo color más común en vez del primero. Por eso en este informe usamos las láminas dibujadas desde los datos, que tienen además la ventaja de que se pueden convertir directamente en 3D (anexo B).</p>
+  <p>Conclusión: dos imágenes hay que <b>corregir</b> (la esférica, por el color y por un artefacto visible, y la de campana, por la proporción del tallo), y dos son aceptables pero muestran el segundo color más común en vez del primero. Por eso este informe usa imágenes generadas desde los datos: salen del mismo modelo 3D del anexo B, así que las medidas y los colores coinciden por construcción. Las imágenes se regeneran con <code>web/tools/render.html</code>.</p>
 </article>
 
 <!-- ============================ B ============================ -->

@@ -229,11 +229,14 @@ function renderChapterCorr(chapterEl) {
 /* ================= Chapter initializers (run once, when first shown) ================= */
 const inits = {
   portada() {
-    $('cover-plate').innerHTML = plateAll(R.arquetipos);
-    $('cover-plate').querySelectorAll('.plate-item').forEach((g) => {
-      const go = () => { location.hash = '#/formas'; setTimeout(() => selectShape(g.dataset.id), 50); };
-      g.addEventListener('click', go); g.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    });
+    // Imagen generada desde el modelo 3D (cámara ortográfica: la posición horizontal es proporcional a la real)
+    const box = $('cover-plate');
+    box.innerHTML = `<img src="img/render/render_todas.jpg" alt="Las seis formas de hongo con tallo, modeladas en 3D con las medidas promedio de los datos y fotografiadas a la misma escala" width="2000" height="760"><div class="cover-labels"></div>`;
+    fetch('img/render/render_todas.json').then((r) => r.json()).then(({ centers }) => {
+      box.querySelector('.cover-labels').innerHTML = R.arquetipos.map((a, i) =>
+        `<a href="#/formas" data-id="${a.id}" style="left:${centers[i] * 100}%"><b>${a.nombre}</b><span>${num(a.pct, 1)} %</span></a>`).join('');
+      box.querySelectorAll('a').forEach((l) => l.addEventListener('click', () => setTimeout(() => selectShape(l.dataset.id), 60)));
+    }).catch(() => { box.innerHTML = plateAll(R.arquetipos); });
   },
 
   investigacion() {
@@ -360,10 +363,14 @@ const inits = {
   formas() {
     const tabs = $('shape-tabs');
     R.arquetipos.forEach((a) => { const b = document.createElement('button'); b.dataset.id = a.id; b.setAttribute('role', 'tab'); b.innerHTML = `${a.nombre}<small>${num(a.pct, 1)} %</small>`; b.onclick = () => selectShape(a.id); tabs.appendChild(b); });
+    document.querySelectorAll('#shape-view button').forEach((b) => b.onclick = () => {
+      document.querySelectorAll('#shape-view button').forEach((x) => x.classList.toggle('on', x === b));
+      selectShape(document.querySelector('#shape-tabs button.on')?.dataset.id || 'convexa');
+    });
     selectShape('convexa');
     $('review').innerHTML = R.revision.map((r) => {
       const a = R.arquetipos.find((x) => x.id === r.id), mx = 3;
-      return `<div class="rv"><img src="img/${r.id}.jpg" alt="Imagen generada con IA de la forma ${a.nombre}" loading="lazy"><div class="rv-body">
+      return `<div class="rv"><div class="rv-pair"><figure><img src="img/${r.id}.jpg" alt="Imagen generada con IA de la forma ${a.nombre}" loading="lazy"><figcaption>Generada con IA</figcaption></figure><figure><img src="img/render/render_${r.id}.jpg" alt="Imagen de la forma ${a.nombre} generada desde los datos" loading="lazy"><figcaption>Desde los datos</figcaption></figure></div><div class="rv-body">
         <div class="rv-head"><b>${a.nombre}</b><span class="tag ${r.veredicto}">${r.veredicto === 'ok' ? 'correcta' : r.veredicto}</span></div>
         <p>${r.color}</p>
         <div class="prop"><span>Imagen</span><span class="bar"><span style="width:${(r.propImg / mx) * 100}%"></span></span><span>${num(r.propImg, 2)}</span></div>
@@ -405,7 +412,10 @@ const inits = {
 function selectShape(id) {
   const a = R.arquetipos.find((x) => x.id === id); if (!a || !$('shape-plate')) return;
   $('shape-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.id === id));
-  $('shape-plate').innerHTML = plateOne(a);
+  const view = document.querySelector('#shape-view button.on')?.dataset.v || 'img';
+  $('shape-plate').innerHTML = view === 'img'
+    ? `<img class="shape-img" src="img/render/render_${a.id}.jpg" alt="Hongo de forma ${a.nombre}: sombrero de ${num(a.cap)} cm, tallo de ${num(a.alto)} cm, color ${a.colorCap.split(' ')[0].toLowerCase()}, generado desde los datos">`
+    : plateOne(a);
   $('sh-code').textContent = `cap-shape = '${a.codigo}' · ${int(a.n)} hongos · ${num(a.pct)} % de la muestra`;
   $('sh-name').textContent = a.nombre;
   $('sh-dl').innerHTML = [
