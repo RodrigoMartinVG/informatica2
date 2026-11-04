@@ -1,0 +1,261 @@
+// ============================================================================
+// TALLER DE INFORMÁTICA II - LIC. EN MATEMÁTICA (UAI)
+// PARADIGMA 1: HONGO CONVEXO CLÁSICO (cap-shape = 'x' | 44,10% del Dataset)
+// Fuente de datos: Secondary Mushroom Dataset (UCI) - 26.934 registros
+// ============================================================================
+
+/* [1. Parámetros Estadísticos del Excel (escala 1 cm = 10 mm)] */
+diametro_sombrero = 66.7;   // Media en Excel: 6,67 cm (66,7 mm)
+altura_sombrero   = 27.0;   // Altura de la cúpula convexa (mm)
+altura_tallo      = 68.4;   // Media en Excel: 6,84 cm (68,4 mm)
+grosor_tallo      = 12.41;  // Media en Excel: 12,41 mm
+
+/* [2. Detalles Morfológicos y Orgánicos] */
+inclinacion_sombrero = 8.0; // Ángulo natural del sombrero (grados)
+curvatura_tallo      = 3.2; // Desplazamiento lateral en S del tallo (mm)
+pares_laminas        = 36;  // 36 grupos x 4 = 144 láminas (primarias y lamélulas)
+grosor_lamina        = 0.42;// Espesor de cada lámina (subir a 0.8 para imprimir en 3D)
+rugosidad_fibrosa    = 0.18;// Amplitud de las fibras longitudinales del tallo (mm)
+
+/* [3. Resolución y Modo de Impresión 3D] */
+resolucion_radial    = 120; // Segmentos circulares ($fn)
+capas_tallo          = 70;  // Divisiones verticales de la malla del tallo
+base_plana_impresion = false; // true = corta 1,5 mm la base para apoyar en impresora 3D
+
+$fn = resolucion_radial;
+
+// Radios base derivados
+R_cap  = diametro_sombrero / 2;
+R_stem = grosor_tallo / 2;
+
+// ============================================================================
+// FUNCIONES MATEMÁTICAS DEL MODELO
+// ============================================================================
+
+// 1. Perfil del radio del tallo según altura normalizada u en [0, 1]
+//    Modela base hinchada (stem-root = 's'/'b': 66,8% en Excel) y afinamiento superior
+function radio_tallo(u) =
+    let(
+        // Redondeo inferior en la base del pie (u < 0.08)
+        redondeo_base = (u < 0.08) ? sqrt(max(0.02, 1 - pow((0.08 - u) / 0.08, 2))) : 1.0,
+        // Ensanchamiento suave en el tercio inferior (bulbo orgánico)
+        hinchazon     = 0.28 * exp(-pow((u - 0.15) / 0.22, 2)),
+        // Afinamiento gradual hacia el ápice y leve ensanche al unirse al sombrero
+        conicidad     = -0.14 * u + 0.07 * pow(u, 4)
+    )
+    R_stem * ((u < 0.08) ? (0.42 + 0.83 * redondeo_base) : (1.0 + hinchazon + conicidad));
+
+// 2. Curva central (espina dorsal) del tallo en el eje X e Y según u en [0, 1]
+function eje_x_tallo(u) =
+    curvatura_tallo * sin(u * 180) - (curvatura_tallo * 0.45) * sin(u * 360);
+
+function eje_y_tallo(u) =
+    (curvatura_tallo * 0.25) * (1 - cos(u * 180));
+
+// 3. Micro-textura fibrosa longitudinal del tallo y leve asimetría orgánica
+function textura_tallo(ang, u) =
+    let(
+        ovoid = 0.04 * cos(2 * ang + 25),
+        fibras = (rugosidad_fibrosa / R_stem) * (
+            0.6 * sin(18 * ang + u * 45) +
+            0.4 * cos(31 * ang - u * 30)
+        ) * sin(u * 180) // Se suaviza en los extremos
+    )
+    1.0 + ovoid + fibras;
+
+// ============================================================================
+// MÓDULO 1: SOMBRERO CONVEXO CON MARGEN INVOLUTO (rotate_extrude)
+// ============================================================================
+module sombrero_convexo() {
+    // Puntos de la superficie exterior: desde el ápice (t=0) hasta el labio involuto (t=1)
+    pts_exterior = [
+        for (i = [0 : 60])
+        let(
+            t   = i / 60,
+            ang = t * 112, // Pasa de 90° a 112° para doblar el borde hacia adentro
+            s   = sin(ang),
+            c   = cos(ang),
+            r   = R_cap * pow(s, 0.92),
+            z   = (c >= 0) ? (altura_sombrero * c) : (altura_sombrero * 0.22 * c)
+        )
+        [r, z]
+    ];
+
+    // Puntos del techo interno (bóveda donde se insertan las láminas)
+    r_labio_int = R_cap * pow(sin(112), 0.92) - 2.1;
+    z_labio_int = (altura_sombrero * 0.22 * cos(112)) + 1.1;
+    z_boveda    = altura_sombrero * 0.43; // Carne central del sombrero (trama)
+
+    pts_interior = [
+        for (j = [0 : 30])
+        let(
+            u = j / 30,
+            r = r_labio_int * (1 - u),
+            z = z_labio_int + (z_boveda - z_labio_int) * pow(sin(u * 90), 1.15)
+        )
+        [r, z]
+    ];
+
+    color([0.55, 0.38, 0.24]) // Marrón cálido (predominante: 42,5% en Excel)
+    rotate_extrude(convexity = 6)
+        polygon(concat(pts_exterior, pts_interior));
+}
+
+// ============================================================================
+// MÓDULO 2: HIMENÓFORO (Láminas Primarias, Secundarias y Terciarias)
+// ============================================================================
+module lamina_individual(r_inicio, r_fin, factor_altura) {
+    // Genera el perfil 2D de una lámina con arista inferior curva (inserción adnada)
+    pasos = 24;
+    // Borde superior (empotrado dentro de la bóveda del sombrero)
+    borde_sup = [
+        for (i = [0 : pasos])
+        let(
+            u = i / pasos,
+            r = r_inicio + (r_fin - r_inicio) * u,
+            z_techo = altura_sombrero * 0.43 * (1 - pow(r / R_cap, 1.8)) + 1.5
+        )
+        [r, z_techo]
+    ];
+
+    // Borde inferior libre (arista de la lámina)
+    borde_inf = [
+        for (i = [pasos : -1 : 0])
+        let(
+            u = i / pasos,
+            r = r_inicio + (r_fin - r_inicio) * u,
+            // Curva suave ascendente cerca del tallo y descendente hacia el margen
+            arco_natural = sin(pow(u, 0.75) * 180),
+            z_base = (4.2 * (1 - u)) + (-1.3 * u) - (3.1 * factor_altura * arco_natural)
+        )
+        [r, z_base]
+    ];
+
+    rotate([90, 0, 0])
+        linear_extrude(height = grosor_lamina, center = true, convexity = 4)
+            polygon(concat(borde_sup, borde_inf));
+}
+
+module sistema_laminas() {
+    r_ext = R_cap * 0.905; // Llega justo hasta el interior del labio involuto
+    r_tallo_sup = radio_tallo(0.95) * 0.85;
+
+    color([0.78, 0.66, 0.50]) // Tono crema/ante de las láminas bajo sombra
+    for (i = [0 : pares_laminas - 1]) {
+        ang_base = i * (360 / pares_laminas);
+        paso_ang = (360 / pares_laminas) / 4;
+
+        // 1. Lámina Primaria (llega desde el tallo hasta el borde)
+        rotate([0, 0, ang_base])
+            lamina_individual(r_tallo_sup, r_ext, 1.0);
+
+        // 2. Lamélula Terciaria (corta, solo en el tercio exterior)
+        rotate([0, 0, ang_base + paso_ang])
+            lamina_individual(R_cap * 0.68, r_ext, 0.55);
+
+        // 3. Lámina Secundaria (intermedia, nace a mitad del radio)
+        rotate([0, 0, ang_base + 2 * paso_ang])
+            lamina_individual(R_cap * 0.42, r_ext, 0.82);
+
+        // 4. Lamélula Terciaria simétrica
+        rotate([0, 0, ang_base + 3 * paso_ang])
+            lamina_individual(R_cap * 0.68, r_ext, 0.55);
+    }
+}
+
+// ============================================================================
+// MÓDULO 3: TALLO ORGÁNICO ESTRIADO (Generador de malla por Polyhedron)
+// ============================================================================
+module tallo_organico() {
+    N_z   = capas_tallo;
+    N_ang = resolucion_radial;
+    h_max = altura_tallo + 7.0; // Penetra 7 mm dentro de la bóveda del sombrero
+
+    // Lista de todos los vértices de los anillos + 2 polos (centro inferior y superior)
+    vertices_anillos = [
+        for (iz = [0 : N_z])
+        let(
+            u  = iz / N_z,
+            z  = u * h_max,
+            cx = eje_x_tallo(u),
+            cy = eje_y_tallo(u),
+            r0 = radio_tallo(u)
+        )
+        for (ia = [0 : N_ang - 1])
+        let(
+            ang = ia * (360 / N_ang),
+            r   = r0 * textura_tallo(ang, u),
+            x   = cx + r * cos(ang),
+            y   = cy + r * sin(ang)
+        )
+        [x, y, z]
+    ];
+
+    polo_inferior = [[eje_x_tallo(0), eje_y_tallo(0), 0]];
+    polo_superior = [[eje_x_tallo(1), eje_y_tallo(1), h_max]];
+    todos_vertices = concat(vertices_anillos, polo_inferior, polo_superior);
+
+    idx_polo_inf = len(vertices_anillos);
+    idx_polo_sup = len(vertices_anillos) + 1;
+
+    // Caras laterales cuadrangulares divididas en triángulos
+    caras_laterales = [
+        for (iz = [0 : N_z - 1])
+        for (ia = [0 : N_ang - 1])
+        let(
+            ia_sig = (ia + 1) % N_ang,
+            p00 = iz * N_ang + ia,
+            p01 = iz * N_ang + ia_sig,
+            p10 = (iz + 1) * N_ang + ia,
+            p11 = (iz + 1) * N_ang + ia_sig
+        )
+        each [[p00, p01, p11], [p00, p11, p10]]
+    ];
+
+    // Tapas inferior y superior
+    caras_base = [
+        for (ia = [0 : N_ang - 1])
+        [idx_polo_inf, (ia + 1) % N_ang, ia]
+    ];
+
+    caras_tope = [
+        for (ia = [0 : N_ang - 1])
+        let(offset_top = N_z * N_ang)
+        [idx_polo_sup, offset_top + ia, offset_top + ((ia + 1) % N_ang)]
+    ];
+
+    color([0.91, 0.87, 0.81]) // Blanco marfil con matiz terroso
+    polyhedron(
+        points = todos_vertices,
+        faces  = concat(caras_laterales, caras_base, caras_tope),
+        convexity = 6
+    );
+}
+
+// ============================================================================
+// ENSAMBLAJE FINAL DEL PARADIGMA 1
+// ============================================================================
+module hongo_convexo_completo() {
+    difference() {
+        union() {
+            // 1. Tallo orgánico
+            tallo_organico();
+
+            // 2. Sombrero + Láminas posicionados en el ápice de la curva del tallo
+            translate([eje_x_tallo(0.92), eje_y_tallo(0.92), altura_tallo])
+                rotate([0, -inclinacion_sombrero, 0]) {
+                    sombrero_convexo();
+                    sistema_laminas();
+                }
+        }
+
+        // Corte plano opcional en la base para impresión 3D sin soportes en la cama
+        if (base_plana_impresion) {
+            translate([0, 0, -10])
+                cube([200, 200, 23], center = true);
+        }
+    }
+}
+
+// Renderizar el modelo
+hongo_convexo_completo();

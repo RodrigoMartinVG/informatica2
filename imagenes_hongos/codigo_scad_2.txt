@@ -1,0 +1,207 @@
+// ============================================================================
+// TALLER DE INFORMÁTICA II - LIC. EN MATEMÁTICA (UAI)
+// PARADIGMA 2: HONGO PLANO EXTENDIDO (cap-shape = 'f' | 21,95% del Dataset)
+// Fuente de datos: Secondary Mushroom Dataset (UCI) - 13.404 registros
+// ============================================================================
+
+/* [1. Parámetros Estadísticos del Excel (escala 1 cm = 10 mm)] */
+diametro_sombrero = 69.8;   // Media en Excel: 6,98 cm (69,8 mm)
+espesor_disco     = 8.3;    // Espesor central del disco plano (mm)
+altura_tallo      = 66.0;   // Media en Excel: 6,60 cm (66,0 mm)
+grosor_tallo      = 11.71;  // Media en Excel: 11,71 mm
+
+/* [2. Detalles Morfológicos del Himenóforo y Tallo] */
+grupos_laminas        = 44;   // 44 grupos x 4 = 176 láminas (73,3% espaciado cerrado 'c')
+grosor_lamina         = 0.38; // Espesor de cada lámina (subir a 0.75 para impresión FDM)
+panza_laminas         = 3.6;  // Proyección inferior ventricosa de las láminas (mm)
+curvatura_leve_tallo  = 0.8;  // Leve desviación natural del eje vertical (mm)
+incluir_sustrato_base = true; // Montículo de tierra/micelio en la base (como en la imagen)
+
+/* [3. Resolución de Malla] */
+resolucion_radial = 120; // Segmentos circulares ($fn)
+capas_tallo       = 65;  // Divisiones verticales del tallo
+
+$fn = resolucion_radial;
+
+// Radios base derivados
+R_cap  = diametro_sombrero / 2; // 34,90 mm
+R_stem = grosor_tallo / 2;      //  5,855 mm
+
+// ============================================================================
+// FUNCIONES MATEMÁTICAS DEL MODELO
+// ============================================================================
+
+// 1. Perfil del radio del tallo según altura normalizada u en [0, 1]
+//    Refleja un tallo recto que se ensancha suavemente hacia la base (bulbosa 61,5%)
+function radio_tallo_plano(u) =
+    let(
+        redondeo_pie = (u < 0.04) ? sqrt(max(0.05, u / 0.04)) : 1.0,
+        // Ensanchamiento progresivo hacia la base (como en la foto de referencia)
+        conicidad    = 0.16 * pow(1 - u, 1.6) - 0.05 * u,
+        // Ensanche sutil en el ápice donde recibe las láminas
+        union_apice  = (u > 0.88) ? 0.10 * pow((u - 0.88) / 0.12, 2) : 0.0
+    )
+    R_stem * ((u < 0.04) ? (0.55 + 0.61 * redondeo_pie) : (1.0 + conicidad + union_apice));
+
+// 2. Eje central casi recto con micro-inflexión orgánica
+function eje_x_plano(u) = curvatura_leve_tallo * sin(u * 180);
+function eje_y_plano(u) = (curvatura_leve_tallo * 0.35) * (1 - cos(u * 180));
+
+// 3. Textura fibrosa longitudinal suave (tallo blanco fibroso/liso)
+function textura_tallo_plano(ang, u) =
+    let(
+        elipse = 0.025 * cos(2 * ang - 15),
+        estrías = 0.018 * (
+            0.65 * sin(22 * ang + u * 20) +
+            0.35 * cos(37 * ang - u * 15)
+        )
+    )
+    1.0 + elipse + estrías;
+
+// ============================================================================
+// MÓDULO 1: SOMBRERO PLANO EXTENDIDO (Meseta + Umbo sutil + Borde biselado)
+// ============================================================================
+module sombrero_plano() {
+    // Superficie superior y borde perimetral redondeado (60 pasos)
+    pts_exterior = [
+        for (i = [0 : 60])
+        let(
+            u = i / 60,
+            // Tramo 1 (u <= 0.82): Meseta horizontal con suave mamelón central (umbo)
+            // Tramo 2 (u > 0.82): Hombro y labio exterior redondeado que baja hasta z = -1.1
+            s   = (u <= 0.82) ? (u / 0.82) : 1.0,
+            w   = (u > 0.82)  ? ((u - 0.82) / 0.18) : 0.0,
+            ang = w * 165,
+            r   = (u <= 0.82)
+                  ? (R_cap * 0.88 * s)
+                  : (R_cap * (0.88 + 0.12 * sin(ang * 0.85))),
+            umbo       = 1.1 * exp(-pow(s / 0.22, 2)),
+            caida_homb = -1.8 * pow(s, 3.5),
+            z   = (u <= 0.82)
+                  ? ((espesor_disco - 1.1) + umbo + caida_homb)
+                  : (2.1 + 3.3 * cos(ang))
+        )
+        [r, z]
+    ];
+
+    // Techo interno de la carne del sombrero (trama) donde se sueldan las láminas
+    r_labio_int = R_cap * (0.88 + 0.12 * sin(165 * 0.85)) - 1.2;
+    z_labio_int = (2.1 + 3.3 * cos(165)) + 0.8;
+    z_centro_int = 4.2;
+
+    pts_interior = [
+        for (j = [0 : 30])
+        let(
+            v = j / 30,
+            r = r_labio_int * (1 - v),
+            z = z_labio_int + (z_centro_int - z_labio_int) * pow(sin(v * 90), 0.85)
+        )
+        [r, z]
+    ];
+
+    color([0.74, 0.57, 0.39]) // Marrón claro / ocre tostado (como en la imagen)
+    rotate_extrude(convexity = 6)
+        polygon(concat(pts_exterior, pts_interior));
+}
+
+// ============================================================================
+// MÓDULO 2: HIMENÓFORO VENTRICOSO-SINUADO (Láminas expuestas bajo el disco)
+// ============================================================================
+module lamina_plana(r_ini, r_fin, factor_panza, es_primaria) {
+    pasos = 28;
+
+    // Borde superior insertado dentro de la carne (trama) del sombrero
+    borde_sup = [
+        for (i = [0 : pasos])
+        let(
+            u = i / pasos,
+            r = r_ini + (r_fin - r_ini) * u,
+            z_techo = 4.6 - 3.6 * pow(r / R_cap, 1.4)
+        )
+        [r, z_techo]
+    ];
+
+    // Borde inferior libre: forma la panza curva expuesta debajo del plato horizontal
+    // e incluye la escotadura sinuada/anexa ('x'/'s' = 44,7% en Excel) junto al tallo
+    borde_inf = [
+        for (i = [pasos : -1 : 0])
+        let(
+            u = i / pasos,
+            r = r_ini + (r_fin - r_ini) * u,
+            arco_ventricoso = sin(pow(u, 0.72) * 180),
+            escotadura_sinuada = es_primaria ? (1.15 * exp(-pow((u - 0.07) / 0.06, 2))) : 0.0,
+            z_recta = (-3.5 * factor_panza) * (1 - u) + (-0.85) * u,
+            z_borde = z_recta - (panza_laminas * factor_panza * arco_ventricoso) + escotadura_sinuada
+        )
+        [r, z_borde]
+    ];
+
+    rotate([90, 0, 0])
+        linear_extrude(height = grosor_lamina, center = true, convexity = 4)
+            polygon(concat(borde_sup, borde_inf));
+}
+
+module sistema_laminas_planas() {
+    r_ext       = R_cap * 0.945; // Llega hasta el borde interno del labio
+    r_tallo_sup = radio_tallo_plano(0.95) * 0.88;
+
+    color([0.82, 0.75, 0.65]) // Crema grisáceo cálido de las láminas
+    for (i = [0 : grupos_laminas - 1]) {
+        ang_base = i * (360 / grupos_laminas);
+        paso_ang = (360 / grupos_laminas) / 4;
+
+        // 1. Lámina Primaria completa (llega al tallo con inserción anexa/sinuada)
+        rotate([0, 0, ang_base])
+            lamina_plana(r_tallo_sup, r_ext, 1.00, true);
+
+        // 2. Lamélula Terciaria exterior
+        rotate([0, 0, ang_base + paso_ang])
+            lamina_plana(R_cap * 0.62, r_ext, 0.62, false);
+
+        // 3. Lámina Secundaria intermedia
+        rotate([0, 0, ang_base + 2 * paso_ang])
+            lamina_plana(R_cap * 0.34, r_ext, 0.86, false);
+
+        // 4. Lamélula Terciaria simétrica
+        rotate([0, 0, ang_base + 3 * paso_ang])
+            lamina_plana(R_cap * 0.62, r_ext, 0.62, false);
+    }
+}
+
+// ============================================================================
+// MÓDULO 3: TALLO CILÍNDRICO RECTO (Polyhedron de alta resolución)
+// ============================================================================
+module tallo_plano() {
+    N_z   = capas_tallo;
+    N_ang = resolucion_radial;
+    h_max = altura_tallo + 4.5; // Se empotra 4,5 mm en el centro del disco
+
+    vertices_anillos = [
+        for (iz = [0 : N_z])
+        let(
+            u  = iz / N_z,
+            z  = u * h_max,
+            cx = eje_x_plano(u),
+            cy = eje_y_plano(u),
+            r0 = radio_tallo_plano(u)
+        )
+        for (ia = [0 : N_ang - 1])
+        let(
+            ang = ia * (360 / N_ang),
+            r   = r0 * textura_tallo_plano(ang, u),
+            x   = cx + r * cos(ang),
+            y   = cy + r * sin(ang)
+        )
+        [x, y, z]
+    ];
+
+    polo_inf = [[eje_x_plano(0), eje_y_plano(0), 0]];
+    polo_sup = [[eje_x_plano(1), eje_y_plano(1), h_max]];
+    todos_pts = concat(vertices_anillos, polo_inf, polo_sup);
+
+    idx_inf = len(vertices_anillos);
+    idx_sup = len(vertices_anillos) + 1;
+
+    caras_lat = [
+        for (iz = [0 : N_z - 1])
+        for (
