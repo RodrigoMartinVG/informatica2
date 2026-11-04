@@ -127,7 +127,6 @@ function corrShell(c) {
       <section><h3>Qué muestra</h3>${c.plain}</section>
       <section class="cx-thread"><h3>En el hilo</h3>${c.thread}</section>
     </div>
-    <button type="button" class="tech-open" aria-expanded="false">Ver cómo se construye y la matemática</button>
     <div class="cx-tech">
       <section class="cx-build"><h3>Cómo se construye en Excel</h3><ol>${c.build.map((b) => `<li>${b}</li>`).join('')}</ol>
         <h3>Precauciones</h3>${c.caveat}</section>
@@ -613,54 +612,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' && i > 0) location.hash = '#/' + ids[i - 1];
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { chartDefaults(); charts.forEach((c) => c.update()); });
-/* ================= Modo de lectura: divulgativa / técnica ================= */
-const HINT = {
-  div: 'Solo lo esencial: gráficos, lectura y el hilo. Lo técnico queda plegado (botones ＋).',
-  tec: 'Todo a la vista: cómo se construye cada dato en Excel, la matemática y las precauciones.'
-};
-function techCount(ch) { return ch ? ch.querySelectorAll('.cx-tech, .read-tech .tech, .tec-only').length : 0; }
-let toastTimer;
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.hidden = false; t.classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.classList.remove('on'); setTimeout(() => (t.hidden = true), 300); }, 3200);
-}
-function setMode(m, user = false) {
-  document.body.classList.toggle('mode-div', m === 'div');
-  document.body.classList.toggle('mode-tec', m === 'tec');
-  document.querySelectorAll('.mode button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
-  $('mode-hint').textContent = HINT[m];
-  if (!user) return;
-  try { localStorage.setItem('lectura', m); } catch { /* sin almacenamiento */ }
-  const ch = chapters.find((c) => !c.hidden), n = techCount(ch);
-  if (!n) { toast(`Lectura ${m === 'tec' ? 'técnica' : 'divulgativa'}. Este capítulo no tiene partes técnicas; se nota en los capítulos 1 a 9 y en los anexos B y C.`); return; }
-  toast(m === 'tec' ? `Lectura técnica: ${n} ${n === 1 ? 'parte técnica abierta' : 'partes técnicas abiertas'} en este capítulo.` : `Lectura divulgativa: ${n} ${n === 1 ? 'parte técnica plegada' : 'partes técnicas plegadas'} en este capítulo.`);
-  // llevar a la vista la primera parte técnica, para que se vea el cambio
-  const first = ch.querySelector(m === 'tec' ? '.cx-tech, .read-tech .tech, .tec-only' : '.tech-open');
-  const r = first?.getBoundingClientRect();
-  if (r && (r.top > innerHeight || r.bottom < 0)) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  first?.classList.add('flash'); setTimeout(() => first?.classList.remove('flash'), 1400);
-}
-document.querySelectorAll('.mode button').forEach((b) => b.onclick = () => setMode(b.dataset.mode, true));
-// Botones para abrir cada parte técnica en modo divulgativo
-document.querySelectorAll('.read-tech').forEach((rt) => {
-  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'tech-open'; btn.setAttribute('aria-expanded', 'false');
-  btn.textContent = 'Ver cómo se calculó'; rt.querySelector('.tech')?.before(btn);
-});
-document.querySelectorAll('.tec-only').forEach((el) => {
-  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'tech-open solo'; btn.setAttribute('aria-expanded', 'false');
-  btn.dataset.label = `Ver parte técnica: ${el.dataset.label}`; btn.textContent = btn.dataset.label; el.before(btn);
-});
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('.tech-open'); if (!b) return;
-  const host = b.classList.contains('solo') ? b.nextElementSibling : b.closest('.cx, .read-tech');
-  const open = host.classList.toggle('show-tech');
-  if (b.classList.contains('solo')) b.classList.toggle('show-tech', open);
-  b.setAttribute('aria-expanded', String(open));
-  b.textContent = open ? 'Ocultar la parte técnica' : (b.dataset.label || (host.classList.contains('cx') ? 'Ver cómo se construye y la matemática' : 'Ver cómo se calculó'));
-});
-let savedMode = 'div'; try { savedMode = localStorage.getItem('lectura') || 'div'; } catch { /* */ }
-setMode(savedMode);
-
 /* ================= Imprimir / PDF: todos los capítulos, con la parte técnica ================= */
 function printAll() {
   const prev = chapters.map((c) => c.hidden);

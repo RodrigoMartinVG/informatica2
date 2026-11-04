@@ -22,12 +22,6 @@
     <p class="toc-sub">Taller de Informática II · 2026</p>
     <button class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-list">Índice</button>
   </div>
-  <div class="mode" role="radiogroup" aria-label="Nivel de lectura">
-    <span class="mode-l">Lectura</span>
-    <button role="radio" data-mode="div" aria-checked="true">Divulgativa</button>
-    <button role="radio" data-mode="tec" aria-checked="false">Técnica</button>
-  </div>
-  <p class="mode-hint" id="mode-hint"></p>
   <nav id="toc-list">
     <p class="toc-group">Planteo</p>
     <a href="#/portada"><span>—</span>Portada</a>
@@ -47,7 +41,6 @@
     <a href="#/tres-d"><span>B</span>Del dibujo al 3D</a>
     <a href="#/metodo"><span>C</span>Fórmulas y fuentes</a>
   </nav>
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="toc-tools">
     <a class="toc-dl" href="presentacion.html"><span>▶</span>Modo presentación (8 diapositivas)</a>
     <a class="toc-dl" href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download><span>↓</span>Descargar el Excel (v5, 16 MB)</a>
@@ -134,12 +127,10 @@
     <div><h3>Promedios frágiles</h3><p>Unos 400 sombreros gigantes (más de 25 cm, casi todos de una especie) alcanzan para mover promedios y pendientes. Los marcamos cada vez que pesan.</p></div>
   </div>
 
-  <div class="tec-only" data-label="celdas vacías por columna (figura 1)">
   <figure class="fig">
     <figcaption><span class="fig-n">Figura 1</span>Celdas vacías por columna en la hoja <code>Data</code></figcaption>
     <div class="chart-box" style="height:300px"><canvas id="c-faltantes" aria-label="Porcentaje de celdas vacías por columna"></canvas></div>
   </figure>
-  </div>
 
   <h2>Mapa de las correlaciones</h2>
   <p>El Excel tiene 14 correlaciones, repartidas en 9 hojas de análisis. Cada una aparece en el capítulo correspondiente con la misma estructura: qué muestra (para cualquier lector), qué aporta al hilo, cómo se construye en Excel, qué significa matemáticamente y qué precauciones tomar.</p>
@@ -208,13 +199,11 @@
   <h1>Modelización en GeoGebra</h1>
   <p class="dek">Dos preguntas que se pueden escribir como funciones: ¿cómo crece el tallo con el sombrero? ¿cómo cambia el riesgo con el tamaño?</p>
 
-  <div class="tec-only" data-label="cómo se armaron los puntos para GeoGebra">
   <h2>Cómo se armaron los puntos</h2>
   <p>Llevar 61.069 puntos a GeoGebra no es práctico, y además el gráfico se vuelve ilegible. En la hoja <code>Datos GeoGebra</code> resumimos los hongos en grupos de 1 cm de sombrero. Cada grupo aporta un punto: su centro en <i>x</i> (0,5; 1,5; 2,5…) y su promedio en <i>y</i>. Los grupos con menos de 100 hongos se descartan, para que ningún punto dependa de unos pocos casos. Cada conjunto de puntos queda escrito como una lista lista para pegar en GeoGebra:</p>
   <pre class="code">Todos = {(0.5, 1.18), (1.5, 2.40), (2.5, 4.69), … , (21.5, 43.43)}
 f(x) = FitLine(Todos)</pre>
 
-  </div>
   <h2>Modelo 1 · Una recta: el tallo crece con el sombrero</h2>
   <figure class="fig">
     <figcaption><span class="fig-n">Figura 2</span>Grosor promedio del tallo (mm) según el diámetro del sombrero (cm)</figcaption>
@@ -414,20 +403,16 @@ f(x) = FitLine(Todos)</pre>
   </div>
   <p class="note">Con pocas divisiones del giro se ve cómo el programa aproxima la superficie curva con caras planas, igual que el parámetro <code>$fn</code> de OpenSCAD.</p>
 
-  <div class="tec-only" data-label="cálculo del volumen (Pappus–Guldin)">
   <h2>Volumen</h2>
   <p>Como el modelo es un sólido de revolución, su volumen se calcula con el teorema de Pappus–Guldin: <i>V</i> = 2π · <i>x̄</i> · <i>A</i>, donde <i>A</i> es el área del perfil y <i>x̄</i> la distancia de su centroide al eje.</p>
   <div class="table-wrap"><table class="summary" id="vol-table"></table></div>
 
-  </div>
   <h2>Qué queda afuera</h2>
   <p>La categoría “Otras” (5,7 % de la muestra) incluye hongos de repisa y sin tallo, que crecen pegados a troncos y no tienen un eje de simetría. No se pueden modelar girando un perfil: necesitarían otro método, como una extrusión o un modelado libre.</p>
 
-  <div class="tec-only" data-label="medidas para Tinkercad y código OpenSCAD">
   <h2>En Tinkercad y OpenSCAD</h2>
   <div class="table-wrap"><table class="summary" id="tink-table"></table></div>
   <p>El repositorio incluye código OpenSCAD paramétrico completo para la convexa y la plana (<code>imagenes_hongos/codigo_scad_1.txt</code> y <code>codigo_scad_2.txt</code>), con las medidas del Excel como parámetros.</p>
-  </div>
 </article>
 
 <!-- ============================ C ============================ -->
@@ -436,7 +421,6 @@ f(x) = FitLine(Todos)</pre>
   <h1>Fórmulas y fuentes</h1>
   <p class="dek">Las fórmulas de Excel que sostienen todo el análisis, en el orden en que se usaron.</p>
 
-  <div class="tec-only" data-label="las 11 fórmulas de Excel">
   <div class="table-wrap">
   <table class="formulas">
     <thead><tr><th>Para qué</th><th>Fórmula</th></tr></thead>
@@ -454,7 +438,6 @@ f(x) = FitLine(Todos)</pre>
       <tr><td>Tóxico como número</td><td><code>=SI(F2="p";1;0)</code>: su promedio es la proporción de venenosos</td></tr>
     </tbody>
   </table>
-  </div>
   </div>
 
   <h2>Versiones del trabajo</h2>

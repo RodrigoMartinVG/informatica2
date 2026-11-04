@@ -17,7 +17,6 @@ El Excel v5 se puede descargar desde el índice lateral, desde el capítulo 1 y 
 
 ## Funciones de lectura
 
-- **Lectura divulgativa o técnica:** un selector en el índice. En modo divulgativo, cada parte técnica se abre con su propio botón.
 - **Hilo visible:** una barra fija con la pregunta, los veredictos acumulados y el estado de la respuesta. Cada capítulo tiene además su mini-índice.
 - **¿Vos lo comerías?:** un cuestionario en la portada con cuatro grupos reales de la muestra.
 - **Glosario:** los términos subrayados con puntos muestran su definición al pasar el cursor.

@@ -347,21 +347,6 @@ table.mini th:first-child, table.mini td:first-child { text-align: left; }
 .rv-pair figcaption { position: absolute; left: 6px; top: 6px; font: 600 .62rem var(--mono); text-transform: uppercase; letter-spacing: .05em; background: rgba(23,22,26,.72); color: #fff; padding: 2px 6px; }
 @media (max-width: 600px) { .cover-labels a { font-size: .66rem; } .cover-labels a span { font-size: .58rem; } }
 
-/* Modo de lectura */
-.mode { display: flex; align-items: center; gap: 0; margin: 4px 0 6px; border: 1px solid var(--rule-strong); width: fit-content; }
-.mode-l { font: 600 .66rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 0 8px; }
-.mode button { font: 500 .78rem var(--sans); border: 0; border-left: 1px solid var(--rule-strong); background: transparent; color: var(--ink-2); padding: 6px 10px; cursor: pointer; }
-.mode button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
-.tech-open { display: none; font: 500 .82rem var(--sans); color: var(--accent); background: transparent; border: 1px dashed var(--rule-strong); padding: 8px 14px; cursor: pointer; margin: 4px 0 18px; }
-.tech-open::before { content: "＋ "; }
-.show-tech .tech-open::before { content: "− "; }
-body.mode-div .tech-open { display: inline-block; }
-body.mode-div .cx:not(.show-tech) .cx-tech,
-body.mode-div .read-tech:not(.show-tech) .tech { display: none; }
-body.mode-div .read-tech { grid-template-columns: 1fr; }
-body.mode-div .read-tech .tech-open { justify-self: start; }
-@media (max-width: 900px) { .mode { margin: 10px 0 0; } }
-
 /* Hilo visible */
 .thread { position: sticky; top: 0; z-index: 15; max-width: 860px; margin: -40px auto 28px; background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--rule); padding: 10px 0 8px; display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; font-family: var(--sans); }
@@ -433,7 +418,7 @@ button.toc-dl { font: inherit; font-size: .84rem; background: transparent; curso
   @page { margin: 16mm 14mm; }
   :root { --paper: #fff; --panel: #fff; --sunk: #f4f2ec; }
   body { background: #fff; font-size: 11pt; }
-  .toc, .progress, .thread, .pager, .tech-open, .listen, .listen-note, .mode, .skip, .viewer-ctl, .exp-form, #exp-reset, .quiz-grid button, .next-big, .seg { display: none !important; }
+  .toc, .progress, .thread, .pager, .listen, .listen-note, .skip, .viewer-ctl, .exp-form, #exp-reset, .quiz-grid button, .next-big, .seg { display: none !important; }
   main { margin: 0; padding: 0; }
   .chapter { max-width: none; }
   body.print-all .chapter[hidden] { display: block !important; }
@@ -446,14 +431,3 @@ button.toc-dl { font: inherit; font-size: .84rem; background: transparent; curso
   .g { border: 0; }
 }
 
-/* Modo de lectura: más evidente */
-body.mode-div .tec-only:not(.show-tech) { display: none; }
-.tech-open.solo.show-tech::before { content: "− "; }
-.mode-hint { font: .74rem/1.4 var(--sans); color: var(--ink-3); margin: 6px 0 0; max-width: 230px; }
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; z-index: 60; background: var(--ink); color: var(--paper);
-  font: 500 .86rem/1.4 var(--sans); padding: 10px 16px; max-width: min(92vw, 520px); box-shadow: 0 6px 24px rgba(0,0,0,.2); transition: opacity .25s, transform .25s; }
-.toast.on { opacity: 1; transform: translate(-50%, 0); }
-@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
-.flash { animation: flash 1.4s ease-out; }
-body.mode-tec .mode button[data-mode="tec"], body.mode-div .mode button[data-mode="div"] { font-weight: 600; }
-@media (max-width: 900px) { .mode-hint { display: none; } }
