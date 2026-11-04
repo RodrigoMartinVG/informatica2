@@ -1,5 +1,5 @@
 /* global Chart, RESEARCH, EXPLORER */
-import { plateAll, plateOne } from './plates.js';
+import { plateAll, plateOne, plateMini } from './plates.js';
 import { profile } from './profiles.js';
 import { CORR, VEREDICTOS } from './corr.js';
 
@@ -257,6 +257,7 @@ function renderChapterCorr(chapterEl) {
 /* ================= Chapter initializers (run once, when first shown) ================= */
 const inits = {
   portada() {
+    renderQuiz();
     // Imagen generada desde el modelo 3D (cámara ortográfica: la posición horizontal es proporcional a la real)
     const box = $('cover-plate');
     box.innerHTML = `<img src="img/render/render_todas.jpg" alt="Las seis formas de hongo con tallo, modeladas en 3D con las medidas promedio de los datos y fotografiadas a la misma escala" width="2000" height="760"><div class="cover-labels"></div>`;
@@ -436,6 +437,33 @@ const inits = {
       R.arquetipos.map((a) => `<tr><td>${a.nombre}</td><td>${tink[a.id][0]}</td><td>${tink[a.id][1]}</td><td><code>${tink[a.id][2]}</code></td></tr>`).join('') + '</tbody>';
   }
 };
+
+/* ================= Cuestionario de la portada ================= */
+function renderQuiz() {
+  const Q = R.quiz, answers = [];
+  $('quiz').innerHTML = Q.map((q, i) => {
+    const a = { id: 'convexa', cap: q.cap, alto: q.alto, grosor: q.grosor, fill: q.fill, tallo: '#efeae0', ring: q.anillo === 'Sí' };
+    const rows = [['Forma', q.forma], ['Sombrero', `${q.color}, ${num(q.cap, 1)} cm`], ['Superficie', q.superficie], ['Tallo', `${q.tallo}, ${num(q.alto, 1)} cm`], ['Anillo', q.anillo], ['Se magulla', q.magulla], ['Hábitat', q.habitat]];
+    return `<article class="qz" data-i="${i}">
+      <p class="qz-n">Hongo ${i + 1}</p>${plateMini(a, `Hongo ${i + 1}: ${q.forma.toLowerCase()}, ${q.color.toLowerCase()}`)}
+      <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+      <div class="qz-btns"><button type="button" data-a="1">Lo comería</button><button type="button" data-a="0">No lo comería</button></div>
+      <div class="qz-res" hidden></div></article>`;
+  }).join('');
+  $('quiz').querySelectorAll('.qz').forEach((card) => card.querySelectorAll('button').forEach((b) => b.onclick = () => {
+    const i = +card.dataset.i, q = Q[i], comeria = b.dataset.a === '1', ok = comeria !== q.venenoso;
+    answers[i] = ok;
+    card.querySelectorAll('button').forEach((x) => { x.disabled = true; x.classList.toggle('picked', x === b); });
+    const res = card.querySelector('.qz-res');
+    res.innerHTML = `<p class="qz-v ${q.venenoso ? 'tox' : 'ed'}">${q.venenoso ? 'Venenoso' : 'Comestible'} <span>${ok ? '· acertaste' : '· no acertaste'}</span></p><p>${q.nota}</p>`;
+    res.hidden = false; card.classList.add(q.venenoso ? 'is-tox' : 'is-ed');
+    const done = answers.filter((x) => x !== undefined).length;
+    if (done === Q.length) {
+      const hits = answers.filter(Boolean).length;
+      $('quiz-score').innerHTML = `Acertaste <b>${hits} de ${Q.length}</b>. Los cuatro son convexos y de tallo blanco, y los rasgos que “parecen” peligrosos no coinciden con los que de verdad lo son. El resto del informe muestra por qué. <a href="#/investigacion">Empezar →</a>`;
+    }
+  }));
+}
 
 function selectShape(id) {
   const a = R.arquetipos.find((x) => x.id === id); if (!a || !$('shape-plate')) return;

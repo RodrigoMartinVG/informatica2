@@ -59,7 +59,7 @@ export function profile(a) {
   const capTop = shift(c.top), capUnder = shift(c.under);
   const capPoly = [...capTop, ...capUnder, [0, capUnder[capUnder.length - 1][1]]];
   const stemPoly = [[0, 0], ...st, [0, a.alto * 10]];
-  const ring = a.id === 'esferica' ? { y: a.alto * 10 * 0.78, pts: [[a.grosor / 2 * 0.95, 8], [a.grosor / 2 * 1.35, 2], [a.grosor / 2 * 1.7, -6]] } : null;
+  const ring = (a.id === 'esferica' || a.ring) ? { y: a.alto * 10 * 0.78, pts: [[a.grosor / 2 * 0.95, 8], [a.grosor / 2 * 1.35, 2], [a.grosor / 2 * 1.7, -6]] } : null;
   const top = Math.max(...capTop.map((p) => p[1]));
   const width = Math.max(...capTop.map((p) => p[0]), ...st.map((p) => p[0]));
   return {

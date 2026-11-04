@@ -75,6 +75,18 @@ window.RESEARCH = {
     { set: "+ superficie y raíz del tallo, espaciado de láminas", tipo: "tactil", grupos: 895, puros: 85.6 }
   ],
 
+  // Cuestionario de la portada: cuatro grupos reales de la hoja Data (mismos rasgos visibles, 100 % de una clase)
+  quiz: [
+    { forma: 'Convexa', color: 'Blanco', tallo: 'Blanco', superficie: 'Escamosa', anillo: 'Sí', magulla: 'Sí', habitat: 'Pastos', cap: 7.49, alto: 8.04, grosor: 13.9, n: 204, venenoso: true,
+      fill: '#e9e3d6', nota: 'Blanco, escamoso, con anillo y de buen tamaño: se parece a un champiñón de supermercado. En la muestra hay 204 hongos con exactamente estos rasgos y todos son venenosos.' },
+    { forma: 'Convexa', color: 'Púrpura', tallo: 'Blanco', superficie: 'Sin dato', anillo: 'No', magulla: 'No', habitat: 'Bosques', cap: 2.45, alto: 5.98, grosor: 4.5, n: 167, venenoso: false,
+      fill: '#6d4a78', nota: 'Color llamativo y sombrero chico: dos señales de riesgo según el capítulo 4 y el 3. Aun así, los 167 hongos con estos rasgos son comestibles.' },
+    { forma: 'Convexa', color: 'Marrón', tallo: 'Blanco', superficie: 'Con surcos', anillo: 'Sí', magulla: 'No', habitat: 'Bosques', cap: 7.53, alto: 7.95, grosor: 14.8, n: 187, venenoso: true,
+      fill: '#8a6446', nota: 'El hongo “de manual”: marrón, convexo, tallo blanco. Los 187 hongos con estos rasgos son venenosos.' },
+    { forma: 'Convexa', color: 'Marrón', tallo: 'Blanco', superficie: 'Sin dato', anillo: 'Sí', magulla: 'Sí', habitat: 'Bosques', cap: 10.12, alto: 11.12, grosor: 17.5, n: 181, venenoso: false,
+      fill: '#93694a', nota: 'Tiene anillo y se magulla: según las dos creencias populares, sería venenoso. Los 181 hongos con estos rasgos son comestibles. Comparalo con el anterior: casi idénticos, y de clases opuestas.' }
+  ],
+
   // Las seis formas con tallo. Colores = el más frecuente en los datos (marrón y tallo blanco en las seis).
   arquetipos: [
     { id: "convexa", nombre: "Convexa", codigo: "x", pct: 44.10, n: 26934, ven: 51.9, cap: 6.67, alto: 6.84, grosor: 12.41, anillo: 28.3,

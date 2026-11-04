@@ -89,3 +89,10 @@ export function plateOne(a, { profileMode = false } = {}) {
   s += `<g class="dim"><line x1="${cx - sw}" y1="${ys}" x2="${cx + sw}" y2="${ys}"/><text x="${cx - sw - 6}" y="${ys + 4}" text-anchor="end">${f1(a.grosor)} mm</text></g>`;
   return `<svg viewBox="0 0 ${W} ${H}" class="plate one" role="img" aria-label="Lámina de la forma ${a.nombre}: sombrero de ${f2(a.cap)} cm de diámetro, tallo de ${f2(a.alto)} cm de alto y ${f1(a.grosor)} mm de grosor">${s}</svg>`;
 }
+
+// Silueta sola, para tarjetas chicas (cuestionario de la portada)
+export function plateMini(a, label = '', k = 1.0) { // k = px por mm, igual para todas las tarjetas
+  const p = profile(a), W = 160, H = 170;
+  const cx = W / 2, by = H - 12;
+  return `<svg viewBox="0 0 ${W} ${H}" class="plate mini" role="img" aria-label="${label}"><line x1="10" y1="${by}" x2="${W - 10}" y2="${by}" class="ground"/>${mushroomSVG(a, p, k, cx, by)}</svg>`;
+}
