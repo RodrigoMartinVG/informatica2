@@ -49,6 +49,7 @@
   <div class="toc-tools">
     <a class="toc-dl" href="presentacion.html"><span>▶</span>Modo presentación (8 diapositivas)</a>
     <a class="toc-dl" href="../v5_Hongos_DataSet_Rodrigo_Vidal.xlsx" download><span>↓</span>Descargar el Excel (v5, 16 MB)</a>
+    <button type="button" class="toc-dl" id="print-btn"><span>⎙</span>Imprimir o guardar en PDF</button>
   </div>
 </aside>
 
@@ -264,7 +265,7 @@ f(x) = FitLine(Todos)</pre>
   <h2>Más rasgos: el giro</h2>
   <p>Llevamos esa idea al extremo: agregar rasgos, uno por uno, como si sumáramos campos a las filas de la tabla dinámica, y contar qué parte de los hongos queda en un grupo donde <em>todos</em> son de la misma clase.</p>
   <figure class="fig">
-    <figcaption><span class="fig-n">Figura 4</span>Parte de los hongos que quedan en grupos 100 % comestibles o 100 % venenosos, a medida que se suman rasgos</figcaption>
+    <figcaption><span class="fig-n">Figura 4</span>Parte de los hongos que quedan en grupos 100 % comestibles o 100 % venenosos, a medida que se suman rasgos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
     <div class="chart-box"><canvas id="c-prog" aria-label="Parte de hongos en grupos puros según la cantidad de rasgos combinados"></canvas></div>
   </figure>
   <div class="read-tech">
@@ -330,7 +331,7 @@ f(x) = FitLine(Todos)</pre>
   <h2>Rasgos que se ven y rasgos que se tocan</h2>
   <p>Separamos los rasgos del dataset según cómo se perciben. Los <b>táctiles</b> son la forma, el tamaño, la superficie del sombrero y del tallo, el anillo, la raíz y el espaciado de las láminas. Los <b>visuales</b> son los colores y el cambio de color al lastimarse.</p>
   <figure class="fig">
-    <figcaption><span class="fig-n">Figura 5</span>Parte de los hongos en grupos puros, según qué sentido se usa para observarlos</figcaption>
+    <figcaption><span class="fig-n">Figura 5</span>Parte de los hongos en grupos puros, según qué sentido se usa para observarlos <span class="src extra">Cálculo adicional, fuera del Excel</span></figcaption>
     <div class="chart-box short"><canvas id="c-sentidos" aria-label="Comparación entre rasgos táctiles y visuales"></canvas></div>
   </figure>
   <div class="read-tech">

@@ -414,3 +414,34 @@ svg.plate.mini { max-width: 150px; margin: 0 auto 6px; }
 .toc-tools { margin-top: 24px; display: grid; gap: 6px; }
 .toc-tools .toc-dl { margin: 0 0 0 -10px; }
 @media (max-width: 900px) { .toc-tools { display: none; } .toc.open .toc-tools { display: grid; } .toc.open .toc-tools .toc-dl { display: grid; margin-left: 0; } }
+
+/* Fuente del dato */
+.src { display: inline-block; margin-left: 8px; font: 500 .68rem var(--sans); color: var(--ink-3); border-left: 2px solid var(--rule-strong); padding-left: 8px; vertical-align: middle; }
+.src.extra { color: var(--tox); border-left-color: var(--tox); margin-left: 10px; }
+/* Escuchar */
+.listen { font: 500 .78rem var(--sans); background: transparent; border: 1px solid var(--rule-strong); color: var(--ink-2); padding: 5px 10px; cursor: pointer; margin-top: 10px; }
+.listen:hover { border-color: var(--ink); color: var(--ink); }
+.listen-note { font: .76rem var(--sans); color: var(--ink-3); margin-left: 10px; }
+/* Glosario */
+.g { border-bottom: 1px dotted var(--accent); cursor: help; position: relative; }
+.g:hover::after, .g:focus::after { content: attr(data-def); position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; width: max-content; max-width: 280px;
+  background: var(--ink); color: var(--paper); font: 400 .78rem/1.45 var(--sans); font-style: normal; padding: 8px 10px; white-space: normal; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+button.toc-dl { font: inherit; font-size: .84rem; background: transparent; cursor: pointer; text-align: left; width: 100%; }
+
+/* Impresión */
+@media print {
+  @page { margin: 16mm 14mm; }
+  :root { --paper: #fff; --panel: #fff; --sunk: #f4f2ec; }
+  body { background: #fff; font-size: 11pt; }
+  .toc, .progress, .thread, .pager, .tech-open, .listen, .listen-note, .mode, .skip, .viewer-ctl, .exp-form, #exp-reset, .quiz-grid button, .next-big, .seg { display: none !important; }
+  main { margin: 0; padding: 0; }
+  .chapter { max-width: none; }
+  body.print-all .chapter[hidden] { display: block !important; }
+  .chapter + .chapter { break-before: page; }
+  .cx, .fig, .cx-tech, .read-tech { break-inside: avoid; }
+  .cx-tech, .tech { display: grid !important; }
+  .tech { display: block !important; }
+  .read-tech { grid-template-columns: 1fr 300px !important; }
+  a { color: inherit; text-decoration: none; }
+  .g { border: 0; }
+}

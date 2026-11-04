@@ -30,7 +30,29 @@ Chart.register({
     ctx.save(); ctx.strokeStyle = T().ink; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5; ctx.beginPath();
     if (h) { ctx.moveTo(p, a.top - 4); ctx.lineTo(p, a.bottom); } else { ctx.moveTo(a.left, p); ctx.lineTo(a.right, p); }
     ctx.stroke(); ctx.setLineDash([]);
-    if (o.label) { ctx.fillStyle = T().ink; ctx.font = '500 10.5px "IBM Plex Sans"'; ctx.textAlign = h ? 'left' : 'right'; ctx.fillText(o.label, h ? p + 4 : a.right, h ? a.top + 8 : p - 5); }
+    if (o.label) { ctx.fillStyle = T().ink; ctx.font = '500 10.5px "IBM Plex Sans"'; ctx.textAlign = h ? 'left' : 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(o.label, h ? p + 4 : a.right, h ? a.top - 3 : p - 3); }
+    ctx.restore();
+  }
+});
+// Etiquetas directas: el % de venenosos escrito sobre cada barra apilada, y máximo/mínimo en las líneas
+Chart.register({
+  id: 'directLabels',
+  afterDatasetsDraw(chart, _a, o) {
+    if (!o || !o.mode) return;
+    const { ctx } = chart, t = T();
+    ctx.save(); ctx.font = '600 10.5px "IBM Plex Mono", monospace'; ctx.textBaseline = 'middle';
+    if (o.mode === 'stack') {
+      chart.getDatasetMeta(0).data.forEach((bar, i) => {
+        const v = chart.data.datasets[0].data[i], txt = Math.round(v * 100) + ' %', w = bar.x - bar.base;
+        if (w > 36) { ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.fillText(txt, bar.x - 6, bar.y); }
+        else { ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(txt, bar.x + 6, bar.y); }
+      });
+    }
+    if (o.mode === 'extremes') {
+      const d = chart.data.datasets[0].data, meta = chart.getDatasetMeta(0).data;
+      const iMax = d.indexOf(Math.max(...d)), iMin = d.indexOf(Math.min(...d));
+      [[iMax, -12], [iMin, 14]].forEach(([i, dy]) => { const p = meta[i]; ctx.fillStyle = t.ink; ctx.textAlign = 'center'; ctx.fillText(Math.round(d[i] * 100) + ' %', p.x, p.y + dy); });
+    }
     ctx.restore();
   }
 });
@@ -94,9 +116,11 @@ function corrShell(c) {
       <h2>${c.title}</h2>
       <p class="cx-q">${c.question}</p>
       <span class="verdict v-${c.verdict}">${VEREDICTOS[c.verdict]}</span>
+      <span class="src">${c.kind === 'heat' ? 'Excel · recalculado desde la hoja Data para mostrar cantidades' : 'Dato del Excel'}</span>
     </header>
     <figure class="fig cx-fig">
       <div class="cx-chart"></div>
+      ${['stack', 'rango', 'corrST'].includes(c.kind) ? `<button type="button" class="listen" data-corr="${c.id}">▶ Escuchar el gráfico</button><span class="listen-note" aria-live="polite"></span>` : ''}
       <details class="cx-data"><summary>Ver los datos en una tabla</summary><div class="table-wrap"></div></details>
     </figure>
     <div class="cx-read">
@@ -127,7 +151,7 @@ const kinds = {
         { label: 'Comestibles', data: m.map((x) => 1 - x.p), backgroundColor: () => T().ed, stack: 's', borderSkipped: false, borderRadius: { topRight: 2, bottomRight: 2 } }
       ] },
       options: { indexAxis: 'y', barPercentage: 0.78, categoryPercentage: 0.9,
-        plugins: { legend: { position: 'top', align: 'end' }, refLine: { value: BASE, axis: 'x', label: '55,5 %' },
+        plugins: { legend: { position: 'top', align: 'end' }, refLine: { value: BASE, axis: 'x', label: '55,5 %' }, directLabels: { mode: 'stack' },
           tooltip: { callbacks: { label: (k) => `${k.dataset.label}: ${pct(k.raw)}`, afterBody: (k) => `${int(m[k[0].dataIndex].n)} hongos` } } },
         scales: { x: { ...pctAxis(), stacked: true }, y: { stacked: true, grid: { display: false }, border: { display: false } } } }
     }));
@@ -159,7 +183,7 @@ const kinds = {
       type: 'line',
       data: { labels: d.x, datasets: [{ label: 'Venenosos', data: d.y, borderColor: () => T().tox, backgroundColor: () => T().tox, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: 0.2 }] },
       options: { interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { display: false }, refLine: { value: BASE, axis: 'y', label: 'promedio 55,5 %' },
+        plugins: { legend: { display: false }, refLine: { value: BASE, axis: 'y', label: 'promedio 55,5 %' }, directLabels: { mode: 'extremes' },
           tooltip: { callbacks: { title: (k) => `${d.label}: ${k[0].label}`, label: (k) => `Venenosos: ${pct(k.raw)}`, afterLabel: (k) => (n ? `${int(n[k.dataIndex])} hongos · margen ±${num(200 * Math.sqrt(k.raw * (1 - k.raw) / n[k.dataIndex]), 1)} pts` : '') } } },
         scales: { y: pctAxis(), x: { title: { display: true, text: d.label }, grid: { display: false } } } }
     }));
@@ -245,6 +269,37 @@ function renderMiniIndex(chapterEl) {
   chapterEl.querySelector('.dek').after(nav);
 }
 
+/* ================= Glosario ================= */
+const GLOSARIO = {
+  'láminas': 'Las hojitas radiales debajo del sombrero, donde se forman las esporas.',
+  'anillo': 'Resto de una membrana que cubría las láminas; queda como una “pollerita” en el tallo.',
+  'micólogo': 'Especialista en hongos. Identifica especies con muchos rasgos a la vez, a veces con microscopio.',
+  'tabla dinámica': 'Herramienta de Excel que agrupa filas y calcula cuentas, promedios o porcentajes por grupo.',
+  'probabilidad condicional': 'La probabilidad de algo sabiendo otra cosa. Acá: de ser venenoso, sabiendo que tiene cierto rasgo.',
+  'promedio ponderado': 'Un promedio donde cada valor pesa según cuántos casos representa.',
+  'mediana': 'El valor del medio cuando se ordenan los datos. No se mueve por unos pocos valores extremos.',
+  'mínimos cuadrados': 'Método para elegir la recta (o curva) que hace más chica la suma de los errores al cuadrado.',
+  'error estándar': 'Cuánto puede variar una proporción estimada por azar. Es más chico cuanto más datos hay.',
+  'segmentación de datos': 'Botones de Excel que filtran una tabla dinámica con un clic.',
+  'sólido de revolución': 'El cuerpo que se forma al girar una figura plana 360° alrededor de un eje.',
+  'interacción': 'Cuando el efecto de un rasgo cambia según el valor de otro rasgo.',
+  'simulados': 'Datos generados por computadora a partir de las especies reales, no recolectados en el campo.'
+};
+function addGlossary(root) {
+  const used = new Set(), terms = Object.keys(GLOSARIO).sort((a, b) => b.length - a.length);
+  const re = new RegExp(`(^|[^\\p{L}])(${terms.join('|')})(?![\\p{L}])`, 'iu');
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) =>
+    n.parentElement.closest('p, li, dd') && !n.parentElement.closest('code, h1, h2, h3, a, button, .g, .eq, figcaption, .verdict, table, .mini-index, .tech dt, svg, .qz, .sh-dl, .facts') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+  const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const n of nodes) {
+    const m = n.nodeValue.match(re); if (!m) continue;
+    const key = m[2].toLowerCase(); if (used.has(key)) continue; used.add(key);
+    const start = m.index + m[1].length, after = n.splitText(start); after.nodeValue = after.nodeValue.slice(m[2].length);
+    const span = document.createElement('span'); span.className = 'g'; span.tabIndex = 0; span.textContent = m[2]; span.dataset.def = GLOSARIO[key];
+    span.setAttribute('aria-description', GLOSARIO[key]); n.after(span);
+  }
+}
+
 function renderChapterCorr(chapterEl) {
   renderMiniIndex(chapterEl);
   chapterEl.querySelectorAll('.corr[data-corr]').forEach((ph) => {
@@ -252,6 +307,7 @@ function renderChapterCorr(chapterEl) {
     ph.innerHTML = corrShell(c);
     kinds[c.kind](c, ph.querySelector('.cx-chart'), ph.querySelector('.cx-data .table-wrap'));
   });
+  addGlossary(chapterEl);
 }
 
 /* ================= Chapter initializers (run once, when first shown) ================= */
@@ -482,8 +538,31 @@ function selectShape(id) {
   $('sh-split').innerHTML = `<span class="t" style="width:${a.ven}%">${num(a.ven, 1)} % venenosos</span><span class="e" style="width:${100 - a.ven}%">${num(100 - a.ven, 1)} %</span>`;
 }
 
-/* ================= Sonificación del modelo 2 ================= */
+/* ================= Sonificación ================= */
 let audio;
+// Cada valor suena como un tono: más agudo = valor más alto (escala de 220 a 880 Hz)
+function playSeries(values, lo, hi, dt = 0.26) {
+  audio ||= new (window.AudioContext || window.webkitAudioContext)();
+  const t0 = audio.currentTime + 0.08;
+  values.forEach((y, i) => {
+    const o = audio.createOscillator(), g = audio.createGain(), t = t0 + i * dt;
+    o.type = 'sine'; o.frequency.value = 220 + Math.max(0, Math.min(1, (y - lo) / (hi - lo))) * 660;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + dt * 0.9);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dt);
+  });
+  return values.length * dt * 1000;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.listen'); if (!b) return;
+  const c = CORR.find((x) => x.id === b.dataset.corr), note = b.nextElementSibling;
+  let vals, txt;
+  if (c.kind === 'stack') { const m = marginal(c.dim); vals = m.map((x) => x.p); txt = `${m.length} tonos, de la categoría con más venenosos (${m[0].label}) a la de menos (${m[m.length - 1].label}). Más agudo = más venenosos.`; }
+  else if (c.kind === 'rango') { vals = R.rangos[c.key].y; txt = `${vals.length} tonos, del rango más chico al más grande. Más agudo = más venenosos.`; }
+  else { vals = R.corrST.ven; txt = 'Grosor del tallo de los venenosos, de 0,5 a 24,5 cm de sombrero. El tono sube casi sin parar: la relación es fuerte.'; }
+  const lo = c.kind === 'corrST' ? 0 : 0, hi = c.kind === 'corrST' ? 60 : 1;
+  const ms = playSeries(vals, lo, hi); note.textContent = txt;
+  setTimeout(() => { note.textContent = ''; }, ms + 2500);
+});
 function sonify() {
   audio ||= new (window.AudioContext || window.webkitAudioContext)();
   const pts = R.modelo2, t0 = audio.currentTime + 0.1, dt = 0.28;
@@ -555,6 +634,25 @@ document.addEventListener('click', (e) => {
 });
 let savedMode = 'div'; try { savedMode = localStorage.getItem('lectura') || 'div'; } catch { /* */ }
 setMode(savedMode, false);
+
+/* ================= Imprimir / PDF: todos los capítulos, con la parte técnica ================= */
+function printAll() {
+  const prev = chapters.map((c) => c.hidden);
+  chapters.forEach((c) => (c.hidden = false));
+  chapters.forEach((c, i) => { const id = ids[i]; if (!done.has(id)) { done.add(id); renderChapterCorr(c); inits[id]?.(); } });
+  document.querySelectorAll('details').forEach((d) => { d.dataset.wasOpen = d.open ? '1' : ''; d.open = true; });
+  document.body.classList.add('print-all');
+  charts.forEach((c) => c.resize());
+  const restore = () => {
+    document.body.classList.remove('print-all');
+    document.querySelectorAll('details').forEach((d) => { d.open = d.dataset.wasOpen === '1'; });
+    chapters.forEach((c, i) => (c.hidden = prev[i]));
+    removeEventListener('afterprint', restore);
+  };
+  addEventListener('afterprint', restore);
+  setTimeout(() => window.print(), 700);
+}
+$('print-btn')?.addEventListener('click', printAll);
 
 renderCorrMaps();
 route();

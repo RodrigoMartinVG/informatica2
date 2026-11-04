@@ -15,6 +15,27 @@ Las **14 correlaciones del Excel** aparecen todas con la misma estructura: qué 
 
 El Excel v5 se puede descargar desde el índice lateral, desde el capítulo 1 y desde el anexo C.
 
+## Funciones de lectura
+
+- **Lectura divulgativa o técnica:** un selector en el índice. En modo divulgativo, cada parte técnica se abre con su propio botón.
+- **Hilo visible:** una barra fija con la pregunta, los veredictos acumulados y el estado de la respuesta. Cada capítulo tiene además su mini-índice.
+- **¿Vos lo comerías?:** un cuestionario en la portada con cuatro grupos reales de la muestra.
+- **Glosario:** los términos subrayados con puntos muestran su definición al pasar el cursor.
+- **Escuchar el gráfico:** cada correlación puede reproducirse como tonos, para lectores ciegos.
+- **Fuente del dato:** cada cifra indica si sale directamente del Excel o de un cálculo adicional.
+- **Modo presentación:** `presentacion.html`, con 8 diapositivas, F para pantalla completa y N para las notas del orador.
+- **Imprimir o guardar en PDF:** arma todos los capítulos, incluida la parte técnica.
+
+## Imágenes desde los datos
+
+Las imágenes de `img/render/` se generan con el mismo modelo 3D del anexo B: las medidas promedio, el color más frecuente y la superficie más común. Para regenerarlas:
+
+```bash
+python3 web/tools/save_server.py
+```
+
+Con ese receptor corriendo, se abre `http://localhost:8765/web/tools/render.html` y las imágenes se guardan solas. Las imágenes de `img/*.jpg` son las originales generadas con IA; se usan solo para la comparación del anexo A.
+
 Para navegar se usa el índice lateral, los enlaces de anterior y siguiente al pie de cada capítulo, o las flechas ← → del teclado.
 
 ## Cómo verla
@@ -35,7 +56,9 @@ Se ejecuta desde la raíz del repo y después se abre http://localhost:8765 (red
 | `app.js` | Navegación, gráficos de cada correlación, explorador y sonificación |
 | `profiles.js` | Perfiles de las seis formas en mm, compartidos por las láminas y el 3D, y cálculo del volumen |
 | `plates.js` | Láminas SVG generadas desde los datos |
-| `viewer3d.js` | Visor 3D (three.js, `LatheGeometry`) |
+| `viewer3d.js` | Modelos 3D con texturas, visor interactivo e imágenes fijas |
+| `presentacion.html`, `deck.js` | Modo presentación |
+| `tools/render.html`, `tools/save_server.py` | Regeneran las imágenes desde los datos |
 | `data.js` | Tablas de las hojas de análisis del Excel |
 | `explorer-data.js` | Conteos agrupados de los 61.069 registros (generado) |
 | `tools/build_data.py` | Regenera `explorer-data.js` a partir de la hoja `Data` |
