@@ -175,6 +175,7 @@ $('#c').addEventListener('wheel', (e) => { cam.dist = Math.min(16, Math.max(2.2,
 $('#c').addEventListener('contextmenu', (e) => e.preventDefault());
 
 const touch = { x: 0, y: 0 };
+const coarse = matchMedia('(pointer: coarse)').matches;
 if (matchMedia('(pointer: coarse)').matches) {
   $('#touch').hidden = false;
   const stick = $('#stick'), knob = stick.querySelector('span');
@@ -385,7 +386,7 @@ $('#insight-ok').addEventListener('click', () => {
   const L = state.cur; if (!L || !state.done.has(L.id) || state.phase !== 'insight') return;
   const next = LEVELS[LEVELS.indexOf(L) + 1];
   gsap.to('#insight', { opacity: 0, duration: 0.4, onComplete: () => ($('#insight').hidden = true) });
-  cam.mode = 'follow'; state.phase = 'play'; S.setMood('calm'); $('#tally').hidden = true;
+  cam.mode = 'follow'; state.phase = 'play'; S.setMood('calm'); $('#tally').hidden = true; state.cur = null;
   say('after' + L.id, L.after);
   gsap.to(trail.scale, { x: 0.001, y: 0.001, z: 0.001, duration: 1.2 });
   if (next) {
@@ -393,8 +394,12 @@ $('#insight-ok').addEventListener('click', () => {
     state.awake.add(next.id); world.wake(next.at.name);
     const a = L.at, b = next.at, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
     trail = sporeTrail(scene, [[a.x, a.z - 4], [mx + (b.z - a.z) * 0.12, mz - (b.x - a.x) * 0.12], [b.x, b.z]]);
-    objective(`Página nueva en el cuaderno (C). Ahora seguí las esporas hasta ${next.place}. Con Espacio volás al próximo hongo.`);
-    say('next' + next.id, `Las esporas te llevan a ${next.place}. Otro claro, otra creencia para poner a prueba.`);
+    objective(`Volando ${toPlace(next.place)}…`);
+    say('next' + next.id, `Abrís las alas y seguís las esporas ${toPlace(next.place)}. Otro claro, otra creencia para poner a prueba.`);
+    // Vuelo de viaje: gratis, siguiendo las esporas, y aterriza al borde del claro mirando al centro
+    const lx = b.x, lz = b.z + next.spread + 7, d = Math.hypot(lx - beetle.pos.x, lz - beetle.pos.z);
+    state.phase = 'travel'; S.fly();
+    setTimeout(() => beetle.flyToGround(lx, lz, Math.atan2(b.x - lx, b.z - lz), Math.min(7, 2.5 + d / 40), Math.max(18, d * 0.3)), 500);
   } else {
     objective('Página nueva en el cuaderno (C). Los demás claros todavía duermen… pronto van a despertar.');
     say('end', 'Los demás claros todavía duermen. Pronto van a despertar.');
@@ -432,21 +437,28 @@ $('#b-book').addEventListener('click', toggleBook);
 $('#book-close').addEventListener('click', toggleBook);
 $('#book').addEventListener('click', (e) => { if (e.target.id === 'book') toggleBook(); });
 
-/* ---------- Volar al próximo hongo ---------- */
+/* ---------- Volar al próximo hongo sin explorar ---------- */
+const FLY_COST = 1.5;
+const unexplored = (s) => !(s.known && s.traitKnown) && !(s.known && !s.level);
+function flyTarget() {
+  const p = beetle.pos, on = beetle.on;
+  const nearestOf = (pool) => { let best = null, bd = Infinity; for (const s of pool) { if (s === on) continue; const d = Math.hypot(s.x - p.x, s.z - p.z); if (d > 1.5 && d < bd) { bd = d; best = s; } } return best; };
+  // 1) el claro actual, 2) cualquier claro despierto sin descubrir, 3) el hongo sin explorar más cercano del bosque
+  const L = state.cur && !state.done.has(state.cur.id) ? state.cur : null;
+  return (L && nearestOf(flora.specimens.filter((s) => s.level === L.id && unexplored(s))))
+    || nearestOf(flora.specimens.filter((s) => state.awake.has(s.level) && !state.done.has(s.level) && unexplored(s)))
+    || nearestOf(flora.all.filter((s) => !s.known));
+}
 function fly() {
   if (state.phase !== 'play' || state.busy || beetle.flying || beetle.state.mode === 'transit') return;
-  if (game.energy < 5) { say('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
-  const p = beetle.pos, on = beetle.on;
-  const L = state.cur && !state.done.has(state.cur.id) ? state.cur : null;
-  let pool = L ? flora.specimens.filter((s) => s.level === L.id && !(s.known && s.traitKnown)) : [];
-  if (!pool.length) { beetle.heading(H); pool = flora.all.filter((s) => ((s.x - p.x) * H.x + (s.z - p.z) * H.z) > 2); }
-  let best = null, bd = Infinity;
-  for (const s of pool) { if (s === on) continue; const d = Math.hypot(s.x - p.x, s.z - p.z); if (d > 2 && d < 60 && d < bd) { bd = d; best = s; } }
-  if (!best) { say('flynone', 'No hay ningún hongo cerca hacia donde volar.', { repeat: true }); return; }
-  game.energy -= 4; drawStatus(); state.flights++;
-  beetle.flyTo(best); S.fly();
-  say('fly1', 'Los escarabajos también vuelan: abrís los élitros y desplegás las alas.');
+  if (game.energy < FLY_COST) { say('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
+  const target = flyTarget();
+  if (!target) { say('flynone', 'Ya exploraste todos los hongos que hay cerca.', { repeat: true }); return; }
+  game.energy -= FLY_COST; drawStatus(); state.flights++;
+  beetle.flyTo(target); S.fly();
+  say('fly1', 'Los escarabajos también vuelan: abrís los élitros, desplegás las alas y aterrizás sobre un hongo que todavía no exploraste.');
 }
+$('#b-fly').addEventListener('click', (e) => { e.currentTarget.blur(); fly(); });
 
 /* ---------- Sonido y voz ---------- */
 const sndLabel = () => ($('#b-snd').textContent = `Sonido: ${S.isOn() ? 'sí' : 'no'}`);
@@ -510,6 +522,9 @@ function frame() {
       pr.innerHTML = `${sn} · ${m.eaten ? 'ya comido' : '<kbd>F</kbd> Comer'}${what}`;
       pr.hidden = false;
       if (beetle.mode === 'ground') say('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
+    } else if (beetle.state.mode !== 'transit') {
+      pr.innerHTML = '<kbd>Espacio</kbd> Volar al próximo hongo sin explorar';
+      pr.hidden = false;
     } else pr.hidden = true;
 
     // Zonas: entrar a un claro despierto y todavía sin descubrir
@@ -517,7 +532,7 @@ function frame() {
       if (!state.awake.has(L.id) || state.done.has(L.id) || state.cur === L) continue;
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
-        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); say('flyhint', 'Tip: con Espacio volás al próximo hongo sin investigar.'); }
+        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); say('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
     }
     for (const s of SLEEPING) {
@@ -528,6 +543,9 @@ function frame() {
       }
     }
   }
+  if (state.phase === 'travel' && ev === 'aterrizó:ground') { state.phase = 'play'; S.jump(); if (state.cur) objective(state.cur.goal); }
+  $('#b-fly').hidden = state.phase !== 'play' || coarse;
+
   // El veneno se va pasando
   if (game.poison > 0) { game.poison = Math.max(0, game.poison - dt / 9); if (game.poison === 0) S.poison(false); }
   poisonU.value = game.poison; beetle.setWobble(game.poison);

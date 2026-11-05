@@ -311,6 +311,13 @@ export function createBeetle(scene) {
     setMushrooms(list) { mushrooms = list; },
     get touching() { return st.touch; },
     get flying() { return st.flying; },
+    // Volar hasta un punto del suelo (viaje entre claros)
+    flyToGround(x, z, yaw, dur, lift) {
+      if (st.mode === 'transit') return false;
+      st.flying = true;
+      startTransit('ground', () => { st.m = null; st.x = x; st.z = z; st.yaw = yaw; }, dur, lift);
+      return true;
+    },
     // Volar hasta arriba del sombrero de un hongo
     flyTo(m) {
       if (st.mode === 'transit') return false;

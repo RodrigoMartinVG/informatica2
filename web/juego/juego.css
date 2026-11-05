@@ -121,3 +121,10 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .act.fly { right: 40px; bottom: 160px; width: 72px; height: 72px; background: rgba(159,232,200,.2); }
 .q-intro { display: block; margin-top: 14px; background: transparent; color: var(--ink-2); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 8px 16px; font-size: 14px; }
 .q-intro:hover { background: rgba(255,255,255,.08); }
+
+.flybtn { position: absolute; right: 22px; bottom: 24px; pointer-events: auto; display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; text-align: left;
+  background: rgba(20,14,8,.62); backdrop-filter: blur(8px); color: var(--ink); border: 1px solid rgba(159,232,200,.45); border-radius: 14px; padding: 10px 16px; font-size: 15px; font-weight: 500; }
+.flybtn .ico { font-size: 22px; color: var(--accent); }
+.flybtn small { display: block; margin-top: 2px; font-size: 11px; color: var(--ink-3); font-weight: 400; }
+.flybtn kbd { margin-left: 6px; }
+.flybtn:hover { background: rgba(20,14,8,.85); border-color: var(--accent); }
