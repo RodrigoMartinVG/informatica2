@@ -149,24 +149,82 @@ const gl = (() => {
   return { render };
 })();
 
-/* ---------- Gráfico de la escena 5 (modelo logarítmico de GeoGebra) ---------- */
-(function plot5() {
-  const sx = (v) => 200 + v * 68.18, sy = (p) => 900 - (p - 0.30) * 1163.6;
-  const NS = 'http://www.w3.org/2000/svg', svg = $('#plot5');
-  const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
-  el('line', { class: 'ax ax5', x1: sx(0), y1: sy(0.30), x2: sx(22.5), y2: sy(0.30) });
-  el('line', { class: 'ax ax5', x1: sx(0), y1: sy(0.30), x2: sx(0), y2: sy(0.86) });
-  [0, 5, 10, 15, 20].forEach((v) => el('text', { class: 'small t5', x: sx(v), y: 940, 'text-anchor': 'middle' }, `${v} cm`));
-  [0.4, 0.6, 0.8].forEach((p) => el('text', { class: 'small t5', x: sx(0) - 18, y: sy(p) + 7, 'text-anchor': 'end' }, `${Math.round(p * 100)} %`));
-  el('text', { class: 'lbl t5', x: sx(22.5), y: 985, 'text-anchor': 'end' }, 'DIÁMETRO DEL SOMBRERO');
-  R.modelo2.forEach(([x, p], i) => el('circle', { class: 'pt5', cx: sx(x), cy: sy(p), r: 4 + Math.sqrt(R.modelo2n[i]) / 9, fill: 'rgba(238,236,230,.38)' }));
+/* ---------- Gráficos (SVG armado con los datos de la investigación) ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (svg, tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
+const pct = (v) => `${Math.round(v * 100)} %`;
+const BASE = R.stats.toxicos;
+
+// Barras verticales: proporción de venenosos por categoría, con la línea del 55,5 %
+function vbars(sel, items, { x0 = 520, x1 = 1400, bottom = 880, h = 600, valClass = 'val' } = {}) {
+  const svg = $(`${sel} svg`), slot = (x1 - x0) / items.length, w = Math.min(240, slot * 0.62);
+  mk(svg, 'line', { class: 'ax', x1: x0, y1: bottom, x2: x1, y2: bottom });
+  const by = bottom - BASE * h;
+  mk(svg, 'line', { class: 'base', x1: x0 - 20, y1: by, x2: x1 + 20, y2: by });
+  items.forEach(([lab, v], i) => {
+    const cx = x0 + slot * (i + 0.5), bh = v * h;
+    mk(svg, 'rect', { class: 'cbar', x: cx - w / 2, y: bottom - bh, width: w, height: bh, rx: 4, fill: 'var(--tox)' });
+    mk(svg, 'text', { class: `${valClass} num`, x: cx, y: bottom - bh - 24, 'text-anchor': 'middle' }, pct(v));
+    mk(svg, 'text', { class: 'lbl num', x: cx, y: bottom + 50, 'text-anchor': 'middle' }, lab.toUpperCase());
+  });
+  mk(svg, 'text', { class: 'small bt', x: x1 + 36, y: by + 8 }, '55,5 % · todos los hongos');
+}
+
+// Barras horizontales con muestra de color
+function hbars(sel, items, { x0 = 560, y0 = 290, row = 82, w = 700 } = {}) {
+  const svg = $(`${sel} svg`), bx = x0 + BASE * w;
+  mk(svg, 'line', { class: 'base', x1: bx, y1: y0 - 30, x2: bx, y2: y0 + items.length * row });
+  items.forEach(([lab, v, col], i) => {
+    const y = y0 + i * row, bh = row * 0.58;
+    mk(svg, 'circle', { class: 'num', cx: x0 - 34, cy: y + bh / 2, r: 15, fill: col, stroke: 'rgba(255,255,255,.35)', 'stroke-width': 2 });
+    mk(svg, 'text', { class: 'clabel num', x: x0 - 66, y: y + bh / 2 + 9, 'text-anchor': 'end' }, lab);
+    mk(svg, 'rect', { class: 'cbar', x: x0, y, width: v * w, height: bh, rx: 4, fill: 'var(--tox)' });
+    mk(svg, 'text', { class: 'cval num', x: x0 + v * w + 18, y: y + bh / 2 + 12 }, pct(v));
+  });
+  mk(svg, 'text', { class: 'small bt', x: bx, y: y0 - 44, 'text-anchor': 'middle' }, '55,5 %');
+}
+
+// Ejes comunes de los dos modelos de GeoGebra
+function axes(svg, sx, sy, xt, yt, ylab, xmax, ymin, ymax, fmt) {
+  mk(svg, 'line', { class: 'ax', x1: sx(0), y1: sy(ymin), x2: sx(xmax), y2: sy(ymin) });
+  mk(svg, 'line', { class: 'ax', x1: sx(0), y1: sy(ymin), x2: sx(0), y2: sy(ymax) });
+  xt.forEach((v) => mk(svg, 'text', { class: 'small num', x: sx(v), y: sy(ymin) + 40, 'text-anchor': 'middle' }, `${v} cm`));
+  yt.forEach((v) => mk(svg, 'text', { class: 'small num', x: sx(0) - 18, y: sy(v) + 7, 'text-anchor': 'end' }, fmt(v)));
+  mk(svg, 'text', { class: 'lbl num', x: sx(xmax), y: sy(ymin) + 85, 'text-anchor': 'end' }, 'DIÁMETRO DEL SOMBRERO');
+  mk(svg, 'text', { class: 'lbl num', x: sx(0), y: sy(ymax) - 24, 'text-anchor': 'start' }, ylab);
+}
+
+vbars('#m1', [['Con anillo', R.rasgos.ring.datos['Con anillo']], ['Sin anillo', R.rasgos.ring.datos['Sin anillo']]]);
+vbars('#m2', [['Se magulla', R.rasgos.bruise.datos['Se magulla']], ['No se magulla', R.rasgos.bruise.datos['No se magulla']]]);
+const CC = R.rasgos.capColor.datos;
+hbars('#m3', [['Verde', CC.Verde, '#5e8a3a'], ['Rojo', CC.Rojo, '#b8382c'], ['Naranja', CC.Naranja, '#df7a2a'],
+  ['Blanco', CC.Blanco, '#efece4'], ['Marrón', CC.Marrón, '#8a6446'], ['Gris', CC.Gris, '#8f8f8f'], ['Crema', CC.Crema, '#e9dcb8']]);
+const SE = R.rasgos.season.datos;
+vbars('#m4', Object.entries(SE), { valClass: 'val val-s' });
+
+// Modelo 2 (FitLog): proporción de venenosos según el diámetro
+(() => {
+  const svg = $('#g2 svg'), sx = (v) => 200 + v * 68.18, sy = (p) => 900 - (p - 0.30) * 1163.6;
+  axes(svg, sx, sy, [0, 5, 10, 15, 20], [0.4, 0.6, 0.8], 'VENENOSOS', 22.5, 0.30, 0.86, (p) => `${Math.round(p * 100)} %`);
+  R.modelo2.forEach(([x, p], i) => mk(svg, 'circle', { class: 'pt', cx: sx(x), cy: sy(p), r: 4 + Math.sqrt(R.modelo2n[i]) / 9, fill: 'rgba(238,236,230,.38)' }));
   const pts = []; for (let x = 0.42; x <= 22; x += 0.1) pts.push(`${sx(x).toFixed(1)},${sy(0.7395 - 0.1087 * Math.log(x)).toFixed(1)}`);
-  el('polyline', { class: 'curve', id: 'curve5', points: pts.join(' ') });
+  mk(svg, 'polyline', { class: 'curve', points: pts.join(' ') });
   [[3, '62 %'], [15, '45 %']].forEach(([x, t]) => {
     const p = 0.7395 - 0.1087 * Math.log(x);
-    el('circle', { class: 'mk5', cx: sx(x), cy: sy(p), r: 13, fill: 'var(--tox)', stroke: '#0f0f0e', 'stroke-width': 4 });
-    el('text', { class: 'mk mk5', x: sx(x) + 26, y: sy(p) + (x === 3 ? -24 : 64) }, `p(${x}) ≈ ${t}`);
+    mk(svg, 'circle', { class: 'mk-in', cx: sx(x), cy: sy(p), r: 13, fill: 'var(--tox)', stroke: '#0f0f0e', 'stroke-width': 4 });
+    mk(svg, 'text', { class: 'mk mk-in', x: sx(x) + 26, y: sy(p) + (x === 3 ? -24 : 64) }, `p(${x}) ≈ ${t}`);
   });
+})();
+
+// Modelo 1 (FitLine): grosor del tallo según el diámetro, venenosos y comestibles
+(() => {
+  const svg = $('#g1 svg'), sx = (v) => 200 + v * 68.18, sy = (y) => 900 - y * 13.6;
+  axes(svg, sx, sy, [0, 5, 10, 15, 20], [10, 20, 30, 40], 'GROSOR DEL TALLO', 22.5, 0, 44, (v) => `${v} mm`);
+  const m = R.modelo1;
+  m.comestibles.forEach(([x, y]) => mk(svg, 'circle', { class: 'pt', cx: sx(x), cy: sy(y), r: 9, fill: 'var(--ed)', opacity: 0.85 }));
+  m.venenosos.forEach(([x, y]) => mk(svg, 'circle', { class: 'pt', cx: sx(x), cy: sy(y), r: 9, fill: 'var(--tox)', opacity: 0.85 }));
+  [['var(--ed)', 1.786, 0.555], ['var(--tox)', 1.785, 0.163]].forEach(([c, a, b]) =>
+    mk(svg, 'line', { class: 'curve', x1: sx(0), y1: sy(b), x2: sx(22), y2: sy(a * 22 + b), style: `stroke:${c}` }));
 })();
 
 /* ---------- QR ---------- */
@@ -177,93 +235,122 @@ $('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true })
 await document.fonts.ready;
 await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
 
-const split = (sel, type = 'chars,words') => new SplitText(sel, { type, mask: type.includes('lines') ? 'lines' : undefined });
-const t1 = split('#t1'), t2 = split('#t2', 'words'), t4 = split('#t4', 'words'), t5 = split('#t5', 'words'), t6 = split('#t6', 'words'), t7 = split('#t7', 'lines');
-
+const words = (sel) => new SplitText(sel, { type: 'words' }).words;
 const tl = gsap.timeline({ repeat: -1, defaults: { ease: 'power3.out' }, paused: true });
 const FT = { immediateRender: false };
-const show = (sel, at) => tl.set(sel, { visibility: 'visible', opacity: 1 }, at);
-const hide = (sel, at, dur = 0.5) => tl.to(sel, { opacity: 0, duration: dur, ease: 'power2.in' }, at).set(sel, { visibility: 'hidden' });
-
-// 1 · La pregunta (0–4,6 s)
-tl.set(S, { mycA: 1, myc: 0 }, 0);
-tl.fromTo(S, { spores: 0 }, { spores: 1, duration: 1.4, ease: 'none' }, 0);
-tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 4.6, ease: 'power1.inOut' }, 0);
-show('#s1', 0);
-tl.from('#s1 .kicker', { opacity: 0, y: 20, duration: 0.8 }, 0.5);
-tl.from(t1.chars, { opacity: 0, yPercent: 70, rotateX: -80, transformOrigin: '50% 100%', stagger: 0.04, duration: 0.9 }, 0.9);
-tl.to(t1.chars, { opacity: 0, yPercent: -40, stagger: 0.012, duration: 0.4, ease: 'power2.in' }, 4.0);
-hide('#s1', 4.3, 0.3);
-tl.to(S, { mycA: 0.22, duration: 1 }, 4.0);
-
-// 2 · A o B (4,6–9,6 s)
-show('#s2', 4.6);
-tl.fromTo('#fa', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'expo.out', ...FT }, 4.6);
-tl.fromTo('#fb', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'expo.out', ...FT }, 4.8);
-tl.fromTo('#s2 img', { scale: 1.25 }, { scale: 1, duration: 5, ease: 'power1.out', ...FT }, 4.6);
-tl.from('#s2 .l', { opacity: 0, x: -30, stagger: 0.2, duration: 0.7 }, 5.3);
-tl.from(t2.words, { opacity: 0, y: 50, stagger: 0.12, duration: 0.8 }, 5.6);
-tl.from('#tag2', { opacity: 0, scale: 0.6, duration: 0.5, ease: 'back.out(2)' }, 7.0);
-tl.from('#s2 .credit', { opacity: 0, duration: 0.6 }, 6.0);
-hide('#s2', 9.1);
-
-// 3 · Los datos (9,6–16 s)
-show('#s3', 9.6);
-tl.fromTo(S, { rainA: 0, rainT: 0 }, { rainA: 1, duration: 0.3, ...FT }, 9.6);
-tl.fromTo(S, { rainT: 0 }, { rainT: 5.2, duration: 5.2, ease: 'none', ...FT }, 9.6);
 const N = { v: 0 };
-tl.fromTo(N, { v: 0 }, { v: 61069, duration: 3.6, ease: 'power2.out', ...FT,
-}, 9.7);
-tl.from('#sub3', { opacity: 0, y: 20, duration: 0.7 }, 10.4);
-tl.from('#s3 .note', { opacity: 0, duration: 0.6 }, 11);
-tl.from('#s3 .pile', { opacity: 0, y: 30, stagger: 0.25, duration: 0.7 }, 13.6);
-tl.to(S, { rainA: 0, duration: 0.5, ease: 'power2.in' }, 15.5);
-hide('#s3', 15.5);
 
-// 4 · El mito del anillo (16–21 s)
-show('#s4', 16);
-tl.from(t4.words, { opacity: 0, y: 50, stagger: 0.1, duration: 0.8 }, 16);
-tl.from('#s4 .ax', { drawSVG: 0, duration: 0.6 }, 16.4);
-tl.from('#bar-con, #bar-sin', { scaleY: 0, transformOrigin: '50% 100%', stagger: 0.18, duration: 1, ease: 'power4.out' }, 16.7);
-tl.from('#s4 .v4, #s4 .lbl', { opacity: 0, y: 20, stagger: 0.08, duration: 0.5 }, 17.3);
-tl.from('#base4', { scaleX: 0, transformOrigin: '0% 50%', duration: 0.8, ease: 'power2.inOut' }, 17.9);
-tl.from('#base4t', { opacity: 0, x: -20, duration: 0.5 }, 18.5);
-tl.from('#stamp', { opacity: 0, scale: 3, rotate: 8, duration: 0.45, ease: 'power4.in' }, 19.0);
-tl.to('#s4 .plot', { x: -6, duration: 0.05, yoyo: true, repeat: 3, ease: 'none' }, 19.45);
-hide('#s4', 20.7);
+// Cada escena aparece en T, se sostiene `dur` segundos y se va con un fundido; la siguiente empieza 0,4 s después.
+let T = 0;
+function scene(sel, dur, build) {
+  const at = T;
+  tl.set(sel, { visibility: 'visible', opacity: 1 }, at);
+  build(at);
+  tl.to(sel, { opacity: 0, duration: 0.7, ease: 'power2.in' }, at + dur - 0.7).set(sel, { visibility: 'hidden' }, at + dur);
+  T = at + dur + 0.4;
+}
 
-// 5 · GeoGebra (21,2–26,6 s)
-show('#s5', 21.2);
-tl.from(t5.words, { opacity: 0, y: 50, stagger: 0.08, duration: 0.8 }, 21.2);
-tl.from('#s5 .ax5', { drawSVG: 0, duration: 0.6 }, 21.6);
-tl.from('#s5 .t5', { opacity: 0, duration: 0.5, stagger: 0.03 }, 21.8);
-tl.from('#s5 .pt5', { opacity: 0, scale: 0, transformOrigin: '50% 50%', stagger: 0.04, duration: 0.4, ease: 'back.out(2)' }, 22);
-tl.from('#curve5', { drawSVG: 0, duration: 1.8, ease: 'power2.inOut' }, 22.8);
-tl.from('#formula', { opacity: 0, y: 20, duration: 0.6 }, 23.6);
-tl.from('#s5 .mk5', { opacity: 0, scale: 0.4, transformOrigin: '50% 50%', stagger: 0.15, duration: 0.5, ease: 'back.out(2)' }, 24.5);
-hide('#s5', 26.1);
+// Entrada común de las escenas con gráfico
+function chartIn(sel, at, { stamp = true } = {}) {
+  tl.from(`${sel} .k-top`, { opacity: 0, x: -20, duration: 0.8 }, at);
+  tl.from(words(`${sel} h2`), { opacity: 0, y: 50, stagger: 0.12, duration: 1 }, at + 0.2);
+  tl.from(`${sel} .ax`, { drawSVG: 0, duration: 0.8 }, at + 1.0);
+  tl.from(`${sel} .cbar`, { scale: 0, transformOrigin: sel === '#m3' ? '0% 50%' : '50% 100%', stagger: 0.15, duration: 1.3, ease: 'power4.out' }, at + 1.4);
+  tl.from(`${sel} .num`, { opacity: 0, y: 14, stagger: 0.04, duration: 0.6 }, at + 2.2);
+  tl.from(`${sel} .base`, { scale: 0, transformOrigin: sel === '#m3' ? '50% 0%' : '0% 50%', duration: 1, ease: 'power2.inOut' }, at + 3.0);
+  tl.from(`${sel} .bt`, { opacity: 0, duration: 0.6 }, at + 3.7);
+  if (stamp) {
+    tl.from(`${sel} .stamp`, { opacity: 0, scale: 3, rotate: 8, duration: 0.5, ease: 'power4.in' }, at + 4.5);
+    tl.to(`${sel} .plot`, { x: -6, duration: 0.05, yoyo: true, repeat: 3, ease: 'none' }, at + 5.0);
+  }
+  tl.from(`${sel} .aside`, { opacity: 0, y: 20, duration: 0.8 }, at + 5.3);
+}
 
-// 6 · 3D (26,6–32,8 s)
-show('#s6', 26.6);
-tl.fromTo(S, { gl: 0 }, { gl: 1, duration: 0.6, ...FT }, 26.6);
-tl.fromTo(S, { sweep: 0 }, { sweep: 1, duration: 4, ease: 'none', ...FT }, 26.7);
-tl.fromTo(S, { cam: 0 }, { cam: 1, duration: 6, ease: 'sine.inOut', ...FT }, 26.6);
-tl.from(t6.words, { opacity: 0, y: 40, stagger: 0.08, duration: 0.8 }, 26.9);
-tl.from('#names6', { opacity: 0, letterSpacing: '0.5em', duration: 1 }, 29.8);
-tl.to(S, { gl: 0, duration: 0.5, ease: 'power2.in' }, 32.3);
-hide('#s6', 32.3);
+// 1 · La pregunta
+tl.set(S, { mycA: 1, myc: 0 }, 0);
+tl.fromTo(S, { spores: 0 }, { spores: 1, duration: 1.8, ease: 'none' }, 0);
+tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 6.5, ease: 'power1.inOut' }, 0);
+const t1 = new SplitText('#t1', { type: 'chars,words' });
+scene('#s1', 7.5, (at) => {
+  tl.from('#s1 .kicker', { opacity: 0, y: 20, duration: 1 }, at + 0.6);
+  tl.from(t1.chars, { opacity: 0, yPercent: 70, rotateX: -80, transformOrigin: '50% 100%', stagger: 0.05, duration: 1.1 }, at + 1.1);
+  tl.to(S, { mycA: 0.22, duration: 1.2 }, at + 6.6);
+});
 
-// 7 · Cierre (32,8–40 s)
-show('#s7', 32.8);
-tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 5, ease: 'power1.inOut', ...FT }, 32.8);
-tl.to(S, { mycA: 0.5, duration: 1 }, 32.8);
-tl.from(t7.lines, { opacity: 0, yPercent: 100, stagger: 0.25, duration: 1 }, 33.0);
-tl.from('#cta7', { opacity: 0, y: 40, duration: 0.9 }, 34.6);
-tl.from('#qr', { opacity: 0, scale: 0.85, duration: 0.6, ease: 'back.out(2)' }, 35.0);
-tl.from('#warn7', { opacity: 0, duration: 0.8 }, 35.6);
-tl.to(S, { spores: 0, mycA: 0, duration: 1, ease: 'power2.in' }, 39.0);
-hide('#s7', 39.0, 1);
-tl.set({}, {}, 40.2);
+// 2 · A o B
+scene('#s2', 9, (at) => {
+  tl.fromTo('#fa', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.4, ease: 'expo.out', ...FT }, at);
+  tl.fromTo('#fb', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.4, ease: 'expo.out', ...FT }, at + 0.3);
+  tl.fromTo('#s2 img', { scale: 1.25 }, { scale: 1, duration: 9, ease: 'power1.out', ...FT }, at);
+  tl.from('#s2 .l', { opacity: 0, x: -30, stagger: 0.25, duration: 0.8 }, at + 0.9);
+  tl.from(words('#t2'), { opacity: 0, y: 50, stagger: 0.15, duration: 1 }, at + 1.4);
+  tl.from('#s2 .credit', { opacity: 0, duration: 0.8 }, at + 2.2);
+  tl.from('#tag2', { opacity: 0, scale: 0.6, duration: 0.6, ease: 'back.out(2)' }, at + 3.6);
+});
+
+// 3 · Los datos
+scene('#s3', 10, (at) => {
+  tl.fromTo(S, { rainA: 0 }, { rainA: 1, duration: 0.4, ...FT }, at);
+  tl.fromTo(S, { rainT: 0 }, { rainT: 5.2, duration: 6, ease: 'none', ...FT }, at);
+  tl.fromTo(N, { v: 0 }, { v: 61069, duration: 4.5, ease: 'power2.out', ...FT }, at + 0.1);
+  tl.from('#sub3', { opacity: 0, y: 20, duration: 0.8 }, at + 1);
+  tl.from('#s3 .note', { opacity: 0, duration: 0.8 }, at + 1.6);
+  tl.from('#s3 .pile', { opacity: 0, y: 30, stagger: 0.3, duration: 0.9 }, at + 5.2);
+  tl.to(S, { rainA: 0, duration: 0.7, ease: 'power2.in' }, at + 9.3);
+});
+
+// 4–7 · Los mitos
+scene('#m1', 10, (at) => chartIn('#m1', at));
+scene('#m2', 10, (at) => chartIn('#m2', at));
+scene('#m3', 11, (at) => chartIn('#m3', at));
+scene('#m4', 10, (at) => chartIn('#m4', at));
+
+// 8 · GeoGebra, modelo logarítmico
+scene('#g2', 11, (at) => {
+  tl.from('#g2 .k-top', { opacity: 0, x: -20, duration: 0.8 }, at);
+  tl.from(words('#g2 h2'), { opacity: 0, y: 50, stagger: 0.1, duration: 1 }, at + 0.2);
+  tl.from('#g2 .ax', { drawSVG: 0, duration: 0.8 }, at + 0.8);
+  tl.from('#g2 .num', { opacity: 0, duration: 0.6, stagger: 0.03 }, at + 1.0);
+  tl.from('#g2 .pt', { opacity: 0, scale: 0, transformOrigin: '50% 50%', stagger: 0.05, duration: 0.5, ease: 'back.out(2)' }, at + 1.3);
+  tl.from('#g2 .curve', { drawSVG: 0, duration: 2.4, ease: 'power2.inOut' }, at + 2.6);
+  tl.from('#g2 .formula', { opacity: 0, y: 20, duration: 0.8 }, at + 3.8);
+  tl.from('#g2 .mk-in', { opacity: 0, scale: 0.4, transformOrigin: '50% 50%', stagger: 0.25, duration: 0.6, ease: 'back.out(2)' }, at + 5.2);
+});
+
+// 9 · GeoGebra, recta de mínimos cuadrados
+scene('#g1', 11, (at) => {
+  tl.from('#g1 .k-top', { opacity: 0, x: -20, duration: 0.8 }, at);
+  tl.from(words('#g1 h2'), { opacity: 0, y: 50, stagger: 0.12, duration: 1 }, at + 0.2);
+  tl.from('#g1 .ax', { drawSVG: 0, duration: 0.8 }, at + 0.8);
+  tl.from('#g1 .num', { opacity: 0, duration: 0.6, stagger: 0.03 }, at + 1.0);
+  tl.from('#g1 .pt', { opacity: 0, scale: 0, transformOrigin: '50% 50%', stagger: 0.03, duration: 0.4, ease: 'back.out(2)' }, at + 1.4);
+  tl.from('#g1 .curve', { drawSVG: 0, stagger: 0.5, duration: 1.8, ease: 'power2.inOut' }, at + 3.0);
+  tl.from('#g1 .formula', { opacity: 0, y: 20, duration: 0.8 }, at + 4.4);
+  tl.from('#g1 .aside', { opacity: 0, y: 20, duration: 0.8 }, at + 5.4);
+});
+
+// 10 · 3D
+scene('#s6', 10, (at) => {
+  tl.fromTo(S, { gl: 0 }, { gl: 1, duration: 0.8, ...FT }, at);
+  tl.fromTo(S, { sweep: 0 }, { sweep: 1, duration: 5.5, ease: 'none', ...FT }, at + 0.2);
+  tl.fromTo(S, { cam: 0 }, { cam: 1, duration: 10, ease: 'sine.inOut', ...FT }, at);
+  tl.from(words('#t6'), { opacity: 0, y: 40, stagger: 0.1, duration: 1 }, at + 0.4);
+  tl.from('#names6', { opacity: 0, letterSpacing: '0.5em', duration: 1.4 }, at + 4.2);
+  tl.to(S, { gl: 0, duration: 0.7, ease: 'power2.in' }, at + 9.3);
+});
+
+// 11 · Cierre
+const t7 = new SplitText('#t7', { type: 'lines', mask: 'lines' });
+scene('#s7', 11, (at) => {
+  tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 6, ease: 'power1.inOut', ...FT }, at);
+  tl.to(S, { mycA: 0.5, duration: 1.2 }, at);
+  tl.from(t7.lines, { opacity: 0, yPercent: 100, stagger: 0.35, duration: 1.2 }, at + 0.3);
+  tl.from('#cta7', { opacity: 0, y: 40, duration: 1 }, at + 2.2);
+  tl.from('#qr', { opacity: 0, scale: 0.85, duration: 0.7, ease: 'back.out(2)' }, at + 2.7);
+  tl.from('#warn7', { opacity: 0, duration: 1 }, at + 3.5);
+  tl.to(S, { spores: 0, mycA: 0, duration: 1, ease: 'power2.in' }, at + 10);
+});
+tl.set({}, {}, T);
 
 /* ---------- Dibujo por cuadro ---------- */
 const nEl = $('#n'), glEl = $('#gl');

@@ -64,8 +64,8 @@
     #s3 .note { position: absolute; right: 80px; bottom: 60px; font: 500 20px var(--mono); color: var(--ink-3); }
 
     /* 4 · Mito */
-    #s4 h2, #s5 h2, #s6 h2, #s7 h2 { position: absolute; top: 80px; left: 120px; right: 120px; font: 700 96px/1.05 var(--serif); letter-spacing: -.02em; }
-    #s4 h2 em, #s5 h2 em { font-style: italic; font-weight: 600; color: var(--ink-2); }
+    .chart h2, #s6 h2, #s7 h2 { position: absolute; top: 80px; left: 120px; right: 120px; font: 700 96px/1.05 var(--serif); letter-spacing: -.02em; }
+    .chart h2 em { font-style: italic; font-weight: 600; color: var(--ink-2); }
     svg.plot { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: visible; }
     .ax { stroke: var(--rule); stroke-width: 2; fill: none; }
     .base { stroke: var(--ink); stroke-width: 3; stroke-dasharray: 14 10; fill: none; }
@@ -75,9 +75,19 @@
     .stamp { position: absolute; left: 1400px; top: 660px; border: 10px solid var(--tox); color: var(--tox); padding: 10px 40px 18px;
       font: 700 150px/1 var(--serif); letter-spacing: .06em; transform: rotate(-12deg); border-radius: 10px; }
 
+    .k-top { position: absolute; top: 64px; left: 120px; font: 600 22px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+    .chart h2 { top: 104px !important; }
+    .small-stamp { color: #e8c35a; border-color: #e8c35a !important; font-size: 64px; line-height: 1.05; border-width: 7px; padding: 14px 28px; text-align: center; }
+    .aside { position: absolute; width: 480px; font: 400 30px/1.4 var(--serif); color: var(--ink-2); }
+    .fl2 p { font: 600 34px/1.6 var(--mono); }
+    .sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; margin-right: 16px; vertical-align: -2px; }
+    .val-s { font-size: 60px; }
+    .val, .cval { paint-order: stroke; stroke: #0f0f0e; stroke-width: 10px; stroke-linejoin: round; }
+    .clabel { font: 600 26px var(--sans); fill: var(--ink-2); }
+    .cval { font: 700 34px var(--serif); fill: var(--ink); }
     /* 5 · GeoGebra */
     .curve { stroke: var(--tox); stroke-width: 6; fill: none; stroke-linecap: round; }
-    .formula { position: absolute; left: 1150px; top: 300px; font: 600 46px var(--mono); color: var(--ink); background: rgba(15,15,14,.7); padding: 12px 18px; }
+    .formula { position: absolute; font: 600 46px var(--mono); color: var(--ink); background: rgba(15,15,14,.7); padding: 12px 18px; }
     .mk { font: 700 46px var(--serif); fill: var(--ink); }
 
     /* 6 · 3D */
@@ -141,26 +151,51 @@
       <p class="note">cada punto ≈ 20 hongos</p>
     </section>
 
-    <section class="scene" id="s4">
-      <h2 id="t4">¿Si tiene anillo, <em>es seguro?</em></h2>
-      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true">
-        <line class="ax" x1="520" y1="900" x2="1400" y2="900"/>
-        <rect id="bar-con" x="620" y="537" width="240" height="363" fill="var(--tox)" rx="4"/>
-        <rect id="bar-sin" x="1060" y="577" width="240" height="323" fill="var(--tox)" opacity=".55" rx="4"/>
-        <text class="val v4" x="740" y="510" text-anchor="middle">61 %</text>
-        <text class="val v4" x="1180" y="550" text-anchor="middle">54 %</text>
-        <text class="lbl" x="740" y="950" text-anchor="middle">CON ANILLO</text>
-        <text class="lbl" x="1180" y="950" text-anchor="middle">SIN ANILLO</text>
-        <line class="base" id="base4" x1="520" y1="567" x2="1400" y2="567"/>
-        <text class="small" id="base4t" x="1420" y="575">55,5 % · todos los hongos</text>
-      </svg>
-      <div class="stamp" id="stamp">MITO</div>
+    <section class="scene chart" id="m1">
+      <p class="k-top">Mito 1 · el anillo</p>
+      <h2>“Si tiene anillo, <em>es venenoso”</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <div class="stamp" style="left:1420px;top:660px">MITO</div>
     </section>
 
-    <section class="scene" id="s5">
-      <h2 id="t5">Más chico, más riesgo. <em>Pero nunca cero.</em></h2>
-      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true" id="plot5"></svg>
-      <p class="formula" id="formula">p(x) = 0,740 − 0,109·ln(x)</p>
+    <section class="scene chart" id="m2">
+      <p class="k-top">Mito 2 · la magulladura</p>
+      <h2>“Si cambia de color al tocarlo, <em>es venenoso”</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <div class="stamp" style="left:1420px;top:660px">MITO</div>
+    </section>
+
+    <section class="scene chart" id="m3">
+      <p class="k-top">Mito 3 · los colores</p>
+      <h2>“Los colores llamativos <em>avisan”</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <div class="stamp small-stamp" style="left:1330px;top:250px">SOLO EN LOS<br>EXTREMOS</div>
+      <p class="aside" style="left:1330px;top:560px">El blanco y el marrón, los colores más comunes, quedan cerca del promedio. Las señales fuertes están donde hay pocos hongos.</p>
+    </section>
+
+    <section class="scene chart" id="m4">
+      <p class="k-top">Mito 4 · la época del año</p>
+      <h2>“Depende de cuándo <em>lo encontrás”</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <div class="stamp small-stamp" style="left:1440px;top:640px">PISTA<br>DÉBIL</div>
+    </section>
+
+    <section class="scene chart" id="g2">
+      <p class="k-top">GeoGebra · modelo logarítmico</p>
+      <h2>Más chico, más riesgo. <em>Pero nunca cero.</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <p class="formula" style="left:1150px;top:330px">p(x) = 0,740 − 0,109·ln(x)</p>
+    </section>
+
+    <section class="scene chart" id="g1">
+      <p class="k-top">GeoGebra · recta de mínimos cuadrados</p>
+      <h2>¿Tienen otras proporciones? <em>No.</em></h2>
+      <svg class="plot" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <div class="formula fl2" style="left:330px;top:300px">
+        <p><i class="sw" style="background:var(--tox)"></i>venenosos&nbsp;&nbsp;&nbsp;y = 1,79x + 0,16</p>
+        <p><i class="sw" style="background:var(--ed)"></i>comestibles y = 1,79x + 0,56</p>
+      </div>
+      <p class="aside" style="left:330px;top:470px">Por cada cm de sombrero, el tallo engorda casi 1,8 mm, igual en los dos grupos.</p>
     </section>
 
     <section class="scene" id="s6">
