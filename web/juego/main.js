@@ -31,6 +31,8 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = quality === 'alta' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 await renderer.init();
+const step = (v) => { window.__load?.set(v); return new Promise((r) => setTimeout(r, 16)); }; // deja dibujar la barra de carga
+await step(0.3);
 const backend = renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL 2';
 
 const scene = new THREE.Scene();
@@ -62,11 +64,15 @@ out = out.add(vec3(0.35, 1, 0.45).mul(vig.mul(healU).mul(0.55)));               
 post.outputNode = vec4(out, lit.a);
 
 /* ---------- Mundo ---------- */
+await step(0.4);
 const world = buildWorld(scene, { quality });
+await step(0.6);
 environment(renderer, scene, scene.userData.sunDir);
 const flora = buildFlora(scene);
+await step(0.8);
 let trail = sporeTrail(scene, TRAIL);
 const beetle = createBeetle(scene);
+await step(0.9);
 beetle.setMushrooms(flora.all);
 
 // Pedacitos que saltan al morder (un pequeño sistema de partículas en la CPU)
@@ -117,6 +123,7 @@ for (const b of document.querySelectorAll('.b-q')) {
   b.addEventListener('click', () => setQuality(quality === 'alta' ? 'baja' : 'alta'));
 }
 const go = $('#go'); go.disabled = false; go.textContent = 'Entrar al bosque';
+window.__load?.done();
 
 /* ---------- Estado del juego ---------- */
 const state = { phase: 'title', near: null, busy: false, slept: new Set(), stepDist: 0, idle: 0, cur: null, entered: new Set(), done: new Set(), awake: new Set(['anillo']), insighting: false, flights: 0 };

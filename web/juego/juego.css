@@ -258,3 +258,12 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .intro-back { display: inline-block; margin-bottom: 22px; font: 500 14px var(--sans); color: var(--ink-2); text-decoration: none; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 7px 14px; background: rgba(20,14,8,.4); }
 .intro-back:hover { color: var(--ink); background: rgba(20,14,8,.7); }
 .top-r a.back-web { border-color: rgba(159,232,200,.45); }
+
+/* Barra de carga */
+.load { margin-top: 14px; width: min(420px, 100%); transition: opacity .5s, max-height .5s; max-height: 60px; overflow: hidden; }
+.load.hide { opacity: 0; max-height: 0; }
+.load-bar { height: 6px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+.load-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #d8a43c, #ffd59a, #9fe8c8); background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite; transition: width .25s ease-out; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.load-msg { margin-top: 6px; font: 500 12px var(--mono); color: var(--ink-3); }

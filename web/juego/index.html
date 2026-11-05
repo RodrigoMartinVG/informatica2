@@ -29,6 +29,28 @@
       <h1>Bajo el<br><em>sombrero</em></h1>
       <p class="lead">Sos un escarabajo en el suelo del bosque. A tu altura, los hongos son torres. Algunos son comestibles, otros mortales. Los humanos creen que pueden distinguirlos a simple vista… <b>¿será cierto?</b></p>
       <button class="go" id="go" disabled>Cargando el bosque…</button>
+      <div class="load" id="load" role="progressbar" aria-label="Cargando el juego" aria-valuemin="0" aria-valuemax="100">
+        <div class="load-bar"><i id="load-fill"></i></div>
+        <p class="load-msg" id="load-msg">Cargando el bosque…</p>
+      </div>
+      <script>
+        // Barra de carga: avanza sola desde el primer instante (aunque las librerías se estén descargando)
+        // y las etapas reales de main.js la empujan hacia adelante con window.__load.set().
+        (() => {
+          const fill = document.getElementById('load-fill'), msg = document.getElementById('load-msg'), box = document.getElementById('load');
+          const MSGS = [[0, 'Cargando el bosque…'], [0.18, 'Encendiendo el sol de la tarde…'], [0.38, 'Haciendo crecer el pasto…'], [0.58, 'Plantando los hongos…'], [0.78, 'Despertando al escarabajo…'], [0.93, 'Casi listo…']];
+          let p = 0, floor = 0, done = false;
+          const draw = () => {
+            fill.style.width = (p * 100).toFixed(1) + '%'; box.setAttribute('aria-valuenow', Math.round(p * 100));
+            if (!done) { let t = MSGS[0][1]; for (const [k, s] of MSGS) if (p >= k) t = s; msg.textContent = t; }
+          };
+          const timer = setInterval(() => { p = Math.max(floor, p + (0.92 - p) * 0.025); draw(); }, 60);
+          window.__load = {
+            set(v) { floor = Math.max(floor, v); p = Math.max(p, v); draw(); },
+            done() { done = true; clearInterval(timer); p = 1; draw(); msg.textContent = '¡Listo!'; setTimeout(() => box.classList.add('hide'), 600); }
+          };
+        })();
+      </script>
       <button class="b-q q-intro" type="button">Gráficos: livianos</button>
       <button class="b-d q-intro" type="button">Dificultad: fácil</button>
       <div class="howto" aria-label="Cómo se juega">
