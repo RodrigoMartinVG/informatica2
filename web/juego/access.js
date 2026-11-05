@@ -27,6 +27,8 @@ export const keyName = (code) => ({ Space: 'Espacio', Enter: 'Enter', Tab: 'Tab'
 const live = () => document.getElementById('sr-live');
 // Decir algo: lo recibe siempre el lector de pantalla; en modo audio (o si force) lo dice la voz.
 // parts: texto o lista de fragmentos pregenerados (ver speechvocab.js). interrupt: es urgente y corta lo que suena.
+// Solo para el lector de pantalla (sin voz): avisos secundarios
+export function announce(text) { const el = live(); if (el) { el.textContent = ''; setTimeout(() => (el.textContent = text), 30); } }
 export function speak(parts, { interrupt = false, force = false } = {}) {
   const list = (Array.isArray(parts) ? parts : [parts]).filter(Boolean);
   const el = live(); if (el) { el.textContent = ''; setTimeout(() => (el.textContent = list.join(' ')), 30); }
@@ -49,7 +51,7 @@ export const cm = (d) => `${Math.max(1, Math.round(d))} centímetro${Math.round(
 let beacons = null;
 function makeBeacons() {
   const out = new Tone.Volume(-8).toDestination();
-  return [0, 1, 2].map((i) => {
+  return [0].map((i) => { // un solo pip: el del hongo sin explorar más cercano
     const pan = new Tone.Panner3D({ panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 4, rolloffFactor: 1.1, maxDistance: 200 }).connect(out);
     const syn = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.12, sustain: 0, release: 0.08 }, volume: -6 - i * 4 }).connect(pan);
     return { pan, syn, next: 0, target: null };

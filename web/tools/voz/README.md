@@ -1,6 +1,6 @@
 # Voz de la narración del juego
 
-Las frases de la narración de «Bajo el sombrero» están pregeneradas con [Piper](https://github.com/OHF-Voice/piper1-gpl) y la voz rioplatense **es_AR-daniela-high** ([rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/es/es_AR/daniela/high)). Los audios quedan en `web/juego/voz/` (AAC, ~1,7 MB en total) con su índice `frases.json` (clave → texto). El juego busca cada frase por su texto; si una frase no tiene audio, usa la voz del navegador como respaldo.
+Todo lo que dice la voz de «Bajo el sombrero» (la historia, los avisos y el modo audio de accesibilidad) está pregenerado con [Piper](https://github.com/OHF-Voice/piper1-gpl) y la voz rioplatense **es_AR-daniela-high** ([rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/es/es_AR/daniela/high)). Los audios quedan en `web/juego/voz/` (AAC, ~1,7 MB en total) con su índice `frases.json` (clave → texto). El juego busca cada frase por su texto y las encadena por una sola cola (`juego/speech.js`), así nunca hablan dos cosas a la vez. Las descripciones que cambian (rasgo, dirección, distancia, vidas) se arman con fragmentos definidos en `juego/speechvocab.js`. Si una frase no tiene audio, se usa la voz del navegador como respaldo.
 
 Para regenerarlas (por ejemplo, si cambian textos en `main.js` o `config.js`):
 

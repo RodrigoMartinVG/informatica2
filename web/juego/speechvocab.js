@@ -18,6 +18,7 @@ export const livesPhrase = (n) => (n === 1 ? 'Tenés una vida,' : `Tenés ${n} v
 export const energyPhrase = (n) => `y ${n} de energía.`;
 export const donePhrase = (n, total) => `Descubriste ${n} de ${total} claros.`;
 export const speciesPhrase = (sp) => `Se parece a ${sp.name}: ${sp.tag}.`;
+export const remainPhrase = (n) => (n === 0 ? 'No quedan hongos sin explorar en este claro.' : n === 1 ? 'Queda un hongo sin explorar.' : `Quedan ${n} hongos sin explorar.`);
 export const placeIn = (L) => `Estás en ${L.place}.`;
 export const placeDir = (L) => `${L.place[0].toUpperCase()}${L.place.slice(1)} está`;
 const strip = (h) => h.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
@@ -31,7 +32,11 @@ export const MISC = {
   nearOne: 'Hay un hongo sin explorar cerca:', nearMany: 'Los hongos sin explorar más cercanos:', flyHint: 'Con Espacio volás al más cercano.',
   noneNear: 'No quedan hongos sin explorar cerca.', poisoned: 'Estás envenenado.', bird: '¡Un pájaro! El hongo más cercano para esconderte está',
   keyChanged: 'Tecla cambiada.', pressKey: 'Apretá la nueva tecla.', test: 'Así suena la voz que describe el juego.',
-  audioOn: 'Modo audio activado.', audioOff: 'Modo audio desactivado.'
+  audioOn: 'Modo audio activado. Espacio: volar a un hongo. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas.',
+  audioOnIntro: 'Modo audio activado. Espacio: volar a un hongo. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas. Apretá Enter para entrar al bosque.',
+  audioOff: 'Modo audio desactivado.', nearest: 'El más cercano:', arrived: 'Llegaste a un claro nuevo.',
+  tox: 'Venenoso.', ed: 'Comestible.', ateEd: 'Era comestible: más energía.', ateTox: 'Era venenoso: perdiste una vida.',
+  safe: 'A salvo.', hit: 'Te picoteó: menos energía.', faint: 'Te desmayaste.', wake: 'Despertaste. Tenés tres vidas.'
 };
 
 // Todas las frases posibles (para generar los audios)
@@ -39,6 +44,7 @@ export function allPhrases(LEVELS, SPECIES) {
   const out = new Set([...Object.values(MUSH), ...Object.values(STATE), ...DIRS, ...Object.values(MISC)]);
   DIST_STEPS.forEach((n) => out.add(distPhrase(n)));
   [1, 2, 3].forEach((n) => out.add(livesPhrase(n)));
+  for (let n = 0; n <= 40; n++) out.add(remainPhrase(n));
   ENERGY_STEPS.forEach((n) => out.add(energyPhrase(n)));
   for (let i = 0; i <= LEVELS.length; i++) out.add(donePhrase(i, LEVELS.length));
   Object.values(SPECIES).forEach((sp) => out.add(speciesPhrase(sp)));

@@ -147,10 +147,10 @@ function birdUpdate(dt) {
   if (!bird.checked && bird.t >= bird.cross) {
     bird.checked = true;
     if (state.phase !== 'play') return;
-    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); }
+    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); }
     else {
       game.energy = Math.max(0, game.energy - 25); drawStatus(); S.hurt(); floatText('−25 energía', 'loss');
-      gsap.fromTo(hurtU, { value: 0.8 }, { value: 0, duration: 1 });
+      gsap.fromTo(hurtU, { value: 0.8 }, { value: 0, duration: 1 }); A.speak(SV.MISC.hit, { interrupt: true });
       tip('birdhit' + Date.now(), 'El pájaro te picoteó: perdiste energía. Para la próxima, escondete debajo de un sombrero.', { repeat: true });
     }
   }
@@ -183,7 +183,7 @@ const game = { lives: 3, energy: 80, poison: 0, starving: 0, faints: 0, eats: []
 const say = V.say;   // historia: con voz y subtítulo
 const acc = A.setupPanel();
 // avisos cortos del momento: sin voz de la narradora (en modo audio los lee la voz de accesibilidad)
-const tip = (id, text, opts) => { const shown = V.tip(id, text, opts); if (shown) A.speak(text); return shown; };
+const tip = (id, text, opts) => { const shown = V.tip(id, text, opts); if (shown) A.announce(text); return shown; }; // la voz dice solo lo esencial (modo audio simplificado)
 const objective = (txt) => { const el = $('#objective'); el.textContent = txt; gsap.fromTo(el, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.6 }); };
 
 /* ---------- Cámara: órbita libre + brazo con resorte ---------- */
@@ -255,7 +255,7 @@ addEventListener('keydown', (e) => {
   keys.add(e.code);
   // En la pantalla de inicio: A activa el modo audio, Enter entra al bosque
   if (state.phase === 'title') {
-    if (e.code === 'KeyA') { acc.setAudio(!A.settings.audio); A.speak(A.settings.audio ? 'Modo audio activado. Espacio vuela al próximo hongo sin explorar. Q describe lo que hay alrededor. R dice tus vidas y tu energía. E olfatea, F come. Apretá Enter para entrar al bosque.' : 'Modo audio desactivado.', { interrupt: true, force: true }); }
+    if (e.code === 'KeyA') { acc.setAudio(!A.settings.audio); A.speak(A.settings.audio ? SV.MISC.audioOnIntro : SV.MISC.audioOff, { interrupt: true, force: true }); }
     if (e.code === 'Enter' && !go.disabled) go.click();
     return;
   }
@@ -377,7 +377,7 @@ function showPhoto(m) {
   const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
   clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
   tip('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
-  A.speak(SV.speciesPhrase(sp));
+  A.announce(SV.speciesPhrase(sp));
 }
 
 /* ---------- Foto en grande ---------- */
@@ -410,16 +410,12 @@ const unexploredNear = () => {
   const pool = flora.all.filter((s) => (s.level ? state.awake.has(s.level) && !state.done.has(s.level) && !(s.known && s.traitKnown) : !s.known) && s !== beetle.on);
   return pool.map((s) => [s, Math.hypot(s.x - p.x, s.z - p.z)]).filter(([, d]) => d < 90).sort((a, b) => a[1] - b[1]).map(([s]) => s);
 };
+// Q: cuántos hongos quedan sin explorar y cuál es el más cercano (corto y siempre igual)
 function describe() {
-  const parts = [];
-  if (beetle.mode === 'cap') parts.push(SV.MISC.onCap); else if (beetle.mode === 'stem') parts.push(SV.MISC.onStem);
-  if (state.cur) parts.push(SV.placeIn(state.cur));
-  const near = unexploredNear().slice(0, 3);
-  if (near.length) {
-    parts.push(near.length === 1 ? SV.MISC.nearOne : SV.MISC.nearMany);
-    near.forEach((mm) => parts.push(...mushParts(mm), ...whereParts(mm)));
-    parts.push(SV.MISC.flyHint);
-  } else {
+  const near = unexploredNear(), parts = [];
+  if (state.cur) parts.push(SV.remainPhrase(Math.min(40, flora.specimens.filter((s) => s.level === state.cur.id && !(s.known && s.traitKnown)).length)));
+  if (near.length) parts.push(SV.MISC.nearest, ...mushParts(near[0]), ...whereParts(near[0]));
+  else {
     const next = LEVELS.find((L) => state.awake.has(L.id) && !state.done.has(L.id));
     if (next && next !== state.cur) parts.push(SV.placeDir(next), ...whereParts(next.at)); else parts.push(SV.MISC.noneNear);
   }
@@ -464,7 +460,7 @@ function sniff() {
   gsap.timeline({ onUpdate: () => beetle.setSniff(anim.v), onComplete: () => (state.busy = false) })
     .to(anim, { v: 1, duration: 0.35, ease: 'power2.out' })
     .add(() => {
-      flora.reveal(m); S.found(m.toxic); showPhoto(m); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
+      flora.reveal(m); S.found(m.toxic); showPhoto(m); A.speak(m.toxic ? SV.MISC.tox : SV.MISC.ed); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
       if (!tip('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
         tip('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
     }, 0.75)
@@ -495,14 +491,14 @@ function eat() {
 }
 function fed() {
   const before = game.energy; game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
-  floatText(`+${Math.round(game.energy - before)} energía`, 'gain');
+  floatText(`+${Math.round(game.energy - before)} energía`, 'gain'); A.speak(SV.MISC.ateEd);
   gsap.fromTo(healU, { value: 1 }, { value: 0, duration: 1.4 });
   const bar = $('#energy').parentElement; bar.classList.remove('boost'); void bar.offsetWidth; bar.classList.add('boost');
   if (!tip('e1', 'Rico. Sentís cómo vuelve la energía.') && game.eats.length >= 4) tip('e4', '¿Estás eligiendo por el aspecto? Fijate cuántos te salieron bien.');
 }
 function poisoned(blind) {
   game.lives -= 1; game.poison = 1; drawStatus(); S.poison(true); S.hurt();
-  floatText('−1 vida', 'loss');
+  floatText('−1 vida', 'loss'); A.speak(SV.MISC.ateTox);
   gsap.fromTo(hurtU, { value: 1 }, { value: 0, duration: 1.2 });
   if (game.lives <= 0) { faint(); return; }
   if (!tip('p1', 'Algo anda mal… el mundo da vueltas. Era venenoso.'))
@@ -511,14 +507,14 @@ function poisoned(blind) {
 }
 function faint() {
   if (state.phase === 'faint') return;
-  state.phase = 'faint'; game.faints++; S.faint();
+  state.phase = 'faint'; game.faints++; S.faint(); A.speak(SV.MISC.faint, { interrupt: true });
   tip('f', 'Todo se apaga…', { repeat: true });
   gsap.to('#fade', { opacity: 1, duration: 1.6, delay: 0.6, onComplete: () => {
     const back = state.cur ? { x: state.cur.at.x, z: state.cur.at.z + state.cur.spread + 10 } : { x: SPAWN.x, z: SPAWN.z };
     beetle.place(back.x, back.z, Math.PI);
     Object.assign(game, { lives: 3, energy: 60, poison: 0, starving: 0 }); S.poison(false); drawStatus();
     cam.arm = cam.dist; followTarget(); camPos.copy(want); camLook.copy(wantLook);
-    gsap.to('#fade', { opacity: 0, duration: 1.4, delay: 0.4, onComplete: () => { state.phase = 'play'; S.wake(); } });
+    gsap.to('#fade', { opacity: 0, duration: 1.4, delay: 0.4, onComplete: () => { state.phase = 'play'; S.wake(); A.speak(SV.MISC.wake); } });
     tip('w', game.faints === 1 ? 'Despertaste al borde del claro. Lo aprendiste por las malas.' : 'Otra vez en pie. El bosque no perdona.', { repeat: true });
   } });
 }
@@ -780,7 +776,7 @@ function frame() {
     if (ev === 'arriba') S.climb();
     if (ev === 'llegó:cap') tip('c2', 'Desde acá arriba se ve todo el claro. Arrastrá el mouse hacia abajo para mirar el bosque desde lo alto.');
     if (ev === 'saltó') { S.jump(); tip('c3', 'Del borde del sombrero se salta al suelo.'); }
-    if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak([SV.MISC.landed, ...mushParts(beetle.on)]); }
+    if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak(mushParts(beetle.on)); }
 
     // Magulladura: al tocar un tallo se descubre si se mancha
     if (beetle.touching) touchCheck(beetle.touching);
@@ -792,7 +788,6 @@ function frame() {
     if (!state.busy) state.near = flora.nearest(head, beetle.mode === 'ground' ? null : beetle.on);
     if (state.near !== state.lastNear) {
       state.lastNear = state.near;
-      if (state.near && beetle.mode === 'ground' && !beetle.flying) A.speak([SV.MISC.near, ...mushParts(state.near)]);
     }
     const pr = $('#prompt'), m = state.near;
     if (m && !state.busy) {
@@ -825,7 +820,7 @@ function frame() {
       }
     }
   }
-  if (state.phase === 'travel' && ev === 'aterrizó:ground') { state.phase = 'play'; S.jump(); if (state.cur) objective(state.cur.goal); A.speak('Llegaste al nuevo claro. Apretá Q para saber qué hay alrededor.'); }
+  if (state.phase === 'travel' && ev === 'aterrizó:ground') { state.phase = 'play'; S.jump(); if (state.cur) objective(state.cur.goal); A.speak(SV.MISC.arrived); }
   $('#b-fly').hidden = state.phase !== 'play' || coarse;
 
   // El veneno se va pasando
