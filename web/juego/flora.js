@@ -22,10 +22,12 @@ export const vision = uniform(0);
 const BRUISE = new THREE.Color('#4f6fae'); // el azul de la magulladura
 
 const templates = new Map();
-function template(shape, pal, ring) {
-  const key = `${shape}|${pal}|${ring}`;
+// pal: índice de PALETTES o un objeto { fill, tallo }; gk: factor de grosor del tallo
+function template(shape, pal, ring, gk = 1) {
+  const key = `${shape}|${JSON.stringify(pal)}|${ring}|${gk}`;
   if (!templates.has(key)) {
-    const a = { ...ARQ[shape], ...PALETTES[pal], ring };
+    const colors = typeof pal === 'number' ? PALETTES[pal] : pal;
+    const a = { ...ARQ[shape], ...colors, ring, grosor: ARQ[shape].grosor * gk };
     const g = build(a, 64); g.scale.setScalar(0.1); // mm → cm
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     // [tallo, sombrero, láminas, anillo]: sombrero y láminas translúcidos; tallo más mate y cálido
@@ -47,8 +49,8 @@ function lerpTable(tab, x) {
 }
 
 let yawSeed = rng(5);
-function plant(scene, list, { x, z, shape, pal, ring = false, scale = 1, toxic }) {
-  const { g, a, p } = template(shape, pal, ring), k = 0.1 * scale;
+function plant(scene, list, { x, z, shape, pal, ring = false, scale = 1, toxic, gk = 1 }) {
+  const { g, a, p } = template(shape, pal, ring, gk), k = 0.1 * scale;
   const mesh = g.clone(true);
   const base = height(x, z) - 0.05;
   mesh.position.set(x, base, z); mesh.scale.multiplyScalar(scale); mesh.rotation.y = yawSeed() * 6;
@@ -81,7 +83,9 @@ function scatter(scene, list) {
       if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 5)) continue;
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 4)) continue; // no adentro de un tronco
       placed.push([x, z]);
-      plant(scene, list, { x, z, shape, pal, scale: 0.6 + r() * 0.9, toxic: r() < R.stats.toxicos });
+      const toxic = r() < R.stats.toxicos, m = plant(scene, list, { x, z, shape, pal, scale: 0.6 + r() * 0.9, toxic });
+      const pool = toxic ? ['phalloides', 'galerina', 'muscaria', 'conica', 'mycena'] : ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba'];
+      m.species = pool[Math.floor(r() * pool.length)];
     }
     n++;
   }
@@ -89,27 +93,39 @@ function scatter(scene, list) {
 
 /* ---------- Claros de los niveles: los dos grupos crecen mezclados ---------- */
 // Proporciones de la investigación (ver LEVELS en config.js), con los hongos entremezclados
+// Colores llamativos y comunes (claro de los colores)
+const VIVID = ['#b8352a', '#d9782a', '#6f8a3a', '#c8708a', '#7a4a7a', '#d4b13a'];
+const COMMON = ['#ebe4d4', '#8a6446', '#9a948c', '#d9c9a3', '#6e4a30'];
+
 function levelClearing(scene, list, L, seed) {
   const r = rng(seed), n = L.nYes + L.nNo, pts = [], c = L.at;
+  const gap = L.trait === 'size' ? 7 : 5.2;
   let guard = 0;
-  while (pts.length < n && guard++ < 5000) {
+  while (pts.length < n && guard++ < 8000) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * L.spread;
     const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
-    if (pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > 5.2)) pts.push([x, z]);
+    if (pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > gap)) pts.push([x, z]);
   }
   // Mezclar: qué lugar le toca a cada grupo
-  const groups = Array.from({ length: n }, (_, i) => i < L.nYes);
-  for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
+  const groups = Array.from({ length: pts.length }, (_, i) => i < L.nYes);
+  for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
   const pick = (count, tox) => { const s = new Set(); while (s.size < tox) s.add(Math.floor(r() * count)); return s; };
   const toxYes = pick(L.nYes, L.toxYes), toxNo = pick(L.nNo, L.toxNo);
   let iy = 0, ino = 0;
-  const shapes = L.trait === 'ring' ? { yes: ['convexa', 'plana', 'esferica', 'campana'], no: ['convexa', 'plana', 'hundida', 'campana', 'conica'] }
-    : { yes: ['convexa', 'plana', 'hundida', 'campana', 'conica'], no: ['convexa', 'plana', 'hundida', 'campana', 'conica'] };
+  const ALL = ['convexa', 'plana', 'hundida', 'campana', 'conica'];
   pts.forEach(([x, z], i) => {
     const yes = groups[i], k = yes ? iy++ : ino++, toxic = yes ? toxYes.has(k) : toxNo.has(k);
-    const list2 = yes ? shapes.yes : shapes.no;
-    const m = plant(scene, list, { x, z, shape: list2[Math.floor(r() * list2.length)], pal: Math.floor(r() * 5), ring: L.trait === 'ring' && yes, scale: 0.85 + r() * 0.45, toxic });
-    m.level = L.id; m.yes = yes; m.traitKnown = L.trait === 'ring'; // el anillo se ve; la mancha hay que provocarla
+    const o = { x, z, shape: ALL[Math.floor(r() * ALL.length)], pal: Math.floor(r() * 5), scale: 0.85 + r() * 0.45, toxic };
+    if (L.trait === 'ring') { o.ring = yes; o.shape = yes ? ['convexa', 'plana', 'esferica', 'campana'][Math.floor(r() * 4)] : o.shape; }
+    if (L.trait === 'color') { const list = yes ? VIVID : COMMON; o.pal = { fill: list[Math.floor(r() * list.length)], tallo: '#efe8d8' }; }
+    if (L.trait === 'size') o.scale = yes ? 0.42 + r() * 0.16 : 1.55 + r() * 0.45;     // ~3 cm contra ~11 cm de sombrero
+    if (L.trait === 'stem') { o.gk = yes ? 1.8 : 0.5; o.shape = ['convexa', 'plana', 'hundida'][Math.floor(r() * 3)]; }
+    if (L.trait === 'twin') { o.shape = 'convexa'; o.pal = { fill: '#ece5d6', tallo: '#f2eee6' }; o.ring = true; o.scale = 1.05 + r() * 0.08; }
+    const m = plant(scene, list, o);
+    m.level = L.id; m.trait = L.trait; m.yes = yes;
+    m.traitKnown = L.trait !== 'bruise' && L.trait !== 'twin'; // la mancha hay que provocarla; los gemelos, olfatearlos
+    const pool = L.photos[yes ? 'yes' : 'no'][toxic ? 'tox' : 'ed'];
+    m.species = pool[k % pool.length];
   });
 }
 
@@ -168,7 +184,7 @@ export function buildFlora(scene) {
       }
       return best;
     },
-    reveal(m) { m.known = true; mark(m); },
+    reveal(m) { m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m); },
     // Empujar un tallo: si es de los que se manchan, se pone azul de a poco
     touch(m) {
       if (m.traitKnown) return false;
@@ -177,7 +193,7 @@ export function buildFlora(scene) {
       return true;
     },
     eat(m) {
-      m.eaten = true; m.known = true; mark(m);
+      m.eaten = true; m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m);
       m.capMat.color = m.capMat.color.clone().multiplyScalar(0.7); // queda mordido (más oscuro)
     },
     update(dt, t) {

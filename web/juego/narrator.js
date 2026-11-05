@@ -41,7 +41,7 @@ function show(text) {
     s.style.animationDelay = `${i * 45}ms`; el.appendChild(s);
   });
   el.classList.remove('out'); void el.offsetWidth; el.classList.add('in');
-  const ms = Math.max(2600, text.length * 62);
+  const ms = Math.max(4500, text.length * 85); // tiempo de sobra para leer
   if (voiceOn) {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text); u.lang = voice?.lang || 'es-AR'; if (voice) u.voice = voice; u.rate = 0.98; u.pitch = 0.95;
@@ -49,6 +49,6 @@ function show(text) {
   }
   setTimeout(() => {
     el.classList.remove('in'); el.classList.add('out');
-    setTimeout(() => { el.hidden = true; next(); }, 500);
+    setTimeout(() => { el.hidden = true; setTimeout(next, 450); }, 500);
   }, ms);
 }

@@ -29,6 +29,7 @@
       <p class="lead">Sos un escarabajo en el suelo del bosque. A tu altura, los hongos son torres. Algunos son comestibles, otros mortales. Los humanos creen que pueden distinguirlos a simple vista… <b>¿será cierto?</b></p>
       <button class="go" id="go" disabled>Cargando el bosque…</button>
       <button class="b-q q-intro" type="button">Gráficos: livianos</button>
+      <button class="b-d q-intro" type="button">Dificultad: fácil</button>
       <p class="keys"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Shift</kbd> correr · empujá contra un tallo para trepar · <kbd>E</kbd> olfatear · <kbd>F</kbd> comer · <kbd>Espacio</kbd> volar al próximo hongo · arrastrá el mouse para mirar · <kbd>V</kbd> visión de antenas · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</p>
       <p class="tech" id="tech"></p>
     </div>
@@ -47,9 +48,20 @@
         <button id="b-snd" title="Sonido (M)">Sonido: sí</button>
         <button id="b-voz" title="Leer la narración en voz alta">Voz: no</button>
         <button class="b-q" type="button" title="Cambiar la calidad de los gráficos (recarga)">Gráficos</button>
+        <button class="b-d" type="button" title="Cuántos hongos de cada grupo hay que conocer para descubrir el mito">Dificultad</button>
         <a href="../" title="Volver a la investigación">Salir</a>
       </div>
     </div>
+    <aside class="ficha" id="ficha" hidden aria-live="polite">
+      <img id="ficha-img" alt="">
+      <div>
+        <p class="ficha-k">Así se ve en la vida real</p>
+        <p class="ficha-n" id="ficha-n"></p>
+        <span class="ficha-t" id="ficha-t"></span>
+        <p class="ficha-d" id="ficha-d"></p>
+        <p class="ficha-c" id="ficha-c"></p>
+      </div>
+    </aside>
     <p class="narr" id="narr" hidden aria-live="polite"></p>
     <button class="flybtn" id="b-fly" hidden title="Volar al próximo hongo sin explorar (Espacio)"><span class="ico">✈</span><span>Volar al próximo hongo <kbd>Espacio</kbd><small>a uno sin explorar · casi no gasta energía</small></span></button>
     <p class="prompt" id="prompt" hidden></p>
@@ -70,6 +82,7 @@
       <div><b class="tox" id="ins-a"></b><span id="ins-la"></span></div>
       <div><b class="tox" id="ins-b"></b><span id="ins-lb"></span></div>
     </div>
+    <div class="gallery" id="ins-gal"></div>
     <div class="mine" id="insight-mine"></div>
     <p class="small" id="ins-small"></p>
     <div class="stamp" id="stamp">MITO</div>

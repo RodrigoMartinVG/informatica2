@@ -8,6 +8,7 @@ import { uniform, positionWorld, positionView, cameraPosition, normalWorld, colo
 export const SUN = new THREE.Vector3(0.62, 0.5, -0.6).normalize();
 export const sunDir = uniform(SUN.clone());
 export const FOG = '#caa078';
+export const nightU = uniform(0); // 0 = atardecer, 1 = noche (claro de los gemelos)
 
 // Cuánta luz del sol atraviesa una superficie vista desde la cámara (0 a 1)
 export function backlight(power = 5) {
@@ -23,7 +24,9 @@ export function sky(scene) {
   const base = mix(color(FOG), color('#e9b98a'), up.pow(0.6));
   const top = mix(base, color('#a7b6c4'), up.pow(2).mul(0.55));
   const glow = dir.dot(sunDir).max(0);
-  scene.backgroundNode = top.add(color('#ffd9a0').mul(glow.pow(24).mul(1.6).add(glow.pow(4).mul(0.25))));
+  const day = top.add(color('#ffd9a0').mul(glow.pow(24).mul(1.6).add(glow.pow(4).mul(0.25))));
+  const night = mix(color('#121a2a'), color('#05070d'), up.pow(0.5)).add(color('#9fb4e0').mul(glow.pow(60).mul(0.8))); // luna
+  scene.backgroundNode = mix(day, night, nightU);
 }
 
 // Niebla: lejanía (como antes) + capa baja junto al suelo que se mueve lento
@@ -33,7 +36,7 @@ export function groundFog(scene, density = 0.0058) {
   const wisps = triNoise3D(positionWorld.mul(0.012), 0.15, time).mul(0.6).add(0.7); // jirones
   const near = float(1).sub(exp(dist.mul(-0.028)));                             // crece con la distancia
   const factor = densityFogFactor(density).add(near.mul(low).mul(wisps).mul(0.42)).saturate();
-  scene.fogNode = fog(color(FOG), factor);
+  scene.fogNode = fog(mix(color(FOG), color('#141c2a'), nightU), factor);
 }
 
 // Material de sombrero / láminas con translucidez (a partir del material original)

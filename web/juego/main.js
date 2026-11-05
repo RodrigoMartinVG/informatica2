@@ -11,6 +11,7 @@ import { walkHeight } from './surfaces.js';
 import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL } from './config.js';
 import * as S from './audio.js';
 import * as V from './narrator.js';
+import { SPECIES, photo, credit } from './species.js';
 
 const $ = (s) => document.querySelector(s);
 const gsap = window.gsap;
@@ -241,6 +242,19 @@ function touchCheck(m) {
   tally(); checkInsight(levelOf(m));
 }
 
+/* ---------- Ficha: la foto real de un hongo parecido ---------- */
+let fichaT = 0;
+function showPhoto(m) {
+  const sp = SPECIES[m.species]; if (!sp) return;
+  $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name;
+  $('#ficha-n').textContent = sp.name;
+  const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : 'ed'}`;
+  $('#ficha-d').textContent = sp.note; $('#ficha-c').textContent = credit(m.species);
+  const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
+  clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
+  say('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
+}
+
 /* ---------- Olfatear: dice la verdad, pero cansa ---------- */
 const anim = { v: 0 };
 function sniff() {
@@ -252,7 +266,7 @@ function sniff() {
   gsap.timeline({ onUpdate: () => beetle.setSniff(anim.v), onComplete: () => (state.busy = false) })
     .to(anim, { v: 1, duration: 0.35, ease: 'power2.out' })
     .add(() => {
-      flora.reveal(m); S.found(m.toxic); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
+      flora.reveal(m); S.found(m.toxic); showPhoto(m); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
       if (!say('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
         say('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
     }, 0.75)
@@ -272,7 +286,7 @@ function eat() {
     .to(chewA, { v: 1, duration: 0.25 })
     .to(chewA, { v: 0, duration: 0.3 }, 1.15)
     .add(() => {
-      flora.eat(m); game.eats.push({ level: m.level, yes: m.yes, trait: m.traitKnown, blind, toxic: m.toxic });
+      flora.eat(m); showPhoto(m); game.eats.push({ level: m.level, yes: m.yes, trait: m.traitKnown, blind, toxic: m.toxic });
       tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
       if (m.toxic) poisoned(blind); else fed();
     }, 1.2);
@@ -340,17 +354,33 @@ function tally() {
 }
 
 /* ---------- El descubrimiento: los datos del claro + tus propias decisiones ---------- */
-function mine(L) {
-  const line = (yes, label) => {
-    const e = game.eats.filter((x) => x.level === L.id && x.yes === yes && x.blind && x.trait); if (!e.length) return '';
-    const t = e.filter((x) => x.toxic).length;
-    return `<p>Comiste <b>${e.length}</b> ${e.length === 1 ? 'hongo' : 'hongos'} que ${label} sin olfatear: <b class="tox">${t}</b> ${t === 1 ? 'era venenoso' : 'eran venenosos'} (${Math.round((t / e.length) * 100)} %).</p>`;
-  };
-  const verb = (s) => s.replace(/^con /, 'tenían ').replace(/^sin /, 'no tenían ').replace(/^se mancha/, 'se manchaban').replace(/^no se mancha/, 'no se manchaban');
-  return line(true, verb(L.yes)) + line(false, verb(L.no));
+// Cómo se nombra cada grupo en plural («hongos con anillo», «hongos que se manchaban»…)
+function plural(L, yes) {
+  const g = yes ? L.yes : L.no;
+  return { 'se mancha': 'que se manchaban', 'no se mancha': 'que no se manchaban', chico: 'chicos', grande: 'grandes', Amanita: 'que resultaron Amanita', 'champiñón': 'que resultaron champiñón' }[g] || g;
 }
-const NEED = 4; // hongos conocidos de cada grupo para descubrir el mito
+function mine(L) {
+  const line = (yes) => {
+    const e = game.eats.filter((x) => x.level === L.id && x.yes === yes && x.blind); if (!e.length) return '';
+    const t = e.filter((x) => x.toxic).length;
+    return `<p>Comiste <b>${e.length}</b> ${e.length === 1 ? 'hongo' : 'hongos'} ${plural(L, yes)} sin olfatear: <b class="tox">${t}</b> ${t === 1 ? 'era venenoso' : 'eran venenosos'} (${Math.round((t / e.length) * 100)} %).</p>`;
+  };
+  return line(true) + line(false);
+}
+// Dificultad: cuántos hongos conocidos de cada grupo hacen falta para descubrir el mito
+let savedD = null; try { savedD = localStorage.getItem('bajo-el-sombrero:dificultad'); } catch { /* nada */ }
+let difficulty = savedD === 'normal' ? 'normal' : 'facil';
+const NEEDS = { facil: 2, normal: 4 };
+function diffLabel() { for (const b of document.querySelectorAll('.b-d')) b.textContent = difficulty === 'facil' ? 'Dificultad: fácil (2 de cada grupo)' : 'Dificultad: normal (4 de cada grupo)'; }
+for (const b of document.querySelectorAll('.b-d')) b.addEventListener('click', (e) => {
+  e.currentTarget.blur();
+  difficulty = difficulty === 'facil' ? 'normal' : 'facil';
+  try { localStorage.setItem('bajo-el-sombrero:dificultad', difficulty); } catch { /* nada */ }
+  diffLabel(); if (state.cur) checkInsight(state.cur);
+});
+diffLabel();
 function checkInsight(L) {
+  const NEED = NEEDS[difficulty];
   if (!L || state.done.has(L.id) || state.insighting || counts(L, true).k < NEED || counts(L, false).k < NEED) return;
   state.insighting = true;
   say('ins0' + L.id, 'Ya conocés bastantes hongos de los dos grupos. Mirá lo que descubriste.');
@@ -366,12 +396,26 @@ function checkInsight(L) {
     setTimeout(() => showInsight(L), 3300);
   }, 1200);
 }
+// Galería: las especies reales del claro, separadas según la diferencia del nivel
+function gallery(L) {
+  const col = (yes) => {
+    const ids = [...new Set(flora.specimens.filter((s) => s.level === L.id && s.yes === yes).map((s) => s.species))];
+    return `<div><h4>${cap1(L.trait === 'twin' ? (yes ? 'los mortales' : 'los comestibles') : L.yes === undefined ? '' : (yes ? L.yes : L.no))}</h4><div class="row">${ids.map((id) => {
+      const sp = SPECIES[id];
+      return `<figure><img src="${photo(id)}" alt="${sp.name}" loading="lazy"><figcaption><b class="${sp.tox ? 'tox' : 'ed'}">${sp.tag}</b>${sp.name}</figcaption></figure>`;
+    }).join('')}</div></div>`;
+  };
+  return col(true) + col(false);
+}
 function showInsight(L) {
   const pct = (v) => `${Math.round(v * 100)} %`;
   $('#ins-k').textContent = `${cap1(L.place)} · descubrimiento`;
   $('#ins-h').innerHTML = L.h2;
-  $('#ins-a').textContent = pct(L.research[0]); $('#ins-la').innerHTML = `venenosos<br>${L.yes}`;
-  $('#ins-b').textContent = pct(L.research[1]); $('#ins-lb').innerHTML = `venenosos<br>${L.no}`;
+  const nums = L.nums || [[pct(L.research[0]), `venenosos<br>${L.yes}`], [pct(L.research[1]), `venenosos<br>${L.no}`]];
+  $('#ins-a').textContent = nums[0][0]; $('#ins-la').innerHTML = nums[0][1];
+  $('#ins-b').textContent = nums[1][0]; $('#ins-lb').innerHTML = nums[1][1];
+  const st = $('#stamp'); st.textContent = L.stamp; st.classList.toggle('long', L.stamp.length > 6);
+  $('#ins-gal').innerHTML = gallery(L);
   $('#ins-small').textContent = L.small;
   const me = mine(L);
   $('#insight-mine').innerHTML = me ? `<p class="eyebrow">Tu partida</p>${me}` : '';
@@ -401,14 +445,14 @@ $('#insight-ok').addEventListener('click', () => {
     state.phase = 'travel'; S.fly();
     setTimeout(() => beetle.flyToGround(lx, lz, Math.atan2(b.x - lx, b.z - lz), Math.min(7, 2.5 + d / 40), Math.max(18, d * 0.3)), 500);
   } else {
-    objective('Página nueva en el cuaderno (C). Los demás claros todavía duermen… pronto van a despertar.');
-    say('end', 'Los demás claros todavía duermen. Pronto van a despertar.');
+    objective('Completaste el cuaderno de campo (C). Podés seguir explorando el bosque… o volver a la investigación.');
+    say('end1', 'Seis creencias puestas a prueba. Ninguna alcanza para saber si un hongo es comestible.');
+    say('end2', 'Gracias por jugar. Ante la duda, no se come.');
   }
 });
 
 /* ---------- Cuaderno de campo ---------- */
-const PAGES = [...LEVELS.map((L) => ({ id: L.id, title: L.title, body: L.page, chart: [...L.research, cap1(L.yes), cap1(L.no)], L })),
-  ...['Los colores', 'El tamaño', 'Las proporciones', 'Los gemelos'].map((title) => ({ id: title, title }))];
+const PAGES = LEVELS.map((L) => ({ id: L.id, title: L.title, body: L.page, chart: L.nums ? null : [...L.research, cap1(L.yes), cap1(L.no)], L }));
 function bars([a, b, la, lb]) {
   const y = (v) => 110 - v * 100, base = y(0.555);
   return `<svg viewBox="0 0 240 140" role="img" aria-label="${la} ${Math.round(a * 100)} %, ${lb} ${Math.round(b * 100)} %">
@@ -423,7 +467,8 @@ function renderBook() {
   $('#book-pages').innerHTML = PAGES.map((p) => {
     if (!state.done.has(p.id)) return `<article class="pg locked"><div><h3>${p.title}</h3><p>${state.awake.has(p.id) ? 'Claro despierto · por descubrir' : 'Claro dormido · próximamente'}</p></div></article>`;
     const me = mine(p.L);
-    return `<article class="pg"><span class="st">MITO</span><h3>${p.title}</h3>${bars(p.chart)}<p>${p.body}</p>${me ? `<div class="me"><b>En tu partida:</b>${me}</div>` : ''}</article>`;
+    const pics = [...new Set(flora.specimens.filter((s) => s.level === p.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}" title="${SPECIES[id].name} · ${SPECIES[id].tag}">`).join('');
+    return `<article class="pg"><span class="st">${p.L.stamp}</span><h3>${p.title}</h3>${p.chart ? bars(p.chart) : ''}<p>${p.body}</p><div class="pics">${pics}</div>${me ? `<div class="me"><b>En tu partida:</b>${me}</div>` : ''}</article>`;
   }).join('');
   $('#pages').textContent = `${state.done.size}/${PAGES.length}`;
 }
@@ -532,6 +577,7 @@ function frame() {
       if (!state.awake.has(L.id) || state.done.has(L.id) || state.cur === L) continue;
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
+        if (L.night && !state.night) { state.night = true; const o = { k: 0 }; gsap.to(o, { k: 1, duration: 6, ease: 'sine.inOut', onUpdate: () => world.setNight(o.k) }); S.setMood('dark'); }
         if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); say('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
     }
@@ -577,3 +623,7 @@ if (params.has('sobre') || params.has('pitch')) { for (let i = 0; i < 40; i++) b
 // Capturas: ?mancha toca todos los hongos de la magulladura; ?alas abre las alas
 if (params.has('mancha')) flora.specimens.filter((s) => s.level === 'magulladura').forEach((s) => { flora.touch(s); s.bruise = 1; if (s.stemMat) s.stemMat.color.lerp(new THREE.Color('#4f6fae'), 0.75); });
 if (params.has('alas')) Object.assign(beetle.state, { fly: 1 });
+// Capturas: ?noche, ?ficha=N (foto del hongo N), ?resumen=id (tarjeta de un nivel)
+if (params.has('noche')) world.setNight(1);
+if (params.has('ficha')) showPhoto(flora.specimens[+params.get('ficha')]);
+if (params.has('resumen')) { const L = LEVELS.find((x) => x.id === params.get('resumen')); state.cur = L; state.phase = 'insight'; flora.specimens.filter((s) => s.level === L.id).forEach((s) => flora.reveal(s)); showInsight(L); }

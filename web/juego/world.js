@@ -4,7 +4,7 @@ import * as THREE from 'three/webgpu';
 import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
 import { addTwig, addPebble, addLeaf } from './surfaces.js';
-import { SUN, backlight, sky, groundFog } from './look.js';
+import { SUN, backlight, sky, groundFog, nightU } from './look.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
 const CX = (BOUNDS.maxX + BOUNDS.minX) / 2, CZ = (BOUNDS.maxZ + BOUNDS.minZ) / 2;
@@ -138,7 +138,9 @@ function moss(scene, count) {
   for (let i = 0; i < count; i++) {
     let x, z; do { x = BOUNDS.minX + r() * (W - 140); z = BOUNDS.minZ + r() * (D - 140); } while (inClearing(x, z, 0.8));
     const k = 1.2 + r() * 4;
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6); s.set(k * (0.8 + r() * 0.6), k * (0.25 + r() * 0.2), k); v.set(x, height(x, z) - 0.1, z);
+    const sx = k * (0.8 + r() * 0.6), sy = k * (0.25 + r() * 0.2);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6); s.set(sx, sy, k); v.set(x, height(x, z) - 0.1, z);
+    addPebble(x, z, height(x, z) - 0.1, Math.min(sx, k) * 0.9, sy * 0.95); // el musgo también se camina
     m.compose(v, q, s); mesh.setMatrixAt(i, m);
     c.setHSL(0.22 + r() * 0.06, 0.45 + r() * 0.2, 0.22 + r() * 0.14); mesh.setColorAt(i, c);
   }
@@ -222,7 +224,7 @@ function atmosphere(scene, sunDir, motes) {
   }
   // Polvo y polen: puntitos que flotan y brillan con el bloom
   const dust = new THREE.MeshBasicNodeMaterial();
-  dust.colorNode = color('#ffe2a8').mul(2.2);
+  dust.colorNode = mix(color('#ffe2a8').mul(2.2), color('#c9ff7a').mul(5), nightU); // de noche, el polvo se vuelve luciérnagas
   const id = float(instanceIndex), hx = hash(id), hy = hash(id.add(17.3)), hz = hash(id.add(41.7));
   dust.positionNode = positionLocal.add(vec3(
     sin(time.mul(hx.mul(0.4).add(0.15)).add(hx.mul(30))).mul(3),
@@ -295,7 +297,7 @@ export function buildWorld(scene, { quality = 'alta' } = {}) {
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 400 });
   sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.05;
   scene.add(sun, sun.target);
-  scene.add(new THREE.HemisphereLight('#ffe6c4', '#5a4026', 1.9));
+  const hemi = new THREE.HemisphereLight('#ffe6c4', '#5a4026', 1.9); scene.add(hemi);
 
   ground(scene);
   grass(scene, hi ? 26000 : 9000);
@@ -311,6 +313,13 @@ export function buildWorld(scene, { quality = 'alta' } = {}) {
   // La luz del sol sigue al jugador para que las sombras sean nítidas cerca de él
   return {
     sun,
+    // Noche (0 a 1): baja el sol, todo se vuelve azul y aparecen las luciérnagas
+    setNight(k) {
+      nightU.value = k;
+      sun.intensity = 3.4 + (0.9 - 3.4) * k; sun.color.set('#ffbd75').lerp(new THREE.Color('#9fb6e8'), k);
+      hemi.intensity = 1.9 + (1.1 - 1.9) * k; hemi.color.set('#ffe6c4').lerp(new THREE.Color('#5d6f9c'), k); hemi.groundColor.set('#5a4026').lerp(new THREE.Color('#141820'), k);
+      scene.environmentIntensity = 0.75 + (0.3 - 0.75) * k;
+    },
     // Despertar un claro: se disipa la niebla azul
     wake(name) { for (const g of sleepers[name] || []) { g.visible = false; } },
     follow(p) {
