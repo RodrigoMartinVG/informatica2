@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/DrawSVGPlugin.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
   <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
   <style>
     :root {
@@ -111,6 +112,8 @@
     .bar:hover, .bar:focus-within { opacity: 1; }
     .bar button, .bar a { font: 500 13px var(--sans); background: #eeece6; color: #17161a; border: 0; padding: 7px 12px; cursor: pointer; text-decoration: none; }
     .rec .bar, .shot .bar { display: none; }
+    .start { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 11; font: 500 16px var(--sans); color: #17161a; background: #eeece6; border: 0; padding: 12px 22px; border-radius: 999px; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+    .start[hidden], .rec .start, .shot .start { display: none; }
     .hint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); font: 500 14px var(--sans); color: #ddd; background: rgba(0,0,0,.7); padding: 8px 14px; z-index: 10; display: none; }
   </style>
 </head>
@@ -119,10 +122,12 @@
     <button id="b-play">Pausa (espacio)</button>
     <button id="b-restart">Reiniciar</button>
     <button id="b-fs">Pantalla completa (F)</button>
+    <button id="b-snd">Sonido: no (M)</button>
     <button id="b-rec">Grabar video</button>
     <a href="./">Ir a la web</a>
   </div>
   <p class="hint" id="hint"></p>
+  <button class="start" id="start">🔊 Hacé clic para verla con música y sonido</button>
 
   <div class="stage" id="stage" aria-label="Animación promocional de la investigación sobre hongos">
     <canvas id="bg" width="1920" height="1080"></canvas>

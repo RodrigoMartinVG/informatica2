@@ -1,8 +1,9 @@
-// Animación promocional: una línea de tiempo de GSAP dirige siete escenas.
+// Animación promocional: una línea de tiempo de GSAP dirige once escenas, y también la música y los sonidos.
 // Todo lo que se dibuja en canvas es función del tiempo de la línea de tiempo,
 // así la animación se puede pausar, adelantar (?t=12) o grabar sin diferencias.
 import * as THREE from 'three';
 import { build } from './viewer3d.js';
+import * as A from './promo-audio.js';
 
 const { gsap, SplitText, DrawSVGPlugin } = window;
 gsap.registerPlugin(SplitText, DrawSVGPlugin);
@@ -239,6 +240,7 @@ const words = (sel) => new SplitText(sel, { type: 'words' }).words;
 const tl = gsap.timeline({ repeat: -1, defaults: { ease: 'power3.out' }, paused: true });
 const FT = { immediateRender: false };
 const N = { v: 0 };
+const cue = (fn, at) => tl.call(fn, null, at); // sonido sincronizado con un momento de la animación
 
 // Cada escena aparece en T, se sostiene `dur` segundos y se va con un fundido; la siguiente empieza 0,4 s después.
 let T = 0;
@@ -251,7 +253,9 @@ function scene(sel, dur, build) {
 }
 
 // Entrada común de las escenas con gráfico
-function chartIn(sel, at, { stamp = true } = {}) {
+function chartIn(sel, at, { stamp = true, strong = true, chord, values = [] } = {}) {
+  cue(() => A.chord(chord, 10.5), at);
+  cue(() => A.bars(values), at + 1.4);
   tl.from(`${sel} .k-top`, { opacity: 0, x: -20, duration: 0.8 }, at);
   tl.from(words(`${sel} h2`), { opacity: 0, y: 50, stagger: 0.12, duration: 1 }, at + 0.2);
   tl.from(`${sel} .ax`, { drawSVG: 0, duration: 0.8 }, at + 1.0);
@@ -262,6 +266,7 @@ function chartIn(sel, at, { stamp = true } = {}) {
   if (stamp) {
     tl.from(`${sel} .stamp`, { opacity: 0, scale: 3, rotate: 8, duration: 0.5, ease: 'power4.in' }, at + 4.5);
     tl.to(`${sel} .plot`, { x: -6, duration: 0.05, yoyo: true, repeat: 3, ease: 'none' }, at + 5.0);
+    cue(() => A.stamp(strong), at + 4.95);
   }
   tl.from(`${sel} .aside`, { opacity: 0, y: 20, duration: 0.8 }, at + 5.3);
 }
@@ -272,6 +277,8 @@ tl.fromTo(S, { spores: 0 }, { spores: 1, duration: 1.8, ease: 'none' }, 0);
 tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 6.5, ease: 'power1.inOut' }, 0);
 const t1 = new SplitText('#t1', { type: 'chars,words' });
 scene('#s1', 7.5, (at) => {
+  cue(() => A.chord('intro', 8), at);
+  cue(() => A.bells(t1.chars.length, 0.05, 0, 5), at + 1.1);
   tl.from('#s1 .kicker', { opacity: 0, y: 20, duration: 1 }, at + 0.6);
   tl.from(t1.chars, { opacity: 0, yPercent: 70, rotateX: -80, transformOrigin: '50% 100%', stagger: 0.05, duration: 1.1 }, at + 1.1);
   tl.to(S, { mycA: 0.22, duration: 1.2 }, at + 6.6);
@@ -279,6 +286,10 @@ scene('#s1', 7.5, (at) => {
 
 // 2 · A o B
 scene('#s2', 9, (at) => {
+  cue(() => A.chord('ab', 9.5), at);
+  cue(() => A.whoosh(1.4), at);
+  cue(() => A.dread(), at + 1.75);
+  cue(() => A.chime(3, 5), at + 3.6);
   tl.fromTo('#fa', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.4, ease: 'expo.out', ...FT }, at);
   tl.fromTo('#fb', { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.4, ease: 'expo.out', ...FT }, at + 0.3);
   tl.fromTo('#s2 img', { scale: 1.25 }, { scale: 1, duration: 9, ease: 'power1.out', ...FT }, at);
@@ -290,6 +301,10 @@ scene('#s2', 9, (at) => {
 
 // 3 · Los datos
 scene('#s3', 10, (at) => {
+  cue(() => A.chord('datos', 10.5), at);
+  cue(() => A.rain(6), at);
+  cue(() => A.chime(0, 4), at + 5.2);
+  cue(() => A.chime(2, 5), at + 5.5);
   tl.fromTo(S, { rainA: 0 }, { rainA: 1, duration: 0.4, ...FT }, at);
   tl.fromTo(S, { rainT: 0 }, { rainT: 5.2, duration: 6, ease: 'none', ...FT }, at);
   tl.fromTo(N, { v: 0 }, { v: 61069, duration: 4.5, ease: 'power2.out', ...FT }, at + 0.1);
@@ -300,13 +315,20 @@ scene('#s3', 10, (at) => {
 });
 
 // 4–7 · Los mitos
-scene('#m1', 10, (at) => chartIn('#m1', at));
-scene('#m2', 10, (at) => chartIn('#m2', at));
-scene('#m3', 11, (at) => chartIn('#m3', at));
-scene('#m4', 10, (at) => chartIn('#m4', at));
+const RS = R.rasgos;
+scene('#m1', 10, (at) => chartIn('#m1', at, { chord: 'm1', values: Object.values(RS.ring.datos) }));
+scene('#m2', 10, (at) => chartIn('#m2', at, { chord: 'm2', values: Object.values(RS.bruise.datos) }));
+scene('#m3', 11, (at) => chartIn('#m3', at, { chord: 'm3', strong: false, values: ['Verde', 'Rojo', 'Naranja', 'Blanco', 'Marrón', 'Gris', 'Crema'].map((c) => RS.capColor.datos[c]) }));
+scene('#m4', 10, (at) => chartIn('#m4', at, { chord: 'm4', strong: false, values: Object.values(RS.season.datos) }));
 
 // 8 · GeoGebra, modelo logarítmico
 scene('#g2', 11, (at) => {
+  const logp = (x) => 0.7395 - 0.1087 * Math.log(x), norm = (p) => (p - 0.3) / 0.55;
+  cue(() => A.chord('g2', 11.5), at);
+  cue(() => A.pops(R.modelo2.map(([, p]) => norm(p))), at + 1.3);
+  cue(() => A.trace(Array.from({ length: 24 }, (_, i) => norm(logp(0.42 + (21.58 * i) / 23))), 2.4), at + 2.6);
+  cue(() => A.chime(4, 5), at + 5.2);
+  cue(() => A.chime(1, 5), at + 5.45);
   tl.from('#g2 .k-top', { opacity: 0, x: -20, duration: 0.8 }, at);
   tl.from(words('#g2 h2'), { opacity: 0, y: 50, stagger: 0.1, duration: 1 }, at + 0.2);
   tl.from('#g2 .ax', { drawSVG: 0, duration: 0.8 }, at + 0.8);
@@ -319,6 +341,11 @@ scene('#g2', 11, (at) => {
 
 // 9 · GeoGebra, recta de mínimos cuadrados
 scene('#g1', 11, (at) => {
+  cue(() => A.chord('g1', 11.5), at);
+  cue(() => A.pops([...R.modelo1.comestibles, ...R.modelo1.venenosos].map(([, y]) => y / 44), 0.03), at + 1.4);
+  const line = Array.from({ length: 12 }, (_, i) => 0.05 + (0.85 * i) / 11);
+  cue(() => A.trace(line, 1.8, 0), at + 3.0);
+  cue(() => A.trace(line, 1.8, 1), at + 3.5);
   tl.from('#g1 .k-top', { opacity: 0, x: -20, duration: 0.8 }, at);
   tl.from(words('#g1 h2'), { opacity: 0, y: 50, stagger: 0.12, duration: 1 }, at + 0.2);
   tl.from('#g1 .ax', { drawSVG: 0, duration: 0.8 }, at + 0.8);
@@ -331,6 +358,8 @@ scene('#g1', 11, (at) => {
 
 // 10 · 3D
 scene('#s6', 10, (at) => {
+  cue(() => A.chord('tres', 10.5), at);
+  R.arquetipos.forEach((_, i) => cue(() => A.arp(i, 4), at + 0.2 + (5.5 * i) / (R.arquetipos.length + 2)));
   tl.fromTo(S, { gl: 0 }, { gl: 1, duration: 0.8, ...FT }, at);
   tl.fromTo(S, { sweep: 0 }, { sweep: 1, duration: 5.5, ease: 'none', ...FT }, at + 0.2);
   tl.fromTo(S, { cam: 0 }, { cam: 1, duration: 10, ease: 'sine.inOut', ...FT }, at);
@@ -342,6 +371,10 @@ scene('#s6', 10, (at) => {
 // 11 · Cierre
 const t7 = new SplitText('#t7', { type: 'lines', mask: 'lines' });
 scene('#s7', 11, (at) => {
+  cue(() => A.chord('cierre', 3), at);
+  cue(() => A.bells(4, 0.12, 2, 4), at + 0.3);
+  cue(() => A.chord('final', 7.5), at + 2.2);
+  cue(() => A.chime(0, 6), at + 2.7);
   tl.fromTo(S, { myc: 0 }, { myc: 1, duration: 6, ease: 'power1.inOut', ...FT }, at);
   tl.to(S, { mycA: 0.5, duration: 1.2 }, at);
   tl.from(t7.lines, { opacity: 0, yPercent: 100, stagger: 0.35, duration: 1.2 }, at + 0.3);
@@ -369,7 +402,7 @@ window.promo = { tl, frame };
 
 /* ---------- Controles ---------- */
 const playBtn = $('#b-play');
-const toggle = () => { tl.paused(!tl.paused()); playBtn.textContent = tl.paused() ? 'Reproducir (espacio)' : 'Pausa (espacio)'; };
+const toggle = () => { tl.paused(!tl.paused()); A.mute(tl.paused()); playBtn.textContent = tl.paused() ? 'Reproducir (espacio)' : 'Pausa (espacio)'; };
 playBtn.onclick = toggle;
 $('#b-restart').onclick = () => tl.restart();
 const fs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
@@ -377,9 +410,18 @@ $('#b-fs').onclick = fs;
 addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); toggle(); }
   if (e.key === 'f' || e.key === 'F') fs();
-  if (e.key === 'ArrowRight') tl.time(Math.min(tl.duration(), tl.time() + 2));
-  if (e.key === 'ArrowLeft') tl.time(Math.max(0, tl.time() - 2));
+  if (e.key === 'ArrowRight') tl.time(Math.min(tl.duration(), tl.time() + 2), true);
+  if (e.key === 'ArrowLeft') tl.time(Math.max(0, tl.time() - 2), true);
+  if (e.key === 'm' || e.key === 'M') soundToggle();
 });
+
+/* ---------- Sonido: el navegador exige un clic antes de reproducir audio ---------- */
+const sndBtn = $('#b-snd'), startCard = $('#start');
+const sndLabel = () => (sndBtn.textContent = A.isOn() ? 'Sonido: sí (M)' : 'Sonido: no (M)');
+async function soundOn() { await A.enable(); A.mute(tl.paused()); startCard.hidden = true; sndLabel(); }
+async function soundToggle() { if (A.isOn()) { A.off(); sndLabel(); } else await soundOn(); }
+sndBtn.onclick = (e) => { e.stopPropagation(); soundToggle(); };
+startCard.onclick = async () => { await soundOn(); tl.restart(); };
 
 /* ---------- Grabar un loop completo como video (WebM) ---------- */
 const hint = $('#hint');
@@ -390,6 +432,8 @@ $('#b-rec').onclick = async () => {
   } catch { hint.textContent = 'Grabación cancelada.'; hint.style.display = 'block'; setTimeout(() => (hint.style.display = 'none'), 2500); return; }
   document.documentElement.classList.add('rec');
   const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  const audio = A.isOn() ? A.stream() : null;
+  if (audio) audio.getAudioTracks().forEach((t) => stream.addTrack(t));
   const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 12e6 }), chunks = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   rec.onstop = () => {
