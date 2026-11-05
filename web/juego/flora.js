@@ -69,6 +69,10 @@ function plant(scene, list, { x, z, shape, pal, ring = false, scale = 1, toxic, 
   return m;
 }
 
+// Especies reales para los hongos sueltos del bosque
+const DECOR = { tox: ['phalloides', 'galerina', 'muscaria', 'conica', 'mycena'], ed: ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba'] };
+const pickDecor = (toxic, r = Math.random) => { const p = DECOR[toxic ? 'tox' : 'ed']; return p[Math.floor(r() * p.length)]; };
+
 /* ---------- Hongos dispersos por el bosque (también se pueden comer) ---------- */
 function scatter(scene, list) {
   const r = rng(97), shapes = ['convexa', 'plana', 'hundida', 'campana', 'conica', 'convexa', 'plana'];
@@ -84,8 +88,7 @@ function scatter(scene, list) {
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 4)) continue; // no adentro de un tronco
       placed.push([x, z]);
       const toxic = r() < R.stats.toxicos, m = plant(scene, list, { x, z, shape, pal, scale: 0.6 + r() * 0.9, toxic });
-      const pool = toxic ? ['phalloides', 'galerina', 'muscaria', 'conica', 'mycena'] : ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba'];
-      m.species = pool[Math.floor(r() * pool.length)];
+      m.species = pickDecor(toxic, r);
     }
     n++;
   }
@@ -184,6 +187,8 @@ export function buildFlora(scene) {
       }
       return best;
     },
+    // Cambiar un hongo suelto al otro tipo (para que no salgan tres iguales seguidos)
+    flipDecor(m) { m.toxic = !m.toxic; m.species = pickDecor(m.toxic); },
     reveal(m) { m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m); },
     // Empujar un tallo: si es de los que se manchan, se pone azul de a poco
     touch(m) {

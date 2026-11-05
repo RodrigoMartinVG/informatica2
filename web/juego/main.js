@@ -49,7 +49,7 @@ if (quality === 'alta') {
   colorTex = aoPass.getTextureNode().mul(colorTex);
 }
 const focus = uniform(6), focal = uniform(7), bokeh = uniform(2.2);
-const poisonU = uniform(0), hurtU = uniform(0), lowU = uniform(0);
+const poisonU = uniform(0), hurtU = uniform(0), lowU = uniform(0), healU = uniform(0);
 const base = quality === 'alta' ? dof(colorTex, scenePass.getViewZNode(), focus, focal, bokeh) : colorTex;
 const lit = quality === 'alta' ? base.add(bloom(base, 0.32, 0.4, 0.92)) : base;
 let out = lit.rgb;
@@ -57,7 +57,8 @@ const vig = smoothstep(0.25, 0.85, screenUV.sub(0.5).length());
 const gray = out.dot(vec3(0.299, 0.587, 0.114));
 out = mix(out, vec3(gray.mul(0.6), gray.mul(1.1), gray.mul(0.5)).mul(0.8).add(out.mul(0.2)), poisonU.mul(0.85)); // el veneno vuelve el mundo verdoso
 out = out.mul(float(1).sub(vig.mul(poisonU.mul(0.9).add(lowU.mul(0.55)))));                                   // viñeta (veneno o poca energía)
-out = out.add(vec3(1, 0.1, 0.05).mul(vig.mul(hurtU).mul(0.9)));                                                // destello rojo al perder una vida
+out = out.add(vec3(1, 0.1, 0.05).mul(vig.mul(hurtU).mul(0.9)));
+out = out.add(vec3(0.35, 1, 0.45).mul(vig.mul(healU).mul(0.55)));                                             // destello verde al comer algo bueno                                                // destello rojo al perder una vida
 post.outputNode = vec4(out, lit.a);
 
 /* ---------- Mundo ---------- */
@@ -67,6 +68,46 @@ const flora = buildFlora(scene);
 let trail = sporeTrail(scene, TRAIL);
 const beetle = createBeetle(scene);
 beetle.setMushrooms(flora.all);
+
+// Pedacitos que saltan al morder (un pequeño sistema de partículas en la CPU)
+const bits = (() => {
+  const N = 80, mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 0.8 }), N);
+  mesh.frustumCulled = false; mesh.castShadow = true; scene.add(mesh);
+  const ps = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), life: 0, s: 0.05 }));
+  const mx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), c = new THREE.Color();
+  let i0 = 0;
+  for (let i = 0; i < N; i++) { mx.makeScale(0, 0, 0); mesh.setMatrixAt(i, mx); mesh.setColorAt(i, c.set('#fff')); }
+  return {
+    emit(at, colors, n = 18, up = 1) {
+      for (let k = 0; k < n; k++) {
+        const i = (i0++) % N, p = ps[i];
+        p.p.copy(at); p.v.set((Math.random() - 0.5) * 4, (1.5 + Math.random() * 3) * up, (Math.random() - 0.5) * 4);
+        p.life = 0.9 + Math.random() * 0.6; p.s = 0.04 + Math.random() * 0.07;
+        mesh.setColorAt(i, c.set(colors[k % colors.length]));
+      }
+      mesh.instanceColor.needsUpdate = true;
+    },
+    update(dt) {
+      for (let i = 0; i < N; i++) {
+        const p = ps[i]; if (p.life <= 0) continue;
+        p.life -= dt; p.v.y -= 9 * dt; p.p.addScaledVector(p.v, dt);
+        const k = Math.max(0, Math.min(1, p.life * 2));
+        q.setFromEuler(new THREE.Euler(p.life * 7, p.life * 5, 0)); sc.setScalar(p.s * k);
+        mx.compose(p.p, q, sc); mesh.setMatrixAt(i, mx);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  };
+})();
+
+// Texto flotante (por ejemplo «+35 energía») sobre el escarabajo
+function floatText(text, cls) {
+  const el = document.createElement('div'); el.className = `float ${cls}`; el.textContent = text; $('#tags').appendChild(el);
+  const p = beetle.pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(camera);
+  el.style.left = `${(p.x * 0.5 + 0.5) * innerWidth}px`; el.style.top = `${(-p.y * 0.5 + 0.5) * innerHeight}px`;
+  gsap.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: -30, duration: 0.6, ease: 'power2.out' });
+  gsap.to(el, { opacity: 0, y: -60, duration: 0.7, delay: 1.1, onComplete: () => el.remove() });
+}
 beetle.place(SPAWN.x, SPAWN.z, Math.PI);
 
 $('#tech').textContent = `three.js r180 · ${backend} · TSL · Tone.js`;
@@ -281,12 +322,35 @@ document.addEventListener('click', (e) => { const img = e.target.closest?.('img[
 $('#lightbox').addEventListener('click', closePhoto);
 addEventListener('keydown', (e) => { if (e.code === 'Escape') closePhoto(); });
 
+/* ---------- Azar equilibrado ---------- */
+// Cada hongo se "decide" cuando lo olfateás o lo comés. Si los dos anteriores salieron del mismo tipo,
+// el tercero sale del otro: se intercambia la toxicidad con otro hongo sin explorar del mismo grupo,
+// así las proporciones del claro (las de los datos) no cambian. Solo en grupos cercanos al 50 %.
+const streak = {};
+function decide(m) {
+  if (m.decided) return;
+  m.decided = true;
+  const h = (streak[m.level || 'bosque'] ||= []);
+  const want = h.length >= 2 && h[h.length - 1] === h[h.length - 2] ? !h[h.length - 1] : null;
+  if (want !== null && m.toxic !== want) {
+    if (m.level) {
+      const L = levelOf(m), p = (m.yes ? L.toxYes / L.nYes : L.toxNo / L.nNo);
+      if (p >= 0.3 && p <= 0.7) {
+        const other = flora.specimens.find((s) => s.level === m.level && s.yes === m.yes && !s.decided && !s.known && s.toxic === want);
+        if (other) { [m.toxic, other.toxic] = [other.toxic, m.toxic]; [m.species, other.species] = [other.species, m.species]; }
+      }
+    } else flora.flipDecor(m);
+  }
+  h.push(m.toxic);
+}
+
 /* ---------- Olfatear: dice la verdad, pero cansa ---------- */
 const anim = { v: 0 };
 function sniff() {
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
   if (m.known) { tip('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
+  decide(m);
   touchCheck(m); // para olfatearlo hay que tocarlo
   state.busy = true; S.sniff(); game.energy -= 6; game.sniffs++; drawStatus();
   gsap.timeline({ onUpdate: () => beetle.setSniff(anim.v), onComplete: () => (state.busy = false) })
@@ -305,6 +369,7 @@ function eat() {
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
   if (m.eaten) { tip('eaten', 'De ese ya comiste. Buscá otro.', { repeat: true }); return; }
+  decide(m);
   touchCheck(m);
   state.busy = true; S.chew();
   const blind = !m.known;
@@ -312,17 +377,24 @@ function eat() {
     .to(chewA, { v: 1, duration: 0.25 })
     .to(chewA, { v: 0, duration: 0.3 }, 1.15)
     .add(() => {
+      const mouth = beetle.pos.clone().addScaledVector(beetle.forward(new THREE.Vector3()), 0.75);
+      bits.emit(mouth, [m.a.fill, m.a.fill, '#f3ead8'], 22);
+      if (m.toxic) bits.emit(mouth, ['#9b5bd6', '#c58cff', '#6b3aa6'], 16, 0.6);
       flora.eat(m); showPhoto(m); game.eats.push({ level: m.level, yes: m.yes, trait: m.traitKnown, blind, toxic: m.toxic });
       tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
       if (m.toxic) poisoned(blind); else fed();
     }, 1.2);
 }
 function fed() {
-  game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
+  const before = game.energy; game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
+  floatText(`+${Math.round(game.energy - before)} energía`, 'gain');
+  gsap.fromTo(healU, { value: 1 }, { value: 0, duration: 1.4 });
+  const bar = $('#energy').parentElement; bar.classList.remove('boost'); void bar.offsetWidth; bar.classList.add('boost');
   if (!tip('e1', 'Rico. Sentís cómo vuelve la energía.') && game.eats.length >= 4) tip('e4', '¿Estás eligiendo por el aspecto? Fijate cuántos te salieron bien.');
 }
 function poisoned(blind) {
   game.lives -= 1; game.poison = 1; drawStatus(); S.poison(true); S.hurt();
+  floatText('−1 vida', 'loss');
   gsap.fromTo(hurtU, { value: 1 }, { value: 0, duration: 1.2 });
   if (game.lives <= 0) { faint(); return; }
   if (!tip('p1', 'Algo anda mal… el mundo da vueltas. Era venenoso.'))
@@ -566,6 +638,7 @@ function frame() {
   const inp = input();
   const ev = beetle.update(dt, inp);
   flora.update(dt, t);
+  bits.update(dt);
   world.follow(beetle.pos);
   vision.value += ((keys.has('KeyV') ? 1 : 0) - vision.value) * Math.min(1, dt * 8);
 
