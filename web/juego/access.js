@@ -88,7 +88,7 @@ export function setupPanel({ onChange } = {}) {
   const panel = document.getElementById('access');
   const apply = () => {
     document.documentElement.classList.toggle('big-text', cfg.big);
-    for (const b of document.querySelectorAll('.b-acc')) b.textContent = cfg.audio ? 'Accesibilidad · modo audio: sí' : 'Accesibilidad';
+    for (const b of document.querySelectorAll('.b-acc')) b.textContent = b.classList.contains('q-intro') ? (cfg.audio ? 'Accesibilidad · modo audio: sí' : 'Accesibilidad') : (cfg.audio ? '♿ Audio: sí' : '♿ Accesibilidad');
     onChange?.(cfg);
   };
   const render = () => {

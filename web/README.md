@@ -86,9 +86,11 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/surfaces.js` | Superficies caminables: suelo, ramas, piedras y hojas |
 | `juego/narrator.js` | Narración en off: subtítulos + voz rioplatense pregenerada (`juego/voz/`, ver `tools/voz/`) |
 | `juego/species.js` | Especies reales: nombre, peligrosidad, nota y crédito de cada foto |
+| `juego/access.js` | Accesibilidad: modo audio (descripciones habladas), sonidos espaciales, texto grande y teclas reasignables |
+| `juego/debug.js` | Herramientas de prueba: solo se cargan con `?debug` |
 | `juego/look.js` | Efectos de luz en TSL: translucidez a contraluz, niebla a ras del suelo y cielo |
 
-Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Arranca con **gráficos livianos** (sin oclusión ambiental, profundidad de campo ni bloom); el botón «Gráficos» pasa a la versión completa y recuerda la elección. Parámetros útiles: `?q=alta` / `?q=baja`, `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
+Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Arranca con **gráficos livianos** (sin oclusión ambiental, profundidad de campo ni bloom); el botón «Gráficos» pasa a la versión completa y recuerda la elección. Parámetros útiles: `?q=alta` / `?q=baja`, `?gl` (forzar WebGL 2); con `?debug` se habilitan las herramientas de prueba (`?debug&auto` salta la intro, `&hora=0..1`, `&pajaro`, etc.). Cada claro ocurre un poco más tarde (de la tarde a la noche) y cada tanto pasa un pájaro: hay que esconderse debajo de un sombrero.
 
 Mecánicas: hambre (la energía baja con el tiempo), olfatear (dice la verdad pero gasta energía), comer (alimenta o envenena: tres vidas), trepar ramas, piedras, hojas y hongos (empujando contra el tallo), saltar desde el borde del sombrero, cámara libre (arrastrar el mouse) con brazo con resorte, visión de antenas (V) y narración en off (con voz opcional). Al final del claro, el juego compara tus decisiones con los datos de la investigación.
 

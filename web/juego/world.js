@@ -4,7 +4,7 @@ import * as THREE from 'three/webgpu';
 import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
 import { addTwig, addPebble, addLeaf } from './surfaces.js';
-import { SUN, backlight, sky, groundFog, nightU } from './look.js';
+import { SUN, backlight, sky, groundFog, nightU, duskU, sunDir as sunU } from './look.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
 const CX = (BOUNDS.maxX + BOUNDS.minX) / 2, CZ = (BOUNDS.maxZ + BOUNDS.minZ) / 2;
@@ -314,12 +314,21 @@ export function buildWorld(scene, { quality = 'alta' } = {}) {
   return {
     sun,
     // Noche (0 a 1): baja el sol, todo se vuelve azul y aparecen las luciérnagas
-    setNight(k) {
-      nightU.value = k;
-      sun.intensity = 3.4 + (0.9 - 3.4) * k; sun.color.set('#ffbd75').lerp(new THREE.Color('#9fb6e8'), k);
-      hemi.intensity = 1.9 + (1.1 - 1.9) * k; hemi.color.set('#ffe6c4').lerp(new THREE.Color('#5d6f9c'), k); hemi.groundColor.set('#5a4026').lerp(new THREE.Color('#141820'), k);
-      scene.environmentIntensity = 0.75 + (0.3 - 0.75) * k;
+    // Hora del día (0 a 1): 0 tarde dorada · 0,6 ocaso · 1 noche. El sol baja, la luz se entibia y después se enfría.
+    setTime(k) {
+      const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const dusk = ss(0, 0.6, k) * (1 - ss(0.65, 1, k)), night = ss(0.6, 1, k);
+      duskU.value = dusk; nightU.value = night;
+      sunDir.copy(SUN); sunDir.y = SUN.y * (1 - 0.65 * ss(0, 0.7, k)) + 0.05; sunDir.normalize(); sunU.value.copy(sunDir);
+      const day = new THREE.Color('#ffbd75'), late = new THREE.Color('#ff7a45'), moon = new THREE.Color('#9fb6e8');
+      sun.color.copy(day).lerp(late, ss(0, 0.6, k)).lerp(moon, night);
+      sun.intensity = (3.4 - 1.2 * ss(0, 0.6, k)) * (1 - night) + 0.9 * night;
+      hemi.color.set('#ffe6c4').lerp(new THREE.Color('#ffb48a'), dusk).lerp(new THREE.Color('#5d6f9c'), night);
+      hemi.groundColor.set('#5a4026').lerp(new THREE.Color('#141820'), night);
+      hemi.intensity = 1.9 - 0.3 * dusk - 0.8 * night;
+      scene.environmentIntensity = 0.75 - 0.45 * night;
     },
+    setNight(k) { this.setTime(0.6 + 0.4 * k); },
     // Despertar un claro: se disipa la niebla azul
     wake(name) { for (const g of sleepers[name] || []) { g.visible = false; } },
     follow(p) {

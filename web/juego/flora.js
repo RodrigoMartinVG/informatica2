@@ -8,6 +8,7 @@ import { profile } from '../profiles.js';
 import { height, inClearing, rng, BOUNDS, LEVELS } from './config.js';
 import { obstacles } from './world.js';
 import { translucent } from './look.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const R = window.RESEARCH;
 const ARQ = Object.fromEntries(R.arquetipos.map((a) => [a.id, a]));
@@ -36,9 +37,47 @@ function template(shape, pal, ring, gk = 1) {
     gills.material = translucent(gills.material, '#ffc58a', 0.9);
     stem.material = stem.material.clone(); stem.material.color = new THREE.Color('#e3d3b8'); stem.material.roughness = 0.92;
     if (g.children[3]) g.children[3].material = stem.material;
-    templates.set(key, { g, a, p: profile(a) });
+    const p = profile(a);
+    addDetail(g, a, p, gills.material, shape, key);
+    templates.set(key, { g, a, p });
   }
   return templates.get(key);
+}
+
+// Detalle 3D: láminas debajo del sombrero y verrugas/escamas sobre algunos sombreros (en mm, antes de escalar)
+function addDetail(g, a, p, gillMat, shape, key) {
+  // Láminas: placas radiales finas que van del tallo al borde, siguiendo la cara de abajo del sombrero
+  const under = [...p.capUnder].sort((u, v) => u[0] - v[0]); // [radio, altura] de adentro hacia afuera
+  const yAt = (r) => lerpTable(under, r);
+  const r0 = under[0][0] * 1.05, r1 = under[under.length - 1][0] * 0.97, n = 56, plates = [];
+  if (r1 - r0 > 2) {
+    for (let i = 0; i < n; i++) {
+      const th = (i / n) * Math.PI * 2, c = Math.cos(th), s = Math.sin(th), steps = 6, pos = [], idx = [];
+      const short = i % 2 === 1; // una lámina larga y una corta, como en los hongos reales
+      for (let k = 0; k <= steps; k++) {
+        const r = (short ? r0 + (r1 - r0) * 0.45 : r0) + ((r1 - (short ? r0 + (r1 - r0) * 0.45 : r0)) * k) / steps;
+        const y = yAt(r), depth = Math.min(6, (r1 - r0) * 0.12) * Math.sin(Math.PI * Math.min(1, 0.15 + 0.85 * k / steps));
+        pos.push(c * r, y - 0.2, s * r, c * r, y - 0.2 - depth, s * r);
+        if (k < steps) { const b = k * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+      plates.push(geo);
+    }
+    const lam = new THREE.Mesh(mergeGeometries(plates), gillMat); lam.castShadow = false; lam.receiveShadow = true; g.add(lam);
+  }
+  // Verrugas o escamas en relieve: en las esféricas y en algunas convexas y planas
+  const h = [...key].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) >>> 0, 7), r = rng(h);
+  if (!(shape === 'esferica' || ((shape === 'convexa' || shape === 'plana') && r() < 0.45))) return;
+  const top = []; let maxR = -1; for (const [rr, yy] of p.capTop) { if (rr <= maxR) break; maxR = rr; top.push([rr, yy]); }
+  const capY = (rr) => lerpTable(top, rr), bumps = [], count = shape === 'esferica' ? 70 : 40, big = shape === 'esferica' ? 1.6 : 1.1;
+  for (let i = 0; i < count; i++) {
+    const rr = Math.sqrt(r()) * maxR * 0.92, th = r() * Math.PI * 2, sz = (0.6 + r() * 0.8) * big * Math.max(1, maxR / 30);
+    const b = new THREE.IcosahedronGeometry(sz, 0); b.scale(1, 0.55, 1);
+    b.translate(Math.cos(th) * rr, capY(rr) + sz * 0.25, Math.sin(th) * rr); bumps.push(b);
+  }
+  const wart = new THREE.Color(a.fill).lerp(new THREE.Color('#f3ead6'), 0.65);
+  const mesh = new THREE.Mesh(mergeGeometries(bumps), new THREE.MeshStandardMaterial({ color: wart, roughness: 0.85, flatShading: true }));
+  mesh.castShadow = true; g.add(mesh);
 }
 
 // Interpolación lineal en una lista de pares [x, y] ordenada por x

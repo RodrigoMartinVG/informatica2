@@ -1,6 +1,6 @@
 // «Bajo el sombrero»: arranque, cámara, controles, hambre y veneno, vuelo, narración y los niveles (claros).
 import * as THREE from 'three/webgpu';
-import { pass, mrt, output, normalView, uniform, screenUV, smoothstep, vec3, vec4, float, mix } from 'three/tsl';
+import { pass, mrt, output, normalView, uniform, screenUV, smoothstep, vec3, vec4, float, mix, uv, color, vec2 } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { dof } from 'three/addons/tsl/display/DepthOfFieldNode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
@@ -67,6 +67,7 @@ post.outputNode = vec4(out, lit.a);
 /* ---------- Mundo ---------- */
 await step(0.4);
 const world = buildWorld(scene, { quality });
+const clock24 = { k: 0 }; // hora del día del bosque (0 tarde · 1 noche)
 await step(0.6);
 environment(renderer, scene, scene.userData.sunDir);
 const flora = buildFlora(scene);
@@ -107,6 +108,54 @@ const bits = (() => {
   };
 })();
 
+// El pájaro: una sombra que cruza el bosque. Hay que esconderse debajo de un sombrero.
+const birdShadow = (() => {
+  const k = uniform(0), mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
+  const d = uv().sub(0.5).mul(vec2(1, 1.6)).length().mul(2);
+  mat.colorNode = color('#000000'); mat.opacityNode = float(1).sub(d).clamp(0, 1).pow(0.8).mul(k).mul(0.6);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(46, 30), mat); mesh.rotation.x = -Math.PI / 2; mesh.visible = false; mesh.renderOrder = 5;
+  scene.add(mesh);
+  return { mesh, k };
+})();
+const bird = { next: 75, t: -1, dur: 8, cross: 5, from: new THREE.Vector3(), dir: new THREE.Vector3(), checked: false };
+function birdStart() {
+  const a = Math.random() * Math.PI * 2; bird.dir.set(Math.cos(a), 0, Math.sin(a));
+  const speed = 26; bird.from.copy(beetle.pos).addScaledVector(bird.dir, -speed * bird.cross); bird.speed = speed;
+  bird.t = 0; bird.checked = false; birdShadow.mesh.visible = true; S.bird();
+  tip('bird' + Date.now(), '¡Un pájaro! Escondete debajo de un sombrero o trepá un tallo.', { repeat: true });
+  const near = flora.nearest(beetle.pos, null, 40) || unexploredNear()[0];
+  if (near) { beetle.heading(H); const r = A.direction(beetle.pos, H, near); A.speak(`¡Un pájaro! El hongo más cercano para esconderte está ${r.where}, a ${A.cm(r.d)}.`, { interrupt: true }); }
+}
+// ¿Está a salvo? Debajo de un sombrero (en el suelo, cerca del tallo) o trepado al tallo
+function hidden() {
+  if (beetle.mode === 'stem') return true;
+  if (beetle.mode !== 'ground') return false;
+  const p = beetle.pos;
+  return flora.all.some((m) => Math.hypot(p.x - m.x, p.z - m.z) < m.Rw * 0.9 && m.climbTop > 1.2);
+}
+function birdUpdate(dt) {
+  if (bird.t < 0) {
+    if (state.phase === 'play' && state.entered.size > 0) { bird.next -= dt; if (bird.next <= 0) { bird.next = 60 + Math.random() * 50; birdStart(); } }
+    return;
+  }
+  bird.t += dt;
+  const p = bird.from.clone().addScaledVector(bird.dir, bird.speed * bird.t);
+  birdShadow.mesh.position.set(p.x, walkHeight(p.x, p.z) + 1.2, p.z);
+  birdShadow.mesh.rotation.z = -Math.atan2(bird.dir.z, bird.dir.x);
+  birdShadow.k.value = Math.min(1, bird.t / 1.2, (bird.dur - bird.t) / 1.2);
+  if (!bird.checked && bird.t >= bird.cross) {
+    bird.checked = true;
+    if (state.phase !== 'play') return;
+    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); }
+    else {
+      game.energy = Math.max(0, game.energy - 25); drawStatus(); S.hurt(); floatText('−25 energía', 'loss');
+      gsap.fromTo(hurtU, { value: 0.8 }, { value: 0, duration: 1 });
+      tip('birdhit' + Date.now(), 'El pájaro te picoteó: perdiste energía. Para la próxima, escondete debajo de un sombrero.', { repeat: true });
+    }
+  }
+  if (bird.t >= bird.dur) { bird.t = -1; birdShadow.mesh.visible = false; }
+}
+
 // Texto flotante (por ejemplo «+35 energía») sobre el escarabajo
 function floatText(text, cls) {
   const el = document.createElement('div'); el.className = `float ${cls}`; el.textContent = text; $('#tags').appendChild(el);
@@ -120,7 +169,7 @@ beetle.place(SPAWN.x, SPAWN.z, Math.PI);
 $('#tech').textContent = `three.js r180 · ${backend} · TSL · Tone.js`;
 const qLabel = quality === 'alta' ? 'Gráficos: altos' : 'Gráficos: livianos';
 for (const b of document.querySelectorAll('.b-q')) {
-  b.textContent = quality === 'alta' ? `${qLabel} · pasar a livianos` : `${qLabel} · pasar a altos`;
+  b.textContent = !b.classList.contains('q-intro') ? qLabel : quality === 'alta' ? `${qLabel} · pasar a livianos` : `${qLabel} · pasar a altos`;
   b.addEventListener('click', () => setQuality(quality === 'alta' ? 'baja' : 'alta'));
 }
 const go = $('#go'); go.disabled = false; go.textContent = 'Entrar al bosque'; go.focus();
@@ -527,7 +576,7 @@ function mine(L) {
 let savedD = null; try { savedD = localStorage.getItem('bajo-el-sombrero:dificultad'); } catch { /* nada */ }
 let difficulty = savedD === 'normal' ? 'normal' : 'facil';
 const NEEDS = { facil: 2, normal: 4 };
-function diffLabel() { for (const b of document.querySelectorAll('.b-d')) b.textContent = difficulty === 'facil' ? 'Dificultad: fácil (2 de cada grupo)' : 'Dificultad: normal (4 de cada grupo)'; }
+function diffLabel() { for (const b of document.querySelectorAll('.b-d')) b.textContent = b.classList.contains('q-intro') ? (difficulty === 'facil' ? 'Dificultad: fácil (2 de cada grupo)' : 'Dificultad: normal (4 de cada grupo)') : (difficulty === 'facil' ? 'Fácil' : 'Normal'); }
 for (const b of document.querySelectorAll('.b-d')) b.addEventListener('click', (e) => {
   e.currentTarget.blur();
   difficulty = difficulty === 'facil' ? 'normal' : 'facil';
@@ -609,6 +658,8 @@ $('#insight-ok').addEventListener('click', () => {
     // Vuelo de viaje: gratis, siguiendo las esporas, y aterriza al borde del claro mirando al centro
     const lx = b.x, lz = b.z + next.spread + 7, d = Math.hypot(lx - beetle.pos.x, lz - beetle.pos.z);
     state.phase = 'travel'; S.fly();
+    // Durante el vuelo pasa el tiempo: cada claro es un poco más tarde que el anterior
+    gsap.to(clock24, { k: next.time, duration: 7, ease: 'sine.inOut', onUpdate: () => world.setTime(clock24.k) });
     setTimeout(() => beetle.flyToGround(lx, lz, Math.atan2(b.x - lx, b.z - lz), Math.min(7, 2.5 + d / 40), Math.max(18, d * 0.3)), 500);
   } else {
     objective('Completaste el cuaderno de campo (C). Podés seguir explorando el bosque… o volver a la web con el botón de arriba a la derecha.');
@@ -700,6 +751,7 @@ function frame() {
   const ev = beetle.update(dt, inp);
   flora.update(dt, t);
   bits.update(dt);
+  birdUpdate(dt);
   world.follow(beetle.pos);
   vision.value += ((keys.has(A.keyFor('vision')) ? 1 : 0) - vision.value) * Math.min(1, dt * 8);
 
@@ -761,7 +813,7 @@ function frame() {
       if (!state.awake.has(L.id) || state.done.has(L.id) || state.cur === L) continue;
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
-        if (L.night && !state.night) { state.night = true; const o = { k: 0 }; gsap.to(o, { k: 1, duration: 6, ease: 'sine.inOut', onUpdate: () => world.setNight(o.k) }); S.setMood('dark'); }
+        if (L.night) S.setMood('dark');
         if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); tip('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
     }
@@ -795,7 +847,7 @@ addEventListener('resize', () => {
 if (params.has('debug')) {
   import('./debug.js').then((d) => d.run({
     params, THREE, gsap, $, beetle, flora, world, state, game, cam, LEVELS, renderer, backend, camera, keys, frame, sniff, eat, fly, quality,
-    objective, showPhoto, showInsight, toggleBook, setBookView: (id) => (bookView = id),
+    objective, showPhoto, showInsight, toggleBook, birdNow: () => (bird.next = 0.5), setBookView: (id) => (bookView = id),
     snapCamera: () => { cam.arm = cam.dist; followTarget(); camPos.copy(want); camLook.copy(wantLook); }
   }));
 }

@@ -157,3 +157,9 @@ export async function playVoice(url) {
   });
 }
 export function stopVoice() { try { voiceSrc?.stop(); } catch { /* nada */ } }
+// Pájaro: un chillido que baja y un aleteo grave
+export function bird() {
+  if (!go()) return; const t = now();
+  chirp.triggerAttack(3200, t); chirp.frequency.exponentialRampToValueAtTime(1400, t + 0.5); chirp.triggerRelease(t + 0.55);
+  for (let i = 0; i < 6; i++) step.triggerAttackRelease(70, 0.06, t + 0.6 + i * 0.22, 0.9);
+}
