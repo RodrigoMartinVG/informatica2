@@ -108,10 +108,10 @@ export function setupPanel({ onChange } = {}) {
     };
     addEventListener('keydown', once, true);
   }
-  panel.querySelector('#acc-audio').addEventListener('change', (e) => { cfg.audio = e.target.checked; save(); apply(); speak(cfg.audio ? MISC.audioOn : MISC.audioOff, { interrupt: true, force: true }); });
+  panel.querySelector('#acc-audio').addEventListener('change', async (e) => { await window.__enableAudio?.(); cfg.audio = e.target.checked; save(); apply(); speak(cfg.audio ? MISC.audioOn : MISC.audioOff, { interrupt: true, force: true }); });
   panel.querySelector('#acc-big').addEventListener('change', (e) => { cfg.big = e.target.checked; save(); apply(); });
   panel.querySelector('#acc-rate').addEventListener('input', (e) => { cfg.rate = +e.target.value; Speech.setRate(cfg.rate); save(); });
-  panel.querySelector('#acc-test').addEventListener('click', () => speak(MISC.test, { interrupt: true, force: true }));
+  panel.querySelector('#acc-test').addEventListener('click', async () => { await window.__enableAudio?.(); speak(MISC.test, { interrupt: true, force: true }); });
   panel.querySelector('#acc-close').addEventListener('click', () => toggle(false));
   panel.addEventListener('click', (e) => { if (e.target === panel) toggle(false); });
   function toggle(open = panel.hidden) { panel.hidden = !open; if (open) { render(); panel.querySelector('#acc-audio').focus(); } }

@@ -255,7 +255,7 @@ addEventListener('keydown', (e) => {
   keys.add(e.code);
   // En la pantalla de inicio: A activa el modo audio, Enter entra al bosque
   if (state.phase === 'title') {
-    if (e.code === 'KeyA') { acc.setAudio(!A.settings.audio); A.speak(A.settings.audio ? SV.MISC.audioOnIntro : SV.MISC.audioOff, { interrupt: true, force: true }); }
+    if (e.code === 'KeyA') toggleAudioMode();
     if (e.code === 'Enter' && !go.disabled) go.click();
     return;
   }
@@ -393,6 +393,18 @@ const closePhoto = () => { const lb = $('#lightbox'); if (!lb.hidden) gsap.to(lb
 document.addEventListener('click', (e) => { const img = e.target.closest?.('img[data-sp]'); if (img) { e.stopPropagation(); openPhoto(img.dataset.sp); } }, true);
 $('#lightbox').addEventListener('click', closePhoto);
 addEventListener('keydown', (e) => { if (e.code === 'Escape') closePhoto(); });
+
+// Activar o desactivar el modo audio desde la pantalla de inicio (tecla A). La tecla cuenta como interacción,
+// así que en ese momento se puede habilitar el audio del navegador y la voz confirma.
+window.__enableAudio = async () => { try { await S.enable(); sndLabel(); } catch { /* sin audio */ } };
+async function toggleAudioMode() {
+  await window.__enableAudio();
+  acc.setAudio(!A.settings.audio);
+  const on = A.settings.audio, tipEl = $('.sr-tip');
+  tipEl.innerHTML = on ? '<b>🔊 Modo audio activado.</b> Espacio: volar a un hongo · E: olfatear · F: comer · Q: qué hay cerca · R: tus vidas. Apretá <b>Enter</b> para entrar.' : 'Modo audio desactivado. Para activarlo, apretá la tecla A.';
+  tipEl.classList.toggle('on', on);
+  A.speak(on ? SV.MISC.audioOnIntro : SV.MISC.audioOff, { interrupt: true, force: true });
+}
 
 /* ---------- Descripciones habladas (accesibilidad) ---------- */
 // Cómo se describe un hongo con palabras (fragmentos pregenerados: rasgo + estado)
