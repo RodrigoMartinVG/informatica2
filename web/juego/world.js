@@ -238,9 +238,9 @@ function atmosphere(scene, sunDir, motes) {
 }
 
 /* ---------- Camino de esporas que guía al jugador ---------- */
-export function sporeTrail(scene) {
-  const curve = new THREE.CatmullRomCurve3(TRAIL.map(([x, z]) => new THREE.Vector3(x, height(x, z) + 2.2, z)));
-  const n = 90, mat = new THREE.MeshBasicNodeMaterial({ transparent: true });
+export function sporeTrail(scene, points = TRAIL) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, height(x, z) + 2.2, z)));
+  const n = Math.max(40, Math.round(curve.getLength() / 1.1)), mat = new THREE.MeshBasicNodeMaterial({ transparent: true });
   const id = float(instanceIndex);
   mat.colorNode = color('#9fe8c8').mul(2.6);
   mat.opacityNode = sin(time.mul(2).sub(id.mul(0.35))).mul(0.4).add(0.6);
@@ -258,13 +258,16 @@ function sleepingClearings(scene) {
   const d = uv().sub(0.5).length().mul(2);
   mat.colorNode = color('#7fa8ff');
   mat.opacityNode = float(1).sub(d).clamp(0, 1).pow(2).mul(0.16).mul(sin(time.mul(0.7)).mul(0.3).add(0.7));
+  const byName = {};
   for (const s of SLEEPING) {
+    byName[s.name] = [];
     for (let k = 0; k < 3; k++) {
       const g = new THREE.Mesh(new THREE.PlaneGeometry(s.r * 2.2, s.r * 1.2), mat);
       g.position.set(s.x, height(s.x, s.z) + 6 + k * 5, s.z); g.rotation.y = k * 1.05;
-      scene.add(g);
+      scene.add(g); byName[s.name].push(g);
     }
   }
+  return byName;
 }
 
 // Mapa de entorno: un cielo de atardecer simplificado para que el caparazón y los hongos reflejen luz
@@ -302,12 +305,14 @@ export function buildWorld(scene, { quality = 'alta' } = {}) {
   twigs(scene, 55);
   trunks(scene);
   atmosphere(scene, sunDir, hi ? 1600 : 600);
-  sleepingClearings(scene);
+  const sleepers = sleepingClearings(scene);
 
   scene.userData.sunDir = sunDir;
   // La luz del sol sigue al jugador para que las sombras sean nítidas cerca de él
   return {
     sun,
+    // Despertar un claro: se disipa la niebla azul
+    wake(name) { for (const g of sleepers[name] || []) { g.visible = false; } },
     follow(p) {
       sun.position.set(p.x + sunDir.x * 160, p.y + sunDir.y * 160, p.z + sunDir.z * 160);
       sun.target.position.set(p.x, p.y, p.z);

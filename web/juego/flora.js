@@ -5,7 +5,7 @@ import * as THREE from 'three/webgpu';
 import { color, uniform } from 'three/tsl';
 import { build } from '../viewer3d.js';
 import { profile } from '../profiles.js';
-import { height, inClearing, rng, RING, BOUNDS } from './config.js';
+import { height, inClearing, rng, BOUNDS, LEVELS } from './config.js';
 import { obstacles } from './world.js';
 import { translucent } from './look.js';
 
@@ -19,6 +19,7 @@ const PALETTES = [
 
 // "Visión de antenas": mantener V resalta lo que ya conocés
 export const vision = uniform(0);
+const BRUISE = new THREE.Color('#4f6fae'); // el azul de la magulladura
 
 const templates = new Map();
 function template(shape, pal, ring) {
@@ -58,7 +59,7 @@ function plant(scene, list, { x, z, shape, pal, ring = false, scale = 1, toxic }
   for (const [r, y] of p.capTop) { if (r <= maxR) break; maxR = r; top.push([r * k, y * k]); } // [radio, altura]
   const under = p.capUnder[p.capUnder.length - 1][1] * k;
   const m = {
-    mesh, a, x, z, base, scale, toxic, side: null, known: false, eaten: false, glow: 0,
+    mesh, a, x, z, base, scale, toxic, level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
     stemR: (h) => lerpTable(stem, h), capY: (r) => lerpTable(top, r), Rw: maxR * k,
     climbTop: Math.min(under, a.alto * scale) - 0.2, top: Math.max(...top.map((t) => t[1]))
   };
@@ -86,32 +87,30 @@ function scatter(scene, list) {
   }
 }
 
-/* ---------- Claro del anillo: 13 hongos con anillo y 13 sin anillo ---------- */
-// Proporciones de la investigación: con anillo 61 % venenosos (8 de 13), sin anillo 54 % (7 de 13)
-function ringClearing(scene, list) {
-  const r = rng(113);
-  const groups = [
-    { side: 'con', cx: RING.x - 19, cz: RING.z, tox: 8, shapes: ['convexa', 'plana', 'esferica', 'campana', 'convexa'] },
-    { side: 'sin', cx: RING.x + 19, cz: RING.z, tox: 7, shapes: ['convexa', 'plana', 'hundida', 'campana', 'conica'] }
-  ];
-  for (const gr of groups) {
-    const pts = [];
-    while (pts.length < 13) {
-      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 15;
-      const x = gr.cx + Math.cos(a) * d, z = gr.cz + Math.sin(a) * d * 1.25;
-      if (pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > 5.5)) pts.push([x, z]);
-    }
-    const toxic = new Set(); while (toxic.size < gr.tox) toxic.add(Math.floor(r() * 13));
-    pts.forEach(([x, z], i) => {
-      const m = plant(scene, list, { x, z, shape: gr.shapes[i % gr.shapes.length], pal: Math.floor(r() * 5), ring: gr.side === 'con', scale: 0.85 + r() * 0.45, toxic: toxic.has(i) });
-      m.side = gr.side;
-    });
+/* ---------- Claros de los niveles: los dos grupos crecen mezclados ---------- */
+// Proporciones de la investigación (ver LEVELS en config.js), con los hongos entremezclados
+function levelClearing(scene, list, L, seed) {
+  const r = rng(seed), n = L.nYes + L.nNo, pts = [], c = L.at;
+  let guard = 0;
+  while (pts.length < n && guard++ < 5000) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * L.spread;
+    const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
+    if (pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > 5.2)) pts.push([x, z]);
   }
-  const peb = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: '#8d8478', roughness: 0.9 }));
-  for (let i = 0; i < 16; i++) {
-    const z = RING.z - 24 + i * 3.2, x = RING.x + Math.sin(i * 1.7) * 0.8, p = peb.clone();
-    p.position.set(x, height(x, z) + 0.2, z); p.scale.set(0.9 + (i % 3) * 0.2, 0.5, 0.9); p.castShadow = true; scene.add(p);
-  }
+  // Mezclar: qué lugar le toca a cada grupo
+  const groups = Array.from({ length: n }, (_, i) => i < L.nYes);
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
+  const pick = (count, tox) => { const s = new Set(); while (s.size < tox) s.add(Math.floor(r() * count)); return s; };
+  const toxYes = pick(L.nYes, L.toxYes), toxNo = pick(L.nNo, L.toxNo);
+  let iy = 0, ino = 0;
+  const shapes = L.trait === 'ring' ? { yes: ['convexa', 'plana', 'esferica', 'campana'], no: ['convexa', 'plana', 'hundida', 'campana', 'conica'] }
+    : { yes: ['convexa', 'plana', 'hundida', 'campana', 'conica'], no: ['convexa', 'plana', 'hundida', 'campana', 'conica'] };
+  pts.forEach(([x, z], i) => {
+    const yes = groups[i], k = yes ? iy++ : ino++, toxic = yes ? toxYes.has(k) : toxNo.has(k);
+    const list2 = yes ? shapes.yes : shapes.no;
+    const m = plant(scene, list, { x, z, shape: list2[Math.floor(r() * list2.length)], pal: Math.floor(r() * 5), ring: L.trait === 'ring' && yes, scale: 0.85 + r() * 0.45, toxic });
+    m.level = L.id; m.yes = yes; m.traitKnown = L.trait === 'ring'; // el anillo se ve; la mancha hay que provocarla
+  });
 }
 
 // Rocío: gotitas sobre los sombreros que destellan con el sol
@@ -134,7 +133,7 @@ function dew(scene, all) {
 export function buildFlora(scene) {
   const all = [];
   scatter(scene, all);
-  ringClearing(scene, all);
+  LEVELS.forEach((L, i) => levelClearing(scene, all, L, 113 + i * 17));
   dew(scene, all);
 
   // Marca discreta en la base (se crea recién cuando conocés el hongo)
@@ -157,7 +156,7 @@ export function buildFlora(scene) {
 
   return {
     all,
-    specimens: all.filter((m) => m.side),
+    specimens: all.filter((m) => m.level),
     // El hongo más cercano a un punto (o el que está bajo el escarabajo, si está trepado)
     nearest(p, on, maxD = 2.6) {
       if (on) return on;
@@ -170,12 +169,20 @@ export function buildFlora(scene) {
       return best;
     },
     reveal(m) { m.known = true; mark(m); },
+    // Empujar un tallo: si es de los que se manchan, se pone azul de a poco
+    touch(m) {
+      if (m.traitKnown) return false;
+      m.traitKnown = true;
+      if (m.yes) { const st = m.mesh.children[0]; st.material = st.material.clone(); m.stemMat = st.material; m.bruiseFrom = st.material.color.clone(); }
+      return true;
+    },
     eat(m) {
       m.eaten = true; m.known = true; mark(m);
       m.capMat.color = m.capMat.color.clone().multiplyScalar(0.7); // queda mordido (más oscuro)
     },
     update(dt, t) {
       for (const m of all) {
+        if (m.stemMat && m.bruise < 1) { m.bruise = Math.min(1, m.bruise + dt * 0.8); m.stemMat.color.copy(m.bruiseFrom).lerp(BRUISE, m.bruise * 0.75); }
         if (!m.halo) continue;
         m.glow += (1 - m.glow) * Math.min(1, dt * 2.5);
         const pulse = 0.85 + 0.15 * Math.sin(t * 2.4 + m.x);

@@ -34,8 +34,20 @@ export function createBeetle(scene) {
   };
   const sph = new THREE.SphereGeometry(1, 40, 28);
   const dome = new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2);
-  add(dome, shell, [0, -0.03, -0.12], [0.43, 0.3, 0.62]);                 // élitros
-  add(new THREE.BoxGeometry(0.012, 0.01, 1.2), dark, [0, 0.272, -0.12]);    // costura
+  // Élitros: dos mitades que se abren para volar, con las alas membranosas debajo
+  const elytra = [-1, 1].map((side) => {
+    const pivot = new THREE.Group(); pivot.position.set(0, -0.03, 0.46); body.add(pivot);
+    const geo = new THREE.SphereGeometry(1, 24, 20, side > 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI, 0, Math.PI / 2);
+    const m = new THREE.Mesh(geo, shell); m.position.set(0, 0, -0.58); m.scale.set(0.43, 0.3, 0.62); m.castShadow = true; pivot.add(m);
+    return { pivot, side };
+  });
+  const wingMat = new THREE.MeshPhysicalMaterial({ color: '#d7e3ea', roughness: 0.15, transparent: true, opacity: 0.4, side: THREE.DoubleSide, iridescence: 0.6, depthWrite: false });
+  const wingGeo = new THREE.PlaneGeometry(1.05, 0.34); wingGeo.rotateX(-Math.PI / 2); wingGeo.translate(0.52, 0, -0.05);
+  const wings = [-1, 1].map((side) => {
+    const pivot = new THREE.Group(); pivot.position.set(side * 0.1, 0.12, 0.3); body.add(pivot);
+    const w = new THREE.Mesh(wingGeo, wingMat); w.scale.x = side; pivot.add(w); pivot.visible = false;
+    return { pivot, side };
+  });
   add(sph, dark, [0, -0.05, -0.1], [0.4, 0.1, 0.6]);                       // vientre
   add(sph, shell, [0, 0.02, 0.47], [0.31, 0.17, 0.22]);                    // pronoto
   const head = new THREE.Group(); head.position.set(0, 0, 0.68); body.add(head);
@@ -71,7 +83,7 @@ export function createBeetle(scene) {
 
   /* ---------- Estado ---------- */
   // mode: 'ground' | 'stem' | 'cap' | 'transit'
-  const st = { mode: 'ground', x: 0, z: 0, yaw: Math.PI, speed: 0, turn: 0, sniff: 0, chew: 0, t: 0, m: null, th: 0, h: 0, push: 0, wobble: 0 };
+  const st = { mode: 'ground', x: 0, z: 0, yaw: Math.PI, speed: 0, turn: 0, sniff: 0, chew: 0, t: 0, m: null, th: 0, h: 0, push: 0, wobble: 0, touch: null, flying: false, fly: 0 };
   let mushrooms = [];
   const pos = new THREE.Vector3(), N = new THREE.Vector3(0, 1, 0), F = new THREE.Vector3(0, 0, 1);
   const smoothN = new THREE.Vector3(0, 1, 0);
@@ -172,8 +184,9 @@ export function createBeetle(scene) {
     for (const m of mushrooms) {
       const dx = st.x - m.x, dz = st.z - m.z; if (Math.abs(dx) > 8 || Math.abs(dz) > 8) continue;
       const d = Math.hypot(dx, dz), min = m.stemR(0.4) + 0.5;
+      if (d < min + 0.35) st.touch = m; // las antenas llegan a tocar el tallo
       if (d < min && d > 1e-4) {
-        st.x = m.x + (dx / d) * min; st.z = m.z + (dz / d) * min;
+        st.x = m.x + (dx / d) * min; st.z = m.z + (dz / d) * min; st.touch = m;
         const facing = -(Math.sin(st.yaw) * dx + Math.cos(st.yaw) * dz) / d;
         if (input.fwd > 0.3 && facing > 0.5) climb = m;
       }
@@ -223,13 +236,13 @@ export function createBeetle(scene) {
 
   /* ---------- Cada cuadro ---------- */
   function update(dt, input) {
-    st.t += dt;
+    st.t += dt; st.touch = null;
     let event = null;
     const slow = Math.max(0, 1 - st.sniff * 0.9 - st.chew * 0.95);
     const wob = st.wobble ? Math.sin(st.t * 2.3) * 0.7 * st.wobble : 0;
     if (st.mode === 'transit') {
       tr.t = Math.min(1, tr.t + dt / tr.dur);
-      if (tr.t >= 1) { st.mode = tr.next; smoothN.copy(poseOf(st.mode).N); event = 'llegó:' + st.mode; }
+      if (tr.t >= 1) { st.mode = tr.next; smoothN.copy(poseOf(st.mode).N); event = (st.flying ? 'aterrizó:' : 'llegó:') + st.mode; st.flying = false; }
     } else {
       const target = input.fwd * (input.run ? 10 : 4.6) * slow;
       st.speed += (target - st.speed) * Math.min(1, dt * 6);
@@ -246,12 +259,16 @@ export function createBeetle(scene) {
     const busy = [0, 1].map((g) => LEGS.some((l) => l.group === g && l.t < 1));
     for (const l of LEGS) {
       const hip = tmp3.copy(l.hip).applyMatrix4(world).clone();
+      if (st.flying) { // en el aire, las patas cuelgan recogidas
+        l.foot.copy(l.rest).multiplyScalar(0.7).applyMatrix4(world); l.from.copy(l.foot); l.t = 1;
+      }
       restWorld(l, tmp2);
       const far = l.foot.distanceTo(tmp2);
       if (l.t < 1) {
         l.t = Math.min(1, l.t + dt / stepDur);
         l.to.copy(tmp2);
         l.foot.lerpVectors(l.from, l.to, l.t).addScaledVector(N, Math.sin(Math.PI * l.t) * 0.16);
+      } else if (st.flying) { /* sin pasos en el aire */
       } else if (far > 0.7 || hip.distanceTo(l.foot) > REACH) {
         l.from.copy(l.foot).lerp(tmp2, 0.5); l.t = 0; // muy lejos: paso ya, sin esperar turno
       } else if (!busy[1 - l.group] && far > (moving ? 0.24 : 0.08)) {
@@ -273,6 +290,12 @@ export function createBeetle(scene) {
       a.base.rotation.set(0.9 - st.sniff * 0.55 + w, 0, -a.side * (0.45 + st.sniff * 0.15));
       a.mid.rotation.set(-0.7 + st.sniff * 0.5 + w * 0.6, 0, a.side * 0.2);
     }
+    st.fly += ((st.flying ? 1 : 0) - st.fly) * Math.min(1, dt * (st.flying ? 10 : 4));
+    for (const e of elytra) { e.pivot.rotation.x = st.fly * 0.75; e.pivot.rotation.z = e.side * st.fly * 0.55; }
+    for (const w of wings) {
+      w.pivot.visible = st.fly > 0.05; w.pivot.scale.setScalar(Math.max(0.001, st.fly));
+      w.pivot.rotation.set(0.25 * st.fly, 0, w.side * (0.2 + Math.sin(st.t * 75) * 0.7) * st.fly);
+    }
     const c = Math.sin(st.t * 26) * st.chew * 0.5;
     mandL.rotation.y = -0.4 - c; mandR.rotation.y = 0.4 + c;
     return event;
@@ -286,6 +309,18 @@ export function createBeetle(scene) {
     heading(out = new THREE.Vector3()) { return yawDir(out); },
     setSniff(v) { st.sniff = v; }, setChew(v) { st.chew = v; }, setWobble(v) { st.wobble = v; },
     setMushrooms(list) { mushrooms = list; },
+    get touching() { return st.touch; },
+    get flying() { return st.flying; },
+    // Volar hasta arriba del sombrero de un hongo
+    flyTo(m) {
+      if (st.mode === 'transit') return false;
+      const from = root.position, d = Math.hypot(m.x - from.x, m.z - from.z);
+      const a = Math.atan2(from.z - m.z, from.x - m.x), r = m.Rw * 0.35;
+      st.flying = true;
+      startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(a) * r; st.z = m.z + Math.sin(a) * r; st.yaw = Math.atan2(-Math.cos(a), -Math.sin(a)); },
+        Math.min(2.6, 0.9 + d / 22), Math.max(4, d * 0.35) + Math.max(0, m.base + m.top - from.y));
+      return true;
+    },
     get mode() { return st.mode === 'transit' ? tr.next : st.mode; },
     get on() { return st.m; }
   };

@@ -52,3 +52,28 @@ export function nearPath(x, z) {
   }
   return d;
 }
+
+// Niveles: cada claro pone a prueba una creencia con los números de la investigación.
+// yes/no: los dos grupos que se comparan; tox*: cuántos venenosos hay en cada grupo (proporciones del Excel).
+export const LEVELS = [
+  {
+    id: 'anillo', at: RING, spread: 22, trait: 'ring', title: 'El anillo', place: 'el claro del anillo',
+    yes: 'con anillo', no: 'sin anillo', nYes: 13, toxYes: 8, nNo: 13, toxNo: 7, research: [0.605, 0.538],
+    enter: ['El claro del anillo. Los hongos con anillo y sin anillo crecen mezclados.', 'Dicen que el anillo sirve para saber cuáles son venenosos. ¿Será cierto? Comé… y averigualo.'],
+    goal: 'El claro del anillo: comé para sobrevivir y averiguá si el anillo sirve para elegir.',
+    h2: 'Con anillo o sin anillo,<br><em>el bosque se parece demasiado.</em>',
+    small: 'En los 61.069 hongos de la investigación, el anillo casi no cambia la proporción de venenosos (55,5 % en total).',
+    after: 'El anillo no avisa nada: con anillo o sin anillo, el bosque se parece demasiado.',
+    page: 'En los dos grupos aparecen venenosos casi por igual: <b>61 %</b> con anillo y <b>54 %</b> sin anillo.'
+  },
+  {
+    id: 'magulladura', at: SLEEPING[0], spread: 17, trait: 'bruise', title: 'La magulladura', place: 'el claro de la magulladura',
+    yes: 'se mancha', no: 'no se mancha', nYes: 13, toxYes: 7, nNo: 9, toxNo: 5, research: [0.533, 0.559],
+    enter: ['El claro de la magulladura. Dicen que si un hongo se mancha al tocarlo, es venenoso.', 'Empujá contra los tallos: algunos se manchan de azul. ¿Eso avisa algo?'],
+    goal: 'El claro de la magulladura: empujá los tallos para ver cuáles se manchan, y averiguá si eso avisa algo.',
+    h2: 'Se manche o no se manche,<br><em>el riesgo es casi el mismo.</em>',
+    small: 'En la investigación, los que se magullan son 53 % venenosos y los que no, 56 %: mancharse no avisa nada.',
+    after: 'Mancharse no es una señal: los que se manchan son tan peligrosos como los que no.',
+    page: 'Los que se manchan al tocarlos son <b>53 %</b> venenosos; los que no, <b>56 %</b>. Casi lo mismo que el promedio.'
+  }
+];

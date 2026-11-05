@@ -87,8 +87,8 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/narrator.js` | Narración en off (subtítulos y voz opcional) |
 | `juego/look.js` | Efectos de luz en TSL: translucidez a contraluz, niebla a ras del suelo y cielo |
 
-Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Parámetros útiles: `?q=baja` (calidad baja), `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
+Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Arranca con **gráficos livianos** (sin oclusión ambiental, profundidad de campo ni bloom); el botón «Gráficos» pasa a la versión completa y recuerda la elección. Parámetros útiles: `?q=alta` / `?q=baja`, `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
 
 Mecánicas: hambre (la energía baja con el tiempo), olfatear (dice la verdad pero gasta energía), comer (alimenta o envenena: tres vidas), trepar ramas, piedras, hojas y hongos (empujando contra el tallo), saltar desde el borde del sombrero, cámara libre (arrastrar el mouse) con brazo con resorte, visión de antenas (V) y narración en off (con voz opcional). Al final del claro, el juego compara tus decisiones con los datos de la investigación.
 
-Etapa 1: claro del anillo jugable. Los otros cinco claros (magulladura, colores, tamaño, proporciones y los gemelos) están marcados como «dormidos».
+Niveles (definidos en `LEVELS`, `config.js`): **el anillo** y **la magulladura** (empujar los tallos para ver cuáles se manchan de azul). En cada claro los dos grupos crecen mezclados con las proporciones del Excel; con 4 hongos conocidos de cada grupo se descubre el mito, se despierta el claro siguiente y aparece un camino de esporas hasta él. Con **Espacio** el escarabajo vuela al próximo hongo sin investigar. Quedan dormidos: colores, tamaño, proporciones y los gemelos.
