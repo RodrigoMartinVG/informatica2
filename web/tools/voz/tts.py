@@ -18,7 +18,8 @@ assert lib.espeak_Initialize(2, 0, data_parent, 0) > 0, 'espeak no inició'
 
 voice = PiperVoice.load('model/es_AR-daniela-high.onnx')
 lib.espeak_SetVoiceByName(voice.config.espeak_voice.encode())
-cfg = SynthesisConfig(length_scale=1.1, noise_scale=0.6, noise_w_scale=0.8)
+cfg = SynthesisConfig(length_scale=1.2, noise_scale=0.6, noise_w_scale=0.8)  # un poco más lenta
+PAUSE = {',': 0.22, ';': 0.3, ':': 0.3, '.': 0.5, '!': 0.5, '?': 0.5, '': 0.35}  # silencio después de cada signo
 
 def ipa(chunk):
     buf = ctypes.c_char_p(chunk.encode()); out = []
@@ -29,27 +30,23 @@ def ipa(chunk):
     return re.sub(r'\([^)]+\)', '', ' '.join(out))
 
 def sentences(text):
-    # Separa en cláusulas conservando la puntuación (como hace Piper)
+    # Separa en cláusulas: cada una se sintetiza aparte y lleva el silencio de su signo de puntuación
     parts = re.findall(r'[^,.;:!?…]+[,.;:!?…]*', text)
-    sent, cur = [], []
+    out = []
     for p in parts:
         m = re.match(r'(.*?)([,.;:!?…]*)$', p.strip()); body, punct = m.group(1), m.group(2)
         if not body: continue
-        ph = ipa(body)
         term = (punct[:1] or '').replace('…', '.')
-        ph += term
-        if term in (',', ':', ';'): ph += ' '
-        cur.extend(list(unicodedata.normalize('NFD', ph)))
-        if term in ('.', '!', '?'): sent.append(cur); cur = []
-    if cur: sent.append(cur)
-    return sent
+        ph = ipa(body) + (term if term in '.!?' else '')
+        out.append((list(unicodedata.normalize('NFD', ph)), PAUSE.get(term, 0.35)))
+    return out
 
 def synth(text):
-    rate = voice.config.sample_rate; pieces = []
-    for ph in sentences(text):
+    rate = voice.config.sample_rate; pieces = [np.zeros(int(rate * 0.05), dtype=np.float32)]
+    for ph, pause in sentences(text):
         audio = voice.phoneme_ids_to_audio(voice.phonemes_to_ids(ph), cfg)
-        pieces += [audio, np.zeros(int(rate * 0.28), dtype=np.float32)]
-    a = np.concatenate(pieces) if pieces else np.zeros(1, dtype=np.float32)
+        pieces += [audio, np.zeros(int(rate * pause), dtype=np.float32)]
+    a = np.concatenate(pieces)
     a = a / max(1e-6, np.abs(a).max()) * 0.92
     return (a * 32767).astype(np.int16).tobytes(), rate
 

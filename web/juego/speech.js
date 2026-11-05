@@ -44,7 +44,7 @@ async function pump() {
   for (const p of item.parts) {
     if (item.cancelled) break;
     await sayOne(p);
-    if (!item.cancelled) await new Promise((r) => setTimeout(r, 90));
+    if (!item.cancelled) await new Promise((r) => setTimeout(r, 300)); // respiro entre fragmentos
   }
   S.duck(false);
   current = null; item.resolve();
