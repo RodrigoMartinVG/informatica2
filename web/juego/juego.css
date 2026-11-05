@@ -204,3 +204,35 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .howto-k { font: 600 11px var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
 .howto ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 @media (max-width: 640px) { .howto ul { grid-template-columns: 1fr; } }
+
+/* Informe del nivel (igual en el resumen y en el cuaderno) */
+.rep-chart { max-width: 320px; margin-top: 14px; color: var(--ink-2); }
+.rep-chart svg { width: 100%; height: auto; }
+/* Cuaderno: índice */
+.pages { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.pg.open { text-align: left; font: inherit; color: inherit; background: rgba(255,255,255,.35); cursor: pointer; border-style: solid; transition: transform .15s, box-shadow .15s; }
+.pg.open:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(60,40,15,.18); }
+.pg .n { font: 600 11px var(--mono); color: #8a7656; }
+.pg .mini { font: 400 14px/1.4 var(--serif); margin-top: 4px; } .pg .mini b { color: #d0531c; }
+.pg .more { display: block; margin-top: 8px; font: 600 12px var(--sans); color: #3c5a1f; }
+.pg .pics img { cursor: inherit; }
+/* Cuaderno: informe sobre papel */
+.rep-view { display: block; }
+.paper .back { border: 0; background: none; font: 600 14px var(--sans); color: #3c5a1f; cursor: pointer; margin-bottom: 12px; padding: 0; }
+.rep { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; }
+.rep-main { position: relative; }
+.rep h2 { font: 700 28px/1.12 var(--serif); margin: 8px 0 16px; padding-right: 130px; }
+.rep h2 em { font-weight: 500; color: #6b5a44; }
+.rep .nums { justify-content: flex-start; gap: 34px; } .rep .nums b { font-size: 46px; color: #d0531c; }
+.rep .nums span { color: #7a6a52; }
+.rep .rep-chart { color: #2a2118; }
+.rep .small { font: 400 15px/1.5 var(--serif); color: #4a3d2c; margin-top: 14px; }
+.rep .mine { margin: 14px 0 0; max-width: none; background: rgba(80,60,30,.08); color: #2a2118; }
+.rep .mine .eyebrow, .rep-side > .eyebrow { color: #6b7d40; }
+.rep .stamp { right: 0; top: -4px; background: rgba(244,236,220,.9); }
+.rep .gallery h4 { color: #5a4a34; }
+.rep .gallery figcaption { color: #2a2118; }
+.rep .gallery figcaption b.tox { color: #d0531c; } .rep .gallery figcaption b.ed { color: #2f6fd0; }
+@media (max-width: 760px) { .rep { grid-template-columns: 1fr; } .rep h2 { padding-right: 0; margin-top: 60px; } }
+
+.rep-k { padding-right: 160px; }

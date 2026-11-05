@@ -433,23 +433,30 @@ function gallery(L) {
   };
   return col(true) + col(false);
 }
-function showInsight(L) {
+// Informe de un nivel: lo mismo en el resumen al terminar el claro y en el cuaderno
+function report(L) {
   const pct = (v) => `${Math.round(v * 100)} %`;
-  $('#ins-k').textContent = `${cap1(L.place)} · descubrimiento`;
-  $('#ins-h').innerHTML = L.h2;
   const nums = L.nums || [[pct(L.research[0]), `venenosos<br>${L.yes}`], [pct(L.research[1]), `venenosos<br>${L.no}`]];
-  $('#ins-a').textContent = nums[0][0]; $('#ins-la').innerHTML = nums[0][1];
-  $('#ins-b').textContent = nums[1][0]; $('#ins-lb').innerHTML = nums[1][1];
-  const st = $('#stamp'); st.textContent = L.stamp; st.classList.toggle('long', L.stamp.length > 6);
-  $('#ins-gal').innerHTML = gallery(L);
-  $('#ins-small').textContent = L.small;
   const me = mine(L);
-  $('#insight-mine').innerHTML = me ? `<p class="eyebrow">Tu partida</p>${me}` : '';
+  return {
+    main: `<div class="stamp${L.stamp.length > 6 ? ' long' : ''}">${L.stamp}</div>
+      <p class="eyebrow rep-k">Claro ${LEVELS.indexOf(L) + 1} de ${LEVELS.length} · ${L.title}</p>
+      <h2>${L.h2}</h2>
+      <div class="nums">${nums.map(([v, l]) => `<div><b class="tox">${v}</b><span>${l}</span></div>`).join('')}</div>
+      ${L.nums ? '' : `<div class="rep-chart">${bars([...L.research, cap1(L.yes), cap1(L.no)])}</div>`}
+      <p class="small">${L.small}</p>
+      ${me ? `<div class="mine"><p class="eyebrow">Tu partida</p>${me}</div>` : ''}`,
+    side: `<p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p><div class="gallery">${gallery(L)}</div>`
+  };
+}
+function showInsight(L) {
+  const r = report(L);
+  $('#ins-main').innerHTML = r.main; $('#ins-side').innerHTML = r.side;
   const next = LEVELS[LEVELS.indexOf(L) + 1];
   $('#insight-ok').textContent = next ? `Ir ${toPlace(next.place)}` : 'Seguir explorando';
-  const el = $('#insight'); el.hidden = false;
+  const el = $('#insight'); el.hidden = false; el.scrollTop = 0;
   gsap.fromTo(el, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8 });
-  gsap.fromTo('#stamp', { opacity: 0, scale: 2.6, rotate: -6 }, { opacity: 1, scale: 1, rotate: 10, duration: 0.45, ease: 'power4.in', delay: 1.2, onComplete: S.stamp });
+  gsap.fromTo('#ins-main .stamp', { opacity: 0, scale: 2.6, rotate: -6 }, { opacity: 1, scale: 1, rotate: 10, duration: 0.45, ease: 'power4.in', delay: 1.2, onComplete: S.stamp });
   state.done.add(L.id); state.insighting = false; renderBook();
 }
 $('#insight-ok').addEventListener('click', () => {
@@ -477,32 +484,45 @@ $('#insight-ok').addEventListener('click', () => {
   }
 });
 
-/* ---------- Cuaderno de campo ---------- */
-const PAGES = LEVELS.map((L) => ({ id: L.id, title: L.title, body: L.page, chart: L.nums ? null : [...L.research, cap1(L.yes), cap1(L.no)], L }));
+/* ---------- Cuaderno de campo: índice de los claros y, al tocar uno, el mismo informe del resumen ---------- */
 function bars([a, b, la, lb]) {
   const y = (v) => 110 - v * 100, base = y(0.555);
-  return `<svg viewBox="0 0 240 140" role="img" aria-label="${la} ${Math.round(a * 100)} %, ${lb} ${Math.round(b * 100)} %">
-    <rect x="40" y="${y(a)}" width="60" height="${a * 100}" fill="#d9662c" rx="2"/><rect x="140" y="${y(b)}" width="60" height="${b * 100}" fill="#d9662c" rx="2"/>
-    <line x1="20" x2="220" y1="${base}" y2="${base}" stroke="#2a2118" stroke-dasharray="5 4"/>
-    <text x="70" y="${y(a) - 5}" text-anchor="middle" font-family="Source Serif 4" font-weight="700" font-size="14">${Math.round(a * 100)} %</text>
+  return `<svg viewBox="0 0 290 140" role="img" aria-label="${la}: ${Math.round(a * 100)} % venenosos; ${lb}: ${Math.round(b * 100)} %">
+    <rect x="40" y="${y(a)}" width="60" height="${a * 100}" fill="#e2622a" rx="2"/><rect x="140" y="${y(b)}" width="60" height="${b * 100}" fill="#e2622a" rx="2"/>
+    <line x1="20" x2="220" y1="${base}" y2="${base}" stroke="currentColor" stroke-dasharray="5 4" opacity=".7"/>
+    <g fill="currentColor"><text x="70" y="${y(a) - 5}" text-anchor="middle" font-family="Source Serif 4" font-weight="700" font-size="14">${Math.round(a * 100)} %</text>
     <text x="170" y="${y(b) - 5}" text-anchor="middle" font-family="Source Serif 4" font-weight="700" font-size="14">${Math.round(b * 100)} %</text>
     <text x="70" y="128" text-anchor="middle" font-family="IBM Plex Sans" font-size="11">${la}</text><text x="170" y="128" text-anchor="middle" font-family="IBM Plex Sans" font-size="11">${lb}</text>
-    <text x="222" y="${base - 4}" text-anchor="end" font-family="IBM Plex Sans" font-size="9" fill="#6b5a44">55,5 % todos</text></svg>`;
+    <text x="226" y="${base + 3}" text-anchor="start" font-family="IBM Plex Sans" font-size="10" opacity=".75">55,5 % todos</text></g></svg>`;
 }
+let bookView = null; // null = índice; id = informe de ese claro
 function renderBook() {
-  $('#book-pages').innerHTML = PAGES.map((p) => {
-    if (!state.done.has(p.id)) return `<article class="pg locked"><div><h3>${p.title}</h3><p>${state.awake.has(p.id) ? 'Claro despierto · por descubrir' : 'Claro dormido · próximamente'}</p></div></article>`;
-    const me = mine(p.L);
-    const pics = [...new Set(flora.specimens.filter((s) => s.level === p.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}" data-sp="${id}" title="${SPECIES[id].name} · ${SPECIES[id].tag}">`).join('');
-    return `<article class="pg"><span class="st">${p.L.stamp}</span><h3>${p.title}</h3>${p.chart ? bars(p.chart) : ''}<p>${p.body}</p><div class="pics">${pics}</div>${me ? `<div class="me"><b>En tu partida:</b>${me}</div>` : ''}</article>`;
-  }).join('');
-  $('#pages').textContent = `${state.done.size}/${PAGES.length}`;
+  const box = $('#book-pages');
+  const L = bookView && LEVELS.find((x) => x.id === bookView);
+  if (L && state.done.has(L.id)) {
+    const r = report(L);
+    box.className = 'pages rep-view';
+    box.innerHTML = `<button class="back" id="book-back">← Todos los claros</button><div class="rep"><div class="rep-main">${r.main}</div><div class="rep-side">${r.side}</div></div>`;
+    $('#book-back').addEventListener('click', () => { bookView = null; renderBook(); });
+  } else {
+    bookView = null; box.className = 'pages';
+    box.innerHTML = LEVELS.map((L, i) => {
+      if (!state.done.has(L.id)) return `<article class="pg locked"><div><span class="n">${i + 1}</span><h3>${L.title}</h3><p>${state.awake.has(L.id) ? 'Claro despierto · por descubrir' : 'Claro dormido'}</p></div></article>`;
+      const nums = L.nums ? L.nums.map((n) => n[0]) : L.research.map((v) => `${Math.round(v * 100)} %`);
+      const labels = L.nums ? ['en total', 'grupos puros'] : [L.yes, L.no];
+      const pics = [...new Set(flora.specimens.filter((s) => s.level === L.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}">`).join('');
+      return `<button class="pg open" data-lv="${L.id}"><span class="st">${L.stamp}</span><span class="n">${i + 1}</span><h3>${L.title}</h3>
+        <p class="mini"><b>${nums[0]}</b> ${labels[0]} · <b>${nums[1]}</b> ${labels[1]}</p><div class="pics">${pics}</div><span class="more">Ver el informe →</span></button>`;
+    }).join('');
+    for (const b of box.querySelectorAll('[data-lv]')) b.addEventListener('click', () => { bookView = b.dataset.lv; renderBook(); $('.paper').scrollTop = 0; });
+  }
+  $('#pages').textContent = `${state.done.size}/${LEVELS.length}`;
 }
 renderBook();
 function toggleBook() {
   const b = $('#book');
   if (b.hidden) { renderBook(); b.hidden = false; state.phase = 'book'; S.page(); gsap.fromTo('.paper', { y: 30, opacity: 0, rotate: -1 }, { y: 0, opacity: 1, rotate: 0, duration: 0.45, ease: 'power3.out' }); }
-  else { gsap.to('.paper', { y: 20, opacity: 0, duration: 0.25, onComplete: () => { b.hidden = true; state.phase = 'play'; } }); }
+  else { gsap.to('.paper', { y: 20, opacity: 0, duration: 0.25, onComplete: () => { b.hidden = true; state.phase = 'play'; bookView = null; } }); }
 }
 $('#b-book').addEventListener('click', toggleBook);
 $('#book-close').addEventListener('click', toggleBook);
@@ -652,4 +672,5 @@ if (params.has('alas')) Object.assign(beetle.state, { fly: 1 });
 // Capturas: ?noche, ?ficha=N (foto del hongo N), ?resumen=id (tarjeta de un nivel)
 if (params.has('noche')) world.setNight(1);
 if (params.has('ficha')) showPhoto(flora.specimens[+params.get('ficha')]);
-if (params.has('resumen')) { const L = LEVELS.find((x) => x.id === params.get('resumen')); state.cur = L; state.phase = 'insight'; flora.specimens.filter((s) => s.level === L.id).forEach((s) => flora.reveal(s)); showInsight(L); setTimeout(() => gsap.set(['#insight', '#stamp'], { opacity: 1, y: 0, scale: 1 }), 50); }
+if (params.has('libro')) { const id = params.get('libro'); state.done.add(id); bookView = id; toggleBook(); setTimeout(() => gsap.set('.paper', { opacity: 1, y: 0, rotate: 0 }), 60); }
+if (params.has('resumen')) { const L = LEVELS.find((x) => x.id === params.get('resumen')); state.cur = L; state.phase = 'insight'; flora.specimens.filter((s) => s.level === L.id).forEach((s) => flora.reveal(s)); showInsight(L); setTimeout(() => gsap.set(['#insight', '#ins-main .stamp'], { opacity: 1, y: 0, scale: 1 }), 50); }
