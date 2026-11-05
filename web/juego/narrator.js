@@ -1,18 +1,23 @@
-// Narración en off: subtítulos que cuentan la historia y orientan al jugador.
-// Opcional: voz sintetizada del navegador (speechSynthesis), en castellano.
+// Narración en off: subtítulos que cuentan la historia y orientan al jugador,
+// con voz rioplatense pregenerada (Piper, voz es_AR «daniela») en voz/*.m4a.
+// Si una frase no tiene audio, se usa la voz del navegador (speechSynthesis) como respaldo.
 import * as S from './audio.js';
 
 const el = document.getElementById('narr');
 const queue = [], said = new Set();
-let busy = false, voiceOn = false, voice = null;
+let busy = false, voiceOn = true, current = null, fallback = null;
 
-function pickVoice() {
+// Índice texto → archivo de audio
+const files = new Map();
+fetch('voz/frases.json').then((r) => r.json()).then((m) => { for (const [k, t] of Object.entries(m)) files.set(t, `voz/${k}.m4a`); }).catch(() => {});
+
+function pickFallback() {
   const vs = speechSynthesis?.getVoices?.() || [];
-  voice = vs.find((v) => /es[-_](AR|UY)/i.test(v.lang)) || vs.find((v) => /es[-_](MX|US|419)/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null;
+  fallback = vs.find((v) => /es[-_](AR|UY)/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null;
 }
-if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+if ('speechSynthesis' in window) { pickFallback(); speechSynthesis.onvoiceschanged = pickFallback; }
 
-export function setVoice(on) { voiceOn = on && 'speechSynthesis' in window; if (!voiceOn) speechSynthesis?.cancel(); return voiceOn; }
+export function setVoice(on) { voiceOn = on; if (!on) { current?.pause(); speechSynthesis?.cancel(); S.duck(false); } return voiceOn; }
 export const hasVoice = () => voiceOn;
 
 // Decir una línea (una sola vez por id, salvo que repeat sea true)
@@ -32,23 +37,39 @@ function next() {
   setTimeout(() => show(item.text), item.wait);
 }
 
+// Reproducir la voz; devuelve una promesa que termina cuando termina el audio
+function speak(text) {
+  if (!voiceOn || !S.isOn()) return Promise.resolve();
+  const src = files.get(text);
+  if (src) {
+    return new Promise((done) => {
+      const a = new Audio(src); current = a; a.volume = 0.95;
+      a.onended = a.onerror = () => { S.duck(false); done(); };
+      S.duck(true);
+      a.play().catch(() => { S.duck(false); done(); });
+    });
+  }
+  if (!('speechSynthesis' in window)) return Promise.resolve();
+  return new Promise((done) => {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = fallback?.lang || 'es-AR'; if (fallback) u.voice = fallback;
+    u.onend = u.onerror = done; speechSynthesis.speak(u);
+  });
+}
+
 function show(text) {
-  S.whisper();
+  if (!voiceOn || !files.has(text)) S.whisper();
   el.innerHTML = ''; el.hidden = false;
-  const words = text.split(' ');
-  words.forEach((w, i) => {
+  text.split(' ').forEach((w, i) => {
     const s = document.createElement('span'); s.textContent = w + ' ';
     s.style.animationDelay = `${i * 45}ms`; el.appendChild(s);
   });
   el.classList.remove('out'); void el.offsetWidth; el.classList.add('in');
-  const ms = Math.max(4500, text.length * 85); // tiempo de sobra para leer
-  if (voiceOn) {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.lang = voice?.lang || 'es-AR'; if (voice) u.voice = voice; u.rate = 0.98; u.pitch = 0.95;
-    speechSynthesis.speak(u);
-  }
-  setTimeout(() => {
+  // El subtítulo queda lo que dure la voz (o el tiempo de lectura, lo que sea más largo)
+  const reading = new Promise((r) => setTimeout(r, Math.max(4500, text.length * 85)));
+  const voice = speak(text).then(() => new Promise((r) => setTimeout(r, 700)));
+  Promise.all([reading, voice]).then(() => {
     el.classList.remove('in'); el.classList.add('out');
     setTimeout(() => { el.hidden = true; setTimeout(next, 450); }, 500);
-  }, ms);
+  });
 }

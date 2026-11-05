@@ -250,6 +250,17 @@ function showPhoto(m) {
   $('#ficha-n').textContent = sp.name;
   const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : 'ed'}`;
   $('#ficha-d').textContent = sp.note; $('#ficha-c').textContent = credit(m.species);
+  // Lo que investiga el nivel, destacado
+  const L = m.level ? levelOf(m) : null, r = $('#ficha-r');
+  const trait = !L ? '' : {
+    ring: m.yes ? 'Tiene anillo' : 'No tiene anillo',
+    bruise: !m.traitKnown ? '' : m.yes ? 'Se mancha al tocarlo' : 'No se mancha al tocarlo',
+    color: m.yes ? 'Color llamativo' : 'Color común',
+    size: m.yes ? 'Chico: unos 3 cm de sombrero' : 'Grande: más de 10 cm de sombrero',
+    stem: m.yes ? 'Tallo grueso para su sombrero' : 'Tallo fino para su sombrero',
+    twin: m.yes ? 'Era una Amanita' : 'Era un champiñón'
+  }[L.trait];
+  r.hidden = !trait; r.innerHTML = trait ? `<span>${L.title}</span>${trait} · <b class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</b>` : '';
   const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
   clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
   say('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');

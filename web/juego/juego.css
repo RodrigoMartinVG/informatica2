@@ -155,3 +155,7 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 
 .pg .pics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; }
 .pg .pics img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+
+.ficha-r { margin: 6px 0 2px; font: 600 13px/1.35 var(--sans); color: #fff; background: rgba(159,232,200,.14); border: 1px solid rgba(159,232,200,.35); border-radius: 8px; padding: 5px 8px; }
+.ficha-r span { display: block; font: 600 9px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+.ficha-r b.tox { color: #ff9a6a; } .ficha-r b.ed { color: #8cc0ff; }

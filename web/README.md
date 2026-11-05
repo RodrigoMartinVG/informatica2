@@ -84,7 +84,7 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/audio.js` | Música y sonidos generativos con Tone.js |
 | `juego/config.js` | Mapa del bosque, claros y altura del terreno |
 | `juego/surfaces.js` | Superficies caminables: suelo, ramas, piedras y hojas |
-| `juego/narrator.js` | Narración en off (subtítulos y voz opcional) |
+| `juego/narrator.js` | Narración en off: subtítulos + voz rioplatense pregenerada (`juego/voz/`, ver `tools/voz/`) |
 | `juego/species.js` | Especies reales: nombre, peligrosidad, nota y crédito de cada foto |
 | `juego/look.js` | Efectos de luz en TSL: translucidez a contraluz, niebla a ras del suelo y cielo |
 

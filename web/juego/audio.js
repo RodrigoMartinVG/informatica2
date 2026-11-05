@@ -134,3 +134,5 @@ export function jump() { if (!go()) return; const t = now(); [3, 1, 0].forEach((
 export function whisper() { if (go()) lead.triggerAttackRelease(n5(Math.floor(Math.random() * 5), 5), '8n', now(), 0.18); }
 // Volar: zumbido de alas (notas rápidas) y un arpegio que sube
 export function fly() { if (!go()) return; const t = now(); for (let i = 0; i < 10; i++) step.triggerAttackRelease(220 + (i % 2) * 30, 0.02, t + i * 0.05, 0.6); [0, 2, 4, 7].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + 0.1 + i * 0.07, 0.4)); }
+// Bajar la música mientras habla la narración
+export function duck(on) { if (ready) music.volume.rampTo(on ? -14 : -4, on ? 0.3 : 1.2); }
