@@ -53,6 +53,8 @@
       </script>
       <button class="b-q q-intro" type="button">Gráficos: livianos</button>
       <button class="b-d q-intro" type="button">Dificultad: fácil</button>
+      <button class="b-acc q-intro" type="button">Accesibilidad</button>
+      <p class="sr-tip">Para jugar sin ver la pantalla, apretá la tecla A: se activa el modo audio, que describe todo con voz. Después apretá Enter para entrar al bosque.</p>
       <div class="howto" aria-label="Cómo se juega">
         <p class="howto-k">Cómo se juega</p>
         <ul>
@@ -83,6 +85,7 @@
         <button id="b-voz" title="Narración con voz (rioplatense)">Voz: sí</button>
         <button class="b-q" type="button" title="Cambiar la calidad de los gráficos (recarga)">Gráficos</button>
         <button class="b-d" type="button" title="Cuántos hongos de cada grupo hay que conocer para descubrir el mito">Dificultad</button>
+        <button class="b-acc" type="button" title="Modo audio, texto grande y teclas">Accesibilidad</button>
         <a href="../" class="back-web" title="Volver a la web de la investigación">← Volver a la web</a>
       </div>
     </div>
@@ -138,6 +141,23 @@
   </section>
 
   <div class="fade" id="fade"></div>
+
+  <!-- Accesibilidad -->
+  <section class="access" id="access" hidden role="dialog" aria-modal="true" aria-labelledby="acc-t">
+    <div class="acc-box">
+      <button class="close" id="acc-close" aria-label="Cerrar accesibilidad">×</button>
+      <p class="eyebrow">Accesibilidad</p>
+      <h2 id="acc-t">Jugar a tu manera</h2>
+      <label class="acc-row"><input type="checkbox" id="acc-audio"> <span><b>Modo audio</b> · una voz describe todo lo que pasa y los hongos sin explorar suenan desde donde están (con auriculares se escucha mejor la izquierda y la derecha). Pensado para jugar sin ver la pantalla.</span></label>
+      <label class="acc-row"><input type="checkbox" id="acc-big"> <span><b>Texto grande</b> en la interfaz del juego.</span></label>
+      <label class="acc-row"><span><b>Velocidad de la voz</b></span> <input type="range" id="acc-rate" min="0.7" max="1.6" step="0.05"> <button type="button" id="acc-test">Probar</button></label>
+      <h3>Teclas</h3>
+      <p class="acc-help">Tocá una tecla para cambiarla. Caminar es siempre con W A S D o las flechas.</p>
+      <ul class="acc-keys" id="acc-keys"></ul>
+      <p class="acc-help">Jugar sin ver: <b>Espacio</b> te lleva volando al próximo hongo sin explorar · <b>Q</b> describe lo que hay alrededor · <b>R</b> dice tus vidas y tu energía · <b>E</b> olfatear, <b>F</b> comer.</p>
+    </div>
+  </section>
+  <p class="sr-only" id="sr-live" aria-live="assertive"></p>
 
   <script src="../data.js"></script>
   <script type="module" src="main.js"></script>
