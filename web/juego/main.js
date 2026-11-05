@@ -81,7 +81,8 @@ const go = $('#go'); go.disabled = false; go.textContent = 'Entrar al bosque';
 const state = { phase: 'title', near: null, busy: false, slept: new Set(), stepDist: 0, idle: 0, cur: null, entered: new Set(), done: new Set(), awake: new Set(['anillo']), insighting: false, flights: 0 };
 const levelOf = (m) => LEVELS.find((L) => L.id === m.level);
 const game = { lives: 3, energy: 80, poison: 0, starving: 0, faints: 0, eats: [], sniffs: 0, beat: 0 };
-const say = V.say;
+const say = V.say;   // historia: con voz y subtítulo
+const tip = V.tip;   // avisos cortos del momento: sin voz
 const objective = (txt) => { const el = $('#objective'); el.textContent = txt; gsap.fromTo(el, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.6 }); };
 
 /* ---------- Cámara: órbita libre + brazo con resorte ---------- */
@@ -238,7 +239,7 @@ function touchCheck(m) {
   if (!m.level || m.traitKnown || !flora.touch(m)) return;
   tag(m, m.yes ? 'Se mancha' : 'No se mancha', m.yes ? 'bru' : 'neutral');
   S.sniff();
-  say('bru1', m.yes ? 'El tallo se pone azul donde lo tocaste. Se mancha.' : 'Lo tocaste y no pasó nada: este no se mancha.');
+  tip('bru1', m.yes ? 'El tallo se pone azul donde lo tocaste. Se mancha.' : 'Lo tocaste y no pasó nada: este no se mancha.');
   tally(); checkInsight(levelOf(m));
 }
 
@@ -263,7 +264,7 @@ function showPhoto(m) {
   r.hidden = !trait; r.innerHTML = trait ? `<span>${L.title}</span>${trait} · <b class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</b>` : '';
   const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
   clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
-  say('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
+  tip('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
 }
 
 /* ---------- Foto en grande ---------- */
@@ -285,15 +286,15 @@ const anim = { v: 0 };
 function sniff() {
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
-  if (m.known) { say('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
+  if (m.known) { tip('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
   touchCheck(m); // para olfatearlo hay que tocarlo
   state.busy = true; S.sniff(); game.energy -= 6; game.sniffs++; drawStatus();
   gsap.timeline({ onUpdate: () => beetle.setSniff(anim.v), onComplete: () => (state.busy = false) })
     .to(anim, { v: 1, duration: 0.35, ease: 'power2.out' })
     .add(() => {
       flora.reveal(m); S.found(m.toxic); showPhoto(m); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
-      if (!say('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
-        say('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
+      if (!tip('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
+        tip('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
     }, 0.75)
     .to(anim, { v: 0, duration: 0.5, ease: 'power2.inOut' }, 0.9);
 }
@@ -303,7 +304,7 @@ const chewA = { v: 0 };
 function eat() {
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
-  if (m.eaten) { say('eaten', 'De ese ya comiste. Buscá otro.', { repeat: true }); return; }
+  if (m.eaten) { tip('eaten', 'De ese ya comiste. Buscá otro.', { repeat: true }); return; }
   touchCheck(m);
   state.busy = true; S.chew();
   const blind = !m.known;
@@ -318,27 +319,27 @@ function eat() {
 }
 function fed() {
   game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
-  if (!say('e1', 'Rico. Sentís cómo vuelve la energía.') && game.eats.length >= 4) say('e4', '¿Estás eligiendo por el aspecto? Fijate cuántos te salieron bien.');
+  if (!tip('e1', 'Rico. Sentís cómo vuelve la energía.') && game.eats.length >= 4) tip('e4', '¿Estás eligiendo por el aspecto? Fijate cuántos te salieron bien.');
 }
 function poisoned(blind) {
   game.lives -= 1; game.poison = 1; drawStatus(); S.poison(true); S.hurt();
   gsap.fromTo(hurtU, { value: 1 }, { value: 0, duration: 1.2 });
   if (game.lives <= 0) { faint(); return; }
-  if (!say('p1', 'Algo anda mal… el mundo da vueltas. Era venenoso.'))
-    say('p' + game.lives, game.lives === 1 ? 'Cuidado. Una vez más y no la contás.' : 'Otra vez veneno. Tu cuerpo lo siente.', { repeat: true });
-  if (blind && game.eats.filter((e) => e.blind && e.toxic).length === 2) say('p-blind', 'Comer a ciegas es como tirar una moneda.');
+  if (!tip('p1', 'Algo anda mal… el mundo da vueltas. Era venenoso.'))
+    tip('p' + game.lives, game.lives === 1 ? 'Cuidado. Una vez más y no la contás.' : 'Otra vez veneno. Tu cuerpo lo siente.', { repeat: true });
+  if (blind && game.eats.filter((e) => e.blind && e.toxic).length === 2) tip('p-blind', 'Comer a ciegas es como tirar una moneda.');
 }
 function faint() {
   if (state.phase === 'faint') return;
   state.phase = 'faint'; game.faints++; S.faint();
-  say('f', 'Todo se apaga…', { repeat: true });
+  tip('f', 'Todo se apaga…', { repeat: true });
   gsap.to('#fade', { opacity: 1, duration: 1.6, delay: 0.6, onComplete: () => {
     const back = state.cur ? { x: state.cur.at.x, z: state.cur.at.z + state.cur.spread + 10 } : { x: SPAWN.x, z: SPAWN.z };
     beetle.place(back.x, back.z, Math.PI);
     Object.assign(game, { lives: 3, energy: 60, poison: 0, starving: 0 }); S.poison(false); drawStatus();
     cam.arm = cam.dist; followTarget(); camPos.copy(want); camLook.copy(wantLook);
     gsap.to('#fade', { opacity: 0, duration: 1.4, delay: 0.4, onComplete: () => { state.phase = 'play'; S.wake(); } });
-    say('w', game.faints === 1 ? 'Despertaste al borde del claro. Lo aprendiste por las malas.' : 'Otra vez en pie. El bosque no perdona.', { repeat: true });
+    tip('w', game.faints === 1 ? 'Despertaste al borde del claro. Lo aprendiste por las malas.' : 'Otra vez en pie. El bosque no perdona.', { repeat: true });
   } });
 }
 
@@ -408,7 +409,7 @@ function checkInsight(L) {
   const NEED = NEEDS[difficulty];
   if (!L || state.done.has(L.id) || state.insighting || counts(L, true).k < NEED || counts(L, false).k < NEED) return;
   state.insighting = true;
-  say('ins0' + L.id, 'Ya conocés bastantes hongos de los dos grupos. Mirá lo que descubriste.');
+  tip('ins0' + L.id, 'Ya conocés bastantes hongos de los dos grupos. Mirá lo que descubriste.');
   setTimeout(() => {
     if (state.phase === 'faint') { state.insighting = false; return; }
     state.phase = 'insight'; S.setMood('wonder');
@@ -521,12 +522,12 @@ function flyTarget() {
 }
 function fly() {
   if (state.phase !== 'play' || state.busy || beetle.flying || beetle.state.mode === 'transit') return;
-  if (game.energy < FLY_COST) { say('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
+  if (game.energy < FLY_COST) { tip('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
   const target = flyTarget();
-  if (!target) { say('flynone', 'Ya exploraste todos los hongos que hay cerca.', { repeat: true }); return; }
+  if (!target) { tip('flynone', 'Ya exploraste todos los hongos que hay cerca.', { repeat: true }); return; }
   game.energy -= FLY_COST; drawStatus(); state.flights++;
   beetle.flyTo(target); S.fly();
-  say('fly1', 'Los escarabajos también vuelan: abrís los élitros, desplegás las alas y aterrizás sobre un hongo que todavía no exploraste.');
+  tip('fly1', 'Los escarabajos también vuelan: abrís los élitros, desplegás las alas y aterrizás sobre un hongo que todavía no exploraste.');
 }
 $('#b-fly').addEventListener('click', (e) => { e.currentTarget.blur(); fly(); });
 
@@ -554,10 +555,10 @@ function frame() {
     game.energy -= dt * (0.35 + (moved > 0.001 ? 0.45 : 0) + (inp.run ? 1 : 0));
     if (game.energy <= 0) {
       game.energy = 0; game.starving += dt;
-      say('starve', 'Sin energía, cada paso cuesta. Si no comés, no vas a aguantar.');
+      tip('starve', 'Sin energía, cada paso cuesta. Si no comés, no vas a aguantar.');
       if (game.starving > 7) { game.starving = 0; game.lives -= 1; drawStatus(); S.hurt(); gsap.fromTo(hurtU, { value: 1 }, { value: 0, duration: 1.2 }); if (game.lives <= 0) faint(); }
     }
-    if (game.energy < 50) say('hungry', 'El hambre aprieta. Los hongos son comida… pero no todos.');
+    if (game.energy < 50) tip('hungry', 'El hambre aprieta. Los hongos son comida… pero no todos.');
     if (game.energy < 22) { game.beat -= dt; if (game.beat <= 0) { game.beat = 1.4; S.heartbeat(); } }
     lowU.value += ((game.energy < 22 ? 1 : 0) - lowU.value) * Math.min(1, dt * 2);
     drawStatus();
@@ -566,18 +567,18 @@ function frame() {
     state.stepDist += moved;
     if (state.stepDist > 1.1) { state.stepDist = 0; S.footstep(Math.abs(beetle.state.speed)); }
     state.idle = moved > 0.001 ? 0 : state.idle + dt;
-    if (state.idle > 10) say('move', 'Usá W A S D o las flechas para caminar. Arrastrá el mouse para mirar alrededor.');
+    if (state.idle > 10) tip('move', 'Usá W A S D o las flechas para caminar. Arrastrá el mouse para mirar alrededor.');
 
     // Eventos del escarabajo
-    if (ev === 'trepa') { S.climb(); say('c1', 'Los tallos se trepan. Seguí subiendo hasta el sombrero.'); }
+    if (ev === 'trepa') { S.climb(); tip('c1', 'Los tallos se trepan. Seguí subiendo hasta el sombrero.'); }
     if (ev === 'arriba') S.climb();
-    if (ev === 'llegó:cap') say('c2', 'Desde acá arriba se ve todo el claro. Arrastrá el mouse hacia abajo para mirar el bosque desde lo alto.');
-    if (ev === 'saltó') { S.jump(); say('c3', 'Del borde del sombrero se salta al suelo.'); }
-    if (ev === 'aterrizó:cap') { S.jump(); say('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); }
+    if (ev === 'llegó:cap') tip('c2', 'Desde acá arriba se ve todo el claro. Arrastrá el mouse hacia abajo para mirar el bosque desde lo alto.');
+    if (ev === 'saltó') { S.jump(); tip('c3', 'Del borde del sombrero se salta al suelo.'); }
+    if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); }
 
     // Magulladura: al tocar un tallo se descubre si se mancha
     if (beetle.touching) touchCheck(beetle.touching);
-    if (beetle.mode === 'ground' && walkHeight(beetle.pos.x, beetle.pos.z) > height(beetle.pos.x, beetle.pos.z) + 0.6) say('twig', 'Las ramas no son paredes: para un escarabajo, son puentes.');
+    if (beetle.mode === 'ground' && walkHeight(beetle.pos.x, beetle.pos.z) > height(beetle.pos.x, beetle.pos.z) + 0.6) tip('twig', 'Las ramas no son paredes: para un escarabajo, son puentes.');
 
     // ¿Hay un hongo al alcance?
     beetle.heading(H);
@@ -591,7 +592,7 @@ function frame() {
       const sn = m.known ? (m.toxic ? '<span class="tox">venenoso</span>' : '<span class="ed">comestible</span>') : '<kbd>E</kbd> Olfatear';
       pr.innerHTML = `${sn} · ${m.eaten ? 'ya comido' : '<kbd>F</kbd> Comer'}${what}`;
       pr.hidden = false;
-      if (beetle.mode === 'ground') say('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
+      if (beetle.mode === 'ground') tip('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
     } else if (beetle.state.mode !== 'transit') {
       pr.innerHTML = '<kbd>Espacio</kbd> Volar al próximo hongo sin explorar';
       pr.hidden = false;
@@ -603,14 +604,14 @@ function frame() {
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
         if (L.night && !state.night) { state.night = true; const o = { k: 0 }; gsap.to(o, { k: 1, duration: 6, ease: 'sine.inOut', onUpdate: () => world.setNight(o.k) }); S.setMood('dark'); }
-        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); say('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
+        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); tip('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
     }
     for (const s of SLEEPING) {
       if (LEVELS.some((L) => L.at === s && state.awake.has(L.id))) continue;
       if (!state.slept.has(s.name) && Math.hypot(beetle.pos.x - s.x, beetle.pos.z - s.z) < s.r) {
         state.slept.add(s.name); S.sleepy();
-        say('sl' + s.name, `Este claro todavía duerme. Pronto: ${s.name}.`);
+        tip('sl' + s.name, `Este claro todavía duerme. Pronto: ${s.name}.`);
       }
     }
   }

@@ -24,14 +24,29 @@ export const hasVoice = () => voiceOn;
 export function say(id, text, { repeat = false, wait = 0 } = {}) {
   if (!repeat && said.has(id)) return false;
   said.add(id);
-  queue.push({ text, wait });
+  queue.push({ text, wait, t: performance.now() });
   if (!busy) next();
+  return true;
+}
+
+// Avisos cortos (sin voz): lo que pasa en el momento. Se muestran arriba y se reemplazan entre sí.
+const tipEl = document.getElementById('tip'), tipsSaid = new Set();
+let tipTimer = 0;
+export function tip(id, text, { repeat = false } = {}) {
+  if (!repeat && tipsSaid.has(id)) return false;
+  tipsSaid.add(id);
+  tipEl.textContent = text; tipEl.hidden = false;
+  tipEl.classList.remove('show'); void tipEl.offsetWidth; tipEl.classList.add('show');
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => { tipEl.classList.remove('show'); setTimeout(() => (tipEl.hidden = true), 400); }, Math.max(3200, text.length * 55));
   return true;
 }
 export const already = (id) => said.has(id);
 
+const STALE = 14000; // una frase de la historia que esperó más que esto ya no tiene sentido: se descarta
 function next() {
-  const item = queue.shift();
+  let item = queue.shift();
+  while (item && performance.now() - item.t > STALE) item = queue.shift();
   if (!item) { busy = false; return; }
   busy = true;
   setTimeout(() => show(item.text), item.wait);

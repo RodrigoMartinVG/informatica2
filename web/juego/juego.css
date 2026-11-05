@@ -193,3 +193,14 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .lightbox figcaption span { font: 400 16px/1.45 var(--serif); color: var(--ink-2); max-width: 640px; }
 .lightbox figcaption small { font: 400 12px var(--sans); color: var(--ink-3); }
 .lightbox .close { position: absolute; top: 14px; right: 22px; border: 0; background: none; color: #fff; font-size: 40px; cursor: pointer; }
+
+/* Avisos cortos */
+.tip { position: absolute; left: 50%; top: 74px; transform: translate(-50%, -8px); max-width: min(560px, calc(100vw - 40px)); text-align: center;
+  font: 500 15px/1.35 var(--sans); color: var(--ink); background: rgba(20,14,8,.72); backdrop-filter: blur(8px); border: 1px solid rgba(159,232,200,.3);
+  border-radius: 999px; padding: 8px 18px; opacity: 0; transition: opacity .35s, transform .35s; }
+.tip.show { opacity: 1; transform: translate(-50%, 0); }
+/* Cómo se juega */
+.howto { margin-top: 22px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 12px 16px; max-width: 600px; }
+.howto-k { font: 600 11px var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.howto ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+@media (max-width: 640px) { .howto ul { grid-template-columns: 1fr; } }
