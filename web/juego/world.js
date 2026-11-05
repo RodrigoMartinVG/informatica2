@@ -1,8 +1,9 @@
 // El suelo del bosque a escala de insecto: terreno, musgo y pasto con viento, hojas caídas,
 // piedras, ramitas, troncos gigantes, rayos de sol y polvo flotando en el aire.
 import * as THREE from 'three/webgpu';
-import { positionLocal, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
+import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
+import { addTwig, addPebble, addLeaf } from './surfaces.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
 const CX = (BOUNDS.maxX + BOUNDS.minX) / 2, CZ = (BOUNDS.maxZ + BOUNDS.minZ) / 2;
@@ -64,6 +65,11 @@ function grass(scene, count) {
   const w = sin(time.mul(1.6).add(phase)).add(sin(time.mul(3.1).add(phase.mul(2.3))).mul(0.35)).mul(gust.mul(0.8).add(0.3));
   mat.positionNode = positionLocal.add(vec3(w.mul(h2).mul(1.1), 0, w.mul(h2).mul(0.5)));
   mat.colorNode = mix(color('#1f3312'), color('#c8c86a'), h.pow(1.4));
+  // El pasto muy cerca de la cámara se desvanece (tramado) para no tapar la vista
+  const near = smoothstep(0.7, 2.6, positionWorld.distance(cameraPosition));
+  const dither = hash(screenCoordinate.x.mul(12.9898).add(screenCoordinate.y.mul(78.233)));
+  mat.opacityNode = near.add(dither.sub(0.5).mul(0.9));
+  mat.alphaTest = 0.5;
 
   const mesh = new THREE.InstancedMesh(geo, mat, count);
   const r = rng(23), m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3(), e = new THREE.Euler(), c = new THREE.Color();
@@ -110,7 +116,9 @@ function leaves(scene, count) {
     const x = BOUNDS.minX - 30 + r() * (W - 80), z = BOUNDS.minZ - 30 + r() * (D - 80);
     const k = 2.2 + r() * 3.2;
     e.set((r() - 0.5) * 0.3, r() * Math.PI * 2, (r() - 0.5) * 0.3); q.setFromEuler(e);
-    s.set(k * 0.75, k, k); v.set(x, height(x, z) + 0.05 + r() * 0.15, z);
+    const ly = height(x, z) + 0.05 + r() * 0.15;
+    s.set(k * 0.75, k, k); v.set(x, ly, z);
+    addLeaf(x, z, ly + 0.04, k * 0.62); // se puede caminar encima
     m.compose(v, q, s); mesh.setMatrixAt(i, m);
     mesh.setColorAt(i, palette[Math.floor(r() * palette.length)].clone().multiplyScalar(0.8 + r() * 0.4));
   }
@@ -144,10 +152,11 @@ function pebbles(scene, count) {
   for (let i = 0; i < count; i++) {
     let x, z; do { x = BOUNDS.minX + r() * (W - 140); z = BOUNDS.minZ + r() * (D - 140); } while (inClearing(x, z, 0.6));
     const k = 0.6 + r() * r() * 3.5;
-    e.set(r() * 3, r() * 3, r() * 3); q.setFromEuler(e); s.set(k, k, k); v.set(x, height(x, z) + k * 0.25, z);
+    e.set(0, r() * 6, 0); q.setFromEuler(e); s.set(k, k, k);
+    const cy = height(x, z) + k * 0.15; v.set(x, cy, z);
     m.compose(v, q, s); mesh.setMatrixAt(i, m);
     c.setHSL(0.08, 0.06 + r() * 0.08, 0.32 + r() * 0.25); mesh.setColorAt(i, c);
-    if (k > 1.6) obstacles.push({ x, z, r: k * 0.95 });
+    addPebble(x, z, cy, k * 0.88, k * 0.62); // se puede trepar
   }
   mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh);
 }
@@ -159,8 +168,10 @@ function twigs(scene, count) {
   for (let i = 0; i < count; i++) {
     let x, z; do { x = BOUNDS.minX + r() * (W - 140); z = BOUNDS.minZ + r() * (D - 140); } while (inClearing(x, z, 0.8));
     const len = 12 + r() * 30, rad = 0.35 + r() * 0.5;
-    e.set(0, r() * Math.PI, (r() - 0.5) * 0.08); q.setFromEuler(e); s.set(len, rad, rad); v.set(x, height(x, z) + rad * 0.7, z);
+    const yaw = r() * Math.PI, cy = Math.max(height(x - Math.cos(yaw) * len / 2, z + Math.sin(yaw) * len / 2), height(x, z), height(x + Math.cos(yaw) * len / 2, z - Math.sin(yaw) * len / 2)) + rad * 0.6;
+    e.set(0, yaw, 0); q.setFromEuler(e); s.set(len, rad, rad); v.set(x, cy, z);
     m.compose(v, q, s); mesh.setMatrixAt(i, m);
+    addTwig(x, z, cy, yaw, len, rad); // se puede trepar
   }
   mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh);
 }

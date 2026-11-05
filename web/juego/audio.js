@@ -3,7 +3,7 @@
 // Ambiente: viento muy suave, pájaros y grillos sintetizados. Efectos: pasos, olfateo, descubrimientos.
 const Tone = window.Tone;
 let ready = false, on = false;
-let master, music, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step;
+let master, music, musicF, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step;
 
 function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
 
@@ -12,7 +12,8 @@ function setup() {
   master = new Tone.Volume(-10);
   master.chain(new Tone.Compressor({ threshold: -20, ratio: 3 }), new Tone.Limiter(-3), Tone.getDestination());
   const reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).connect(master);
-  music = new Tone.Volume(-4).connect(reverb);
+  musicF = new Tone.Filter(18000, 'lowpass').connect(reverb);
+  music = new Tone.Volume(-4).connect(musicF);
   sfx = new Tone.Volume(-2).connect(reverb);
   amb = new Tone.Volume(-8).connect(master);
 
@@ -107,3 +108,27 @@ export function stamp() { if (go()) thump.triggerAttackRelease('G1', 0.4, now(),
 export function page() { if (!go()) return; const t = now(); pluck.triggerAttackRelease('A4', '16n', t, 0.6); pluck.triggerAttackRelease('D5', '16n', t + 0.07, 0.6); }
 // Claro dormido
 export function sleepy() { if (go()) bell.triggerAttackRelease(['F4', 'C5'], 1.5, now(), 0.3); }
+
+// Comer: mordiscos cortitos
+export function chew() { if (!go()) return; const t = now(); for (let i = 0; i < 5; i++) step.triggerAttackRelease(140 + (i % 2) * 40, 0.04, t + i * 0.16, 1); pluck.triggerAttackRelease('D4', '32n', t + 0.8, 0.3); }
+// Comida buena: campanitas que suben
+export function heal() { if (!go()) return; const t = now(); ['D5', 'F5', 'A5', 'D6'].forEach((n, i) => bell.triggerAttackRelease(n, '8n', t + i * 0.09, 0.5)); }
+// Veneno: golpe grave, roce disonante y la música se apaga como bajo el agua
+export function poison(on) {
+  if (!ready) return; const t = Tone.now();
+  musicF.frequency.cancelScheduledValues(t);
+  musicF.frequency.rampTo(on ? 500 : 18000, on ? 0.6 : 3);
+  if (on && go()) { thump.triggerAttackRelease('C1', 0.8, now(), 0.9); bell.triggerAttackRelease(['C#4', 'D4', 'G#4'], 1.6, Tone.now() + 0.1, 0.35); }
+}
+// Perder una vida
+export function hurt() { if (!go()) return; const t = now(); thump.triggerAttackRelease('A1', 0.5, t, 1); bell.triggerAttackRelease(['A3', 'Bb3'], 1, t + 0.05, 0.4); }
+// Desmayo y despertar
+export function faint() { if (!go()) return; const t = now(); ['A4', 'F4', 'D4', 'A3'].forEach((n, i) => lead.triggerAttackRelease(n, '4n', t + i * 0.35, 0.5)); }
+export function wake() { if (!go()) return; const t = now(); ['D4', 'A4', 'D5'].forEach((n, i) => bell.triggerAttackRelease(n, '8n', t + i * 0.2, 0.4)); }
+// Latido cuando queda poca energía
+export function heartbeat() { if (!go()) return; const t = now(); thump.triggerAttackRelease('E1', 0.2, t, 0.45); thump.triggerAttackRelease('E1', 0.2, t + 0.22, 0.3); }
+// Trepar y saltar
+export function climb() { if (!go()) return; const t = now(); [0, 1, 2].forEach((k) => pluck.triggerAttackRelease(n5(k, 4), '32n', t + k * 0.07, 0.35)); }
+export function jump() { if (!go()) return; const t = now(); [3, 1, 0].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + i * 0.08, 0.35)); }
+// Narración: una nota suave cuando aparece un mensaje
+export function whisper() { if (go()) lead.triggerAttackRelease(n5(Math.floor(Math.random() * 5), 5), '8n', now(), 0.18); }

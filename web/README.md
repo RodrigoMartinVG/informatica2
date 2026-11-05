@@ -83,7 +83,11 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/flora.js` | Hongos: los mismos modelos 3D de la investigación (`viewer3d.js` + `profiles.js`) |
 | `juego/audio.js` | Música y sonidos generativos con Tone.js |
 | `juego/config.js` | Mapa del bosque, claros y altura del terreno |
+| `juego/surfaces.js` | Superficies caminables: suelo, ramas, piedras y hojas |
+| `juego/narrator.js` | Narración en off (subtítulos y voz opcional) |
 
 Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Parámetros útiles: `?q=baja` (calidad baja), `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
+
+Mecánicas: hambre (la energía baja con el tiempo), olfatear (dice la verdad pero gasta energía), comer (alimenta o envenena: tres vidas), trepar ramas, piedras, hojas y hongos (empujando contra el tallo), saltar desde el borde del sombrero, cámara libre (arrastrar el mouse) con brazo con resorte, visión de antenas (V) y narración en off (con voz opcional). Al final del claro, el juego compara tus decisiones con los datos de la investigación.
 
 Etapa 1: claro del anillo jugable. Los otros cinco claros (magulladura, colores, tamaño, proporciones y los gemelos) están marcados como «dormidos».

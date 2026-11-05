@@ -28,7 +28,7 @@
       <h1>Bajo el<br><em>sombrero</em></h1>
       <p class="lead">Sos un escarabajo en el suelo del bosque. A tu altura, los hongos son torres. Algunos son comestibles, otros mortales. Los humanos creen que pueden distinguirlos a simple vista… <b>¿será cierto?</b></p>
       <button class="go" id="go" disabled>Cargando el bosque…</button>
-      <p class="keys"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Shift</kbd> correr · <kbd>E</kbd> olfatear · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</p>
+      <p class="keys"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Shift</kbd> correr · empujá contra un tallo para trepar · <kbd>E</kbd> olfatear · <kbd>F</kbd> comer · arrastrá el mouse para mirar · <kbd>V</kbd> visión de antenas · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</p>
       <p class="tech" id="tech"></p>
     </div>
   </section>
@@ -37,20 +37,24 @@
   <div class="hud" id="hud" hidden>
     <div class="top">
       <div class="top-l">
+        <div class="status" aria-label="Vidas y energía"><span class="hearts" id="hearts"></span><div class="energy" title="Energía"><i id="energy"></i></div></div>
         <p class="objective" id="objective"></p>
         <div class="tally" id="tally" hidden></div>
       </div>
       <div class="top-r">
         <button id="b-book" title="Cuaderno de campo (C)">Cuaderno <span id="pages">0/6</span></button>
         <button id="b-snd" title="Sonido (M)">Sonido: sí</button>
+        <button id="b-voz" title="Leer la narración en voz alta">Voz: no</button>
         <a href="../" title="Volver a la investigación">Salir</a>
       </div>
     </div>
+    <p class="narr" id="narr" hidden aria-live="polite"></p>
     <p class="prompt" id="prompt" hidden></p>
     <div id="tags"></div>
     <div class="touch" id="touch" hidden>
       <div class="stick" id="stick"><span></span></div>
       <button class="act" id="act">Olfatear</button>
+      <button class="act eat" id="act-eat">Comer</button>
     </div>
   </div>
 
@@ -62,6 +66,7 @@
       <div><b class="tox">61 %</b><span>venenosos<br>con anillo</span></div>
       <div><b class="tox">54 %</b><span>venenosos<br>sin anillo</span></div>
     </div>
+    <div class="mine" id="insight-mine"></div>
     <p class="small">En los 61.069 hongos de la investigación, el anillo casi no cambia la proporción de venenosos (55,5 % en total).</p>
     <div class="stamp" id="stamp">MITO</div>
     <button class="go" id="insight-ok">Seguir explorando</button>
@@ -77,6 +82,8 @@
       <p class="foot">Los números vienen de la investigación con 61.069 hongos. <a href="../#excel">Ver la investigación completa →</a></p>
     </div>
   </section>
+
+  <div class="fade" id="fade"></div>
 
   <script src="../data.js"></script>
   <script type="module" src="main.js"></script>

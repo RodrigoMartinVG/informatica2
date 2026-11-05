@@ -87,3 +87,32 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
   .insight { padding: 26px 20px; } .insight h2 { font-size: 26px; } .nums b { font-size: 44px; }
   .paper { padding: 26px 20px; }
 }
+
+/* Vidas y energía */
+.status { display: flex; align-items: center; gap: 12px; background: rgba(20,14,8,.55); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 6px 14px; }
+.hearts { display: flex; gap: 4px; font-size: 17px; line-height: 1; }
+.hearts i { font-style: normal; color: #ff7a5c; transition: opacity .3s, transform .3s; }
+.hearts i.off { opacity: .2; transform: scale(.8); filter: grayscale(1); }
+.energy { width: 140px; height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+.energy i { display: block; height: 100%; width: 100%; border-radius: 99px; background: linear-gradient(90deg, #d8a43c, #9fe8c8); transition: width .3s; }
+.energy.low i { background: #ff7a5c; animation: pulse 0.9s infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+
+/* Narración en off */
+.narr { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); text-align: center;
+  font: 500 italic clamp(18px, 2vw, 24px)/1.4 var(--serif); color: #fff8ec; text-shadow: 0 2px 14px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.9); }
+.narr span { display: inline; opacity: 0; filter: blur(4px); }
+.narr.in span { animation: word .5s forwards; }
+.narr.out { transition: opacity .5s; opacity: 0; }
+@keyframes word { to { opacity: 1; filter: blur(0); } }
+
+/* Pantalla que se oscurece al desmayarse */
+.fade { position: fixed; inset: 0; z-index: 16; background: #000; opacity: 0; pointer-events: none; }
+
+.mine { margin: 18px auto 0; max-width: 480px; font: 400 16px/1.5 var(--serif); color: var(--ink); background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px 14px; }
+.mine:empty { display: none; }
+.act.eat { right: 136px; bottom: 34px; width: 80px; height: 80px; background: rgba(255,213,154,.25); }
+.pg .me { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(80,60,30,.35); font: 400 14px/1.45 var(--serif); }
+.pg .me p { margin-top: 4px; font-size: 14px; }
+.pg .me .tox, .mine .tox { color: #d0531c; }
+.prompt .tox { color: var(--tox); font-weight: 600; } .prompt .ed { color: var(--ed); font-weight: 600; }
