@@ -5,7 +5,7 @@ import * as S from './audio.js';
 
 const el = document.getElementById('narr');
 const queue = [], said = new Set();
-let busy = false, voiceOn = true, current = null, fallback = null;
+let busy = false, voiceOn = true, fallback = null;
 
 // Índice texto → archivo de audio
 const files = new Map();
@@ -17,7 +17,7 @@ function pickFallback() {
 }
 if ('speechSynthesis' in window) { pickFallback(); speechSynthesis.onvoiceschanged = pickFallback; }
 
-export function setVoice(on) { voiceOn = on; if (!on) { current?.pause(); speechSynthesis?.cancel(); S.duck(false); } return voiceOn; }
+export function setVoice(on) { voiceOn = on; if (!on) { S.stopVoice(); speechSynthesis?.cancel(); S.duck(false); } return voiceOn; }
 export const hasVoice = () => voiceOn;
 
 // Decir una línea (una sola vez por id, salvo que repeat sea true)
@@ -41,20 +41,17 @@ function next() {
 function speak(text) {
   if (!voiceOn || !S.isOn()) return Promise.resolve();
   const src = files.get(text);
+  const limit = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 25000))]); // nunca trabar la cola
   if (src) {
-    return new Promise((done) => {
-      const a = new Audio(src); current = a; a.volume = 0.95;
-      a.onended = a.onerror = () => { S.duck(false); done(); };
-      S.duck(true);
-      a.play().catch(() => { S.duck(false); done(); });
-    });
+    S.duck(true);
+    return limit(S.playVoice(src).catch((e) => console.warn('voz:', e))).finally(() => S.duck(false));
   }
   if (!('speechSynthesis' in window)) return Promise.resolve();
-  return new Promise((done) => {
+  return limit(new Promise((done) => {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text); u.lang = fallback?.lang || 'es-AR'; if (fallback) u.voice = fallback;
     u.onend = u.onerror = done; speechSynthesis.speak(u);
-  });
+  }));
 }
 
 function show(text) {

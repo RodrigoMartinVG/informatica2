@@ -136,3 +136,24 @@ export function whisper() { if (go()) lead.triggerAttackRelease(n5(Math.floor(Ma
 export function fly() { if (!go()) return; const t = now(); for (let i = 0; i < 10; i++) step.triggerAttackRelease(220 + (i % 2) * 30, 0.02, t + i * 0.05, 0.6); [0, 2, 4, 7].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + 0.1 + i * 0.07, 0.4)); }
 // Bajar la música mientras habla la narración
 export function duck(on) { if (ready) music.volume.rampTo(on ? -14 : -4, on ? 0.3 : 1.2); }
+
+// Voz de la narración: se reproduce por Web Audio (el mismo contexto ya habilitado con el clic de inicio),
+// así el navegador no la bloquea como a un <audio> suelto. Va directo a la salida, sin reverb.
+const voiceBuffers = new Map();
+let voiceOut = null, voiceSrc = null;
+export async function playVoice(url) {
+  if (!go()) return;
+  const ctx = Tone.getContext().rawContext;
+  if (ctx.state !== 'running') { try { await ctx.resume(); } catch { return; } }
+  if (!voiceOut) voiceOut = new Tone.Volume(-2).connect(Tone.getDestination());
+  let buf = voiceBuffers.get(url);
+  if (!buf) { const ab = await (await fetch(url)).arrayBuffer(); buf = await ctx.decodeAudioData(ab); voiceBuffers.set(url, buf); }
+  return new Promise((done) => {
+    try { voiceSrc?.stop(); } catch { /* ya terminó */ }
+    const src = ctx.createBufferSource(); src.buffer = buf; voiceSrc = src;
+    Tone.connect(src, voiceOut);
+    src.onended = () => done();
+    src.start();
+  });
+}
+export function stopVoice() { try { voiceSrc?.stop(); } catch { /* nada */ } }

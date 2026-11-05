@@ -246,7 +246,7 @@ function touchCheck(m) {
 let fichaT = 0;
 function showPhoto(m) {
   const sp = SPECIES[m.species]; if (!sp) return;
-  $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name;
+  $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name; $('#ficha-img').dataset.sp = m.species;
   $('#ficha-n').textContent = sp.name;
   const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : 'ed'}`;
   $('#ficha-d').textContent = sp.note; $('#ficha-c').textContent = credit(m.species);
@@ -265,6 +265,20 @@ function showPhoto(m) {
   clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
   say('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
 }
+
+/* ---------- Foto en grande ---------- */
+function openPhoto(id) {
+  const sp = SPECIES[id]; if (!sp) return;
+  $('#lb-img').src = photo(id); $('#lb-img').alt = sp.name;
+  const t = $('#lb-tag'); t.textContent = sp.tag; t.className = sp.tox ? 'tox' : 'ed';
+  $('#lb-name').textContent = sp.name; $('#lb-note').textContent = sp.note; $('#lb-credit').textContent = credit(id);
+  const lb = $('#lightbox'); lb.hidden = false; gsap.fromTo(lb, { opacity: 0 }, { opacity: 1, duration: 0.25 });
+  clearTimeout(fichaT); // mientras mirás la foto, la ficha no se va
+}
+const closePhoto = () => { const lb = $('#lightbox'); if (!lb.hidden) gsap.to(lb, { opacity: 0, duration: 0.2, onComplete: () => (lb.hidden = true) }); };
+document.addEventListener('click', (e) => { const img = e.target.closest?.('img[data-sp]'); if (img) { e.stopPropagation(); openPhoto(img.dataset.sp); } }, true);
+$('#lightbox').addEventListener('click', closePhoto);
+addEventListener('keydown', (e) => { if (e.code === 'Escape') closePhoto(); });
 
 /* ---------- Olfatear: dice la verdad, pero cansa ---------- */
 const anim = { v: 0 };
@@ -413,7 +427,7 @@ function gallery(L) {
     const ids = [...new Set(flora.specimens.filter((s) => s.level === L.id && s.yes === yes).map((s) => s.species))];
     return `<div><h4>${cap1(L.trait === 'twin' ? (yes ? 'los mortales' : 'los comestibles') : L.yes === undefined ? '' : (yes ? L.yes : L.no))}</h4><div class="row">${ids.map((id) => {
       const sp = SPECIES[id];
-      return `<figure><img src="${photo(id)}" alt="${sp.name}" loading="lazy"><figcaption><b class="${sp.tox ? 'tox' : 'ed'}">${sp.tag}</b>${sp.name}</figcaption></figure>`;
+      return `<figure><img src="${photo(id)}" alt="${sp.name}" data-sp="${id}" loading="lazy"><figcaption><b class="${sp.tox ? 'tox' : 'ed'}">${sp.tag}</b>${sp.name}</figcaption></figure>`;
     }).join('')}</div></div>`;
   };
   return col(true) + col(false);
@@ -478,7 +492,7 @@ function renderBook() {
   $('#book-pages').innerHTML = PAGES.map((p) => {
     if (!state.done.has(p.id)) return `<article class="pg locked"><div><h3>${p.title}</h3><p>${state.awake.has(p.id) ? 'Claro despierto · por descubrir' : 'Claro dormido · próximamente'}</p></div></article>`;
     const me = mine(p.L);
-    const pics = [...new Set(flora.specimens.filter((s) => s.level === p.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}" title="${SPECIES[id].name} · ${SPECIES[id].tag}">`).join('');
+    const pics = [...new Set(flora.specimens.filter((s) => s.level === p.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}" data-sp="${id}" title="${SPECIES[id].name} · ${SPECIES[id].tag}">`).join('');
     return `<article class="pg"><span class="st">${p.L.stamp}</span><h3>${p.title}</h3>${p.chart ? bars(p.chart) : ''}<p>${p.body}</p><div class="pics">${pics}</div>${me ? `<div class="me"><b>En tu partida:</b>${me}</div>` : ''}</article>`;
   }).join('');
   $('#pages').textContent = `${state.done.size}/${PAGES.length}`;
@@ -637,4 +651,4 @@ if (params.has('alas')) Object.assign(beetle.state, { fly: 1 });
 // Capturas: ?noche, ?ficha=N (foto del hongo N), ?resumen=id (tarjeta de un nivel)
 if (params.has('noche')) world.setNight(1);
 if (params.has('ficha')) showPhoto(flora.specimens[+params.get('ficha')]);
-if (params.has('resumen')) { const L = LEVELS.find((x) => x.id === params.get('resumen')); state.cur = L; state.phase = 'insight'; flora.specimens.filter((s) => s.level === L.id).forEach((s) => flora.reveal(s)); showInsight(L); }
+if (params.has('resumen')) { const L = LEVELS.find((x) => x.id === params.get('resumen')); state.cur = L; state.phase = 'insight'; flora.specimens.filter((s) => s.level === L.id).forEach((s) => flora.reveal(s)); showInsight(L); setTimeout(() => gsap.set(['#insight', '#stamp'], { opacity: 1, y: 0, scale: 1 }), 50); }

@@ -77,18 +77,32 @@
 
   <!-- Descubrimiento del mito -->
   <section class="insight" id="insight" hidden>
-    <p class="eyebrow" id="ins-k">Descubrimiento</p>
-    <h2 id="ins-h"></h2>
-    <div class="nums">
-      <div><b class="tox" id="ins-a"></b><span id="ins-la"></span></div>
-      <div><b class="tox" id="ins-b"></b><span id="ins-lb"></span></div>
+    <div class="ins-main">
+      <div class="stamp" id="stamp">MITO</div>
+      <p class="eyebrow" id="ins-k">Descubrimiento</p>
+      <h2 id="ins-h"></h2>
+      <div class="nums">
+        <div><b class="tox" id="ins-a"></b><span id="ins-la"></span></div>
+        <div><b class="tox" id="ins-b"></b><span id="ins-lb"></span></div>
+      </div>
+      <p class="small" id="ins-small"></p>
+      <div class="mine" id="insight-mine"></div>
     </div>
-    <div class="gallery" id="ins-gal"></div>
-    <div class="mine" id="insight-mine"></div>
-    <p class="small" id="ins-small"></p>
-    <div class="stamp" id="stamp">MITO</div>
-    <button class="go" id="insight-ok">Seguir explorando</button>
+    <div class="ins-side">
+      <p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p>
+      <div class="gallery" id="ins-gal"></div>
+    </div>
+    <div class="ins-foot"><button class="go" id="insight-ok">Seguir explorando</button></div>
   </section>
+
+  <!-- Foto en grande -->
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-label="Foto en grande">
+    <figure>
+      <img id="lb-img" alt="">
+      <figcaption><b id="lb-tag"></b><i id="lb-name"></i><span id="lb-note"></span><small id="lb-credit"></small></figcaption>
+    </figure>
+    <button class="close" id="lb-close" aria-label="Cerrar">×</button>
+  </div>
 
   <!-- Cuaderno de campo -->
   <section class="book" id="book" hidden aria-label="Cuaderno de campo">
