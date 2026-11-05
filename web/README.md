@@ -69,3 +69,21 @@ Se ejecuta desde la raíz del repo y después se abre http://localhost:8765 (red
 | `explorer-data.js` | Conteos agrupados de los 61.069 registros (generado) |
 | `tools/build_data.py` | Regenera `explorer-data.js` a partir de la hoja `Data` |
 | `img/` | Las seis imágenes generadas con IA, reducidas, que se usan en la revisión del anexo A |
+
+## Juego: «Bajo el sombrero» (`juego/`)
+
+Una forma distinta de recorrer la investigación: manejás a un escarabajo por el suelo del bosque, a escala de insecto, e investigás los mitos olfateando hongos. Se abre desde el botón **🍄 Jugar** de la web o directo en `/juego/` (redirige a `web/juego/`).
+
+| Archivo | Qué hace |
+|---|---|
+| `juego/index.html`, `juego/juego.css` | Pantalla de inicio, interfaz, cuaderno de campo |
+| `juego/main.js` | Render (WebGPU con respaldo WebGL 2), postprocesado (profundidad de campo + bloom), cámara, controles y la lógica del mito |
+| `juego/world.js` | Terreno, pasto con viento (shader TSL), hojas, musgo, troncos, rayos de sol, polvo, esporas guía |
+| `juego/beetle.js` | Escarabajo procedural: marcha en trípode y cinemática inversa de las patas |
+| `juego/flora.js` | Hongos: los mismos modelos 3D de la investigación (`viewer3d.js` + `profiles.js`) |
+| `juego/audio.js` | Música y sonidos generativos con Tone.js |
+| `juego/config.js` | Mapa del bosque, claros y altura del terreno |
+
+Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Parámetros útiles: `?q=baja` (calidad baja), `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
+
+Etapa 1: claro del anillo jugable. Los otros cinco claros (magulladura, colores, tamaño, proporciones y los gemelos) están marcados como «dormidos».

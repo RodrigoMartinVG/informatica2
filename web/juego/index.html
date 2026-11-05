@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bajo el sombrero · un juego sobre hongos</title>
+  <meta name="description" content="Manejá a un escarabajo por el suelo del bosque e investigá los mitos sobre hongos venenosos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;1,8..60,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
+  <script type="importmap">{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  } }</script>
+  <link rel="stylesheet" href="juego.css">
+</head>
+<body>
+  <canvas id="c" aria-label="Bosque en 3D: el escarabajo explora el suelo del bosque"></canvas>
+
+  <!-- Pantalla de inicio -->
+  <section class="intro" id="intro">
+    <div class="intro-in">
+      <p class="eyebrow">Una investigación a ras del suelo</p>
+      <h1>Bajo el<br><em>sombrero</em></h1>
+      <p class="lead">Sos un escarabajo en el suelo del bosque. A tu altura, los hongos son torres. Algunos son comestibles, otros mortales. Los humanos creen que pueden distinguirlos a simple vista… <b>¿será cierto?</b></p>
+      <button class="go" id="go" disabled>Cargando el bosque…</button>
+      <p class="keys"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Shift</kbd> correr · <kbd>E</kbd> olfatear · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</p>
+      <p class="tech" id="tech"></p>
+    </div>
+  </section>
+
+  <!-- Interfaz durante el juego -->
+  <div class="hud" id="hud" hidden>
+    <div class="top">
+      <div class="top-l">
+        <p class="objective" id="objective"></p>
+        <div class="tally" id="tally" hidden></div>
+      </div>
+      <div class="top-r">
+        <button id="b-book" title="Cuaderno de campo (C)">Cuaderno <span id="pages">0/6</span></button>
+        <button id="b-snd" title="Sonido (M)">Sonido: sí</button>
+        <a href="../" title="Volver a la investigación">Salir</a>
+      </div>
+    </div>
+    <p class="prompt" id="prompt" hidden></p>
+    <div id="tags"></div>
+    <div class="touch" id="touch" hidden>
+      <div class="stick" id="stick"><span></span></div>
+      <button class="act" id="act">Olfatear</button>
+    </div>
+  </div>
+
+  <!-- Descubrimiento del mito -->
+  <section class="insight" id="insight" hidden>
+    <p class="eyebrow">Claro del anillo · descubrimiento</p>
+    <h2>Con anillo o sin anillo,<br><em>el bosque se parece demasiado.</em></h2>
+    <div class="nums">
+      <div><b class="tox">61 %</b><span>venenosos<br>con anillo</span></div>
+      <div><b class="tox">54 %</b><span>venenosos<br>sin anillo</span></div>
+    </div>
+    <p class="small">En los 61.069 hongos de la investigación, el anillo casi no cambia la proporción de venenosos (55,5 % en total).</p>
+    <div class="stamp" id="stamp">MITO</div>
+    <button class="go" id="insight-ok">Seguir explorando</button>
+  </section>
+
+  <!-- Cuaderno de campo -->
+  <section class="book" id="book" hidden aria-label="Cuaderno de campo">
+    <div class="paper">
+      <button class="close" id="book-close" aria-label="Cerrar cuaderno">×</button>
+      <p class="eyebrow">Cuaderno de campo</p>
+      <h2>Lo que fui descubriendo</h2>
+      <div class="pages" id="book-pages"></div>
+      <p class="foot">Los números vienen de la investigación con 61.069 hongos. <a href="../#excel">Ver la investigación completa →</a></p>
+    </div>
+  </section>
+
+  <script src="../data.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
