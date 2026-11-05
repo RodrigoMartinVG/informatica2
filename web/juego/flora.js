@@ -168,7 +168,11 @@ export function buildFlora(scene) {
     scene.add(halo); m.halo = halo; m.haloK = k;
     const cap = m.mesh.children[1], base = cap.material;
     m.tintK = uniform(0);
-    cap.material = base.clone();
+    // Copia del material para teñirla; clone() de los materiales de nodos pierde la textura, así que se copia a mano
+    const capCopy = base.clone();
+    Object.assign(capCopy, { map: base.map, bumpMap: base.bumpMap, bumpScale: base.bumpScale, roughness: base.roughness, side: base.side });
+    capCopy.color.copy(base.color);
+    cap.material = capCopy;
     cap.material.emissiveNode = base.userData.scatter.add(color(m.toxic ? '#ff5a1f' : '#2f7dff').mul(m.tintK)); // translucidez + tinte de lo que sabés
     m.capMat = cap.material;
   }
@@ -199,7 +203,7 @@ export function buildFlora(scene) {
     },
     eat(m) {
       m.eaten = true; m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m);
-      m.capMat.color = m.capMat.color.clone().multiplyScalar(0.7); // queda mordido (más oscuro)
+      m.capMat.color = m.capMat.color.clone().multiplyScalar(0.82); // queda mordido (un poco más oscuro, sin perder sus rasgos)
     },
     update(dt, t) {
       for (const m of all) {

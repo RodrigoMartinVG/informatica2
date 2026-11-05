@@ -550,7 +550,7 @@ $('#insight-ok').addEventListener('click', () => {
     state.phase = 'travel'; S.fly();
     setTimeout(() => beetle.flyToGround(lx, lz, Math.atan2(b.x - lx, b.z - lz), Math.min(7, 2.5 + d / 40), Math.max(18, d * 0.3)), 500);
   } else {
-    objective('Completaste el cuaderno de campo (C). Podés seguir explorando el bosque… o volver a la investigación.');
+    objective('Completaste el cuaderno de campo (C). Podés seguir explorando el bosque… o volver a la web con el botón de arriba a la derecha.');
     say('end1', 'Seis creencias puestas a prueba. Ninguna alcanza para saber si un hongo es comestible.');
     say('end2', 'Gracias por jugar. Ante la duda, no se come.');
   }

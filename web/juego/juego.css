@@ -253,3 +253,8 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .float.gain { color: #b8f5a0; } .float.loss { color: #ff8a6a; }
 .energy.boost { animation: boost .9s ease-out; }
 @keyframes boost { 0% { box-shadow: 0 0 0 0 rgba(159,232,200,.9); transform: scaleY(1.8); } 100% { box-shadow: 0 0 0 8px rgba(159,232,200,0); transform: scaleY(1); } }
+
+/* Volver a la web */
+.intro-back { display: inline-block; margin-bottom: 22px; font: 500 14px var(--sans); color: var(--ink-2); text-decoration: none; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 7px 14px; background: rgba(20,14,8,.4); }
+.intro-back:hover { color: var(--ink); background: rgba(20,14,8,.7); }
+.top-r a.back-web { border-color: rgba(159,232,200,.45); }
