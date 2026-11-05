@@ -10,32 +10,35 @@ function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) 
 
 /* ---------- Instrumentos ---------- */
 function setup() {
-  master = new Tone.Volume(-6);
-  const limiter = new Tone.Limiter(-1);
-  master.chain(limiter, Tone.getDestination());
-  const reverb = new Tone.Reverb({ decay: 7, wet: 0.4 }).connect(master);
-  const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.3, wet: 0.22 }).connect(reverb);
+  // Volumen general más bajo + compresor suave + limitador: evita la saturación cuando se juntan muchos sonidos
+  master = new Tone.Volume(-12);
+  const comp = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.25 });
+  const limiter = new Tone.Limiter(-3);
+  master.chain(comp, limiter, Tone.getDestination());
+  // Reverb más corta: mucho menos trabajo para el procesador de audio
+  const reverb = new Tone.Reverb({ decay: 3.5, wet: 0.3 }).connect(master);
+  const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.22, wet: 0.15 }).connect(reverb);
 
   // Colchón ambiental: acordes lentos, filtrados y oscuros
   const padFilter = new Tone.Filter(900, 'lowpass').connect(reverb);
   pad = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'fattriangle', count: 3, spread: 24 },
-    envelope: { attack: 2.2, decay: 1, sustain: 0.8, release: 3.5 }, volume: -20
+    oscillator: { type: 'fattriangle', count: 2, spread: 18 },
+    envelope: { attack: 2.2, decay: 1, sustain: 0.7, release: 2.5 }, volume: -22
   }).connect(padFilter);
+  pad.maxPolyphony = 12;
   new Tone.LFO({ frequency: 0.07, min: 500, max: 1400 }).connect(padFilter.frequency).start();
 
   // Campanitas: letras, marcadores, QR
-  bell = new Tone.PolySynth(Tone.FMSynth, {
-    harmonicity: 3.01, modulationIndex: 6,
-    envelope: { attack: 0.002, decay: 1.2, sustain: 0, release: 1.2 },
-    modulationEnvelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 }, volume: -22
+  bell = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.9, sustain: 0, release: 0.8 }, volume: -18
   }).connect(delay);
+  bell.maxPolyphony = 16;
 
   // Notas cortas: lluvia de datos, barras, puntos
   pluck = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'triangle' }, envelope: { attack: 0.003, decay: 0.25, sustain: 0, release: 0.3 }, volume: -20
+    oscillator: { type: 'sine' }, envelope: { attack: 0.006, decay: 0.22, sustain: 0, release: 0.25 }, volume: -20
   }).connect(reverb);
-  pluck.maxPolyphony = 64;
+  pluck.maxPolyphony = 20;
 
   // Tonos que se deslizan: curvas de GeoGebra
   const mkGlide = (detune) => new Tone.MonoSynth({
@@ -46,22 +49,22 @@ function setup() {
   glide = mkGlide(0); glide2 = mkGlide(9);
 
   // Golpe grave del sello
-  thump = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 5, envelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 0.4 }, volume: -6 }).connect(master);
-  click = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.001, decay: 0.12, sustain: 0 }, volume: -14 }).connect(master);
+  thump = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.45, sustain: 0, release: 0.3 }, volume: -12 }).connect(master);
+  click = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.002, decay: 0.06, sustain: 0 }, volume: -26 }).connect(master);
 
   // Ráfaga de aire para las fotos que se revelan
   noiseFilt = new Tone.Filter(400, 'bandpass').connect(reverb);
   noiseEnv = new Tone.AmplitudeEnvelope({ attack: 0.4, decay: 0.3, sustain: 0.4, release: 0.8 }).connect(noiseFilt);
   noise = new Tone.Noise('pink').connect(noiseEnv);
-  noise.volume.value = -18;
+  noise.volume.value = -26;
   ready = true;
 }
 
 /* ---------- Encendido ---------- */
 export async function enable() {
+  if (!ready) Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.15 }));
   await Tone.start();
   if (!ready) setup();
-  if (noise.state !== 'started') noise.start();
   on = true; master.mute = false;
 }
 export function mute(m) { if (ready) master.mute = m || !on; }
@@ -72,6 +75,9 @@ export function stream() { if (!ready) return null; const d = Tone.getContext().
 
 const go = () => on && ready && !master.mute;
 const now = () => Tone.now() + 0.02;
+// Los instrumentos de una sola voz no aceptan dos golpes en el mismo instante
+const last = new Map();
+const slot = (inst, t) => { const v = Math.max(t, (last.get(inst) ?? 0) + 0.02); last.set(inst, v); return v; };
 
 /* ---------- Escala: re menor pentatónica, para que todo combine ---------- */
 const SCALE = ['D', 'F', 'G', 'A', 'C'];
@@ -105,21 +111,21 @@ export function chime(i = 0, oct = 5) { if (go()) bell.triggerAttackRelease([not
 
 // Fotos que se revelan: ráfaga de aire que sube
 export function whoosh(dur = 1.4) {
-  if (!go()) return; const t = now();
+  if (!go()) return; const t = slot(noise, now());
   noiseFilt.frequency.cancelScheduledValues(t); noiseFilt.frequency.setValueAtTime(300, t);
   noiseFilt.frequency.exponentialRampToValueAtTime(2600, t + dur);
-  noiseEnv.triggerAttackRelease(dur * 0.6, t);
+  noise.start(t); noiseEnv.triggerAttackRelease(dur * 0.6, t); noise.stop(t + dur + 1);
 }
 
 // "Mortal": golpe grave y un roce disonante
 export function dread() {
   if (!go()) return; const t = now();
-  thump.triggerAttackRelease('D1', '2n', t, 0.9);
-  bell.triggerAttackRelease(['D4', 'Eb4'], '2n', t + 0.02, 0.5);
+  thump.triggerAttackRelease('D1', '2n', slot(thump, t), 0.8);
+  bell.triggerAttackRelease(['D4', 'Eb4'], '2n', t + 0.02, 0.3);
 }
 
 // Lluvia de datos: muchas notas que se van espaciando
-export function rain(dur = 6, n = 90) {
+export function rain(dur = 6, n = 42) {
   if (!go()) return; const t = now(), r = rng(3);
   for (let i = 0; i < n; i++) {
     const x = Math.pow(i / n, 1.6) * dur; // más densa al principio
@@ -140,19 +146,19 @@ export function bars(values, gap = 0.15) {
 // Sello: fuerte para MITO, más suave para los veredictos intermedios
 export function stamp(strong = true) {
   if (!go()) return; const t = now();
-  thump.triggerAttackRelease(strong ? 'G1' : 'D2', '8n', t, strong ? 1 : 0.55);
-  click.triggerAttackRelease('16n', t, strong ? 1 : 0.5);
+  thump.triggerAttackRelease(strong ? 'G1' : 'D2', '8n', slot(thump, t), strong ? 1 : 0.55);
+  click.triggerAttackRelease('16n', slot(click, t), strong ? 1 : 0.5);
 }
 
 // Puntos de un gráfico que aparecen uno por uno
 export function pops(values, gap = 0.05) {
   if (!go()) return; const t = now();
-  values.forEach((v, i) => pluck.triggerAttackRelease(pitch(v, 4, 10), '32n', t + i * gap, 0.35));
+  values.forEach((v, i) => { if (i % 2 === 0 || values.length < 25) pluck.triggerAttackRelease(pitch(v, 4, 10), '32n', t + i * gap, 0.35); });
 }
 
 // Un tono que sigue la forma de una curva: values entre 0 y 1
 export function trace(values, dur, voice = 0) {
-  if (!go()) return; const s = voice ? glide2 : glide, t = now();
+  if (!go()) return; const s = voice ? glide2 : glide, t = slot(s, now());
   const freqs = values.map((v) => Tone.Frequency(pitch(v, 3, 14)).toFrequency());
   s.triggerAttack(freqs[0], t, 0.7);
   freqs.forEach((f, i) => s.frequency.linearRampToValueAtTime(f, t + (i / (freqs.length - 1)) * dur));

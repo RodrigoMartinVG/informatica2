@@ -233,8 +233,10 @@ const qr = qrcode(0, 'M'); qr.addData('https://rodrigomartinvg.github.io/informa
 $('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
 
 /* ---------- Línea de tiempo ---------- */
-await document.fonts.ready;
-await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+// Espera fuentes e imágenes, pero nunca más de 3 s (en pestañas en segundo plano decode() puede no terminar)
+const wait = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+await wait(document.fonts.ready, 3000);
+await wait(Promise.all([...document.images].map((i) => i.decode().catch(() => {}))), 3000);
 
 const words = (sel) => new SplitText(sel, { type: 'words' }).words;
 const tl = gsap.timeline({ repeat: -1, defaults: { ease: 'power3.out' }, paused: true });
