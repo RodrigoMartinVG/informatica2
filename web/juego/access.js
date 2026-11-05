@@ -4,6 +4,8 @@
 // - Teclas para describir el entorno y el estado; teclas reasignables; texto grande.
 // La configuración se guarda en el navegador.
 const Tone = window.Tone;
+import * as Speech from './speech.js';
+import { MISC } from './speechvocab.js';
 const KEY = 'bajo-el-sombrero:acceso';
 
 export const ACTIONS = {
@@ -12,7 +14,7 @@ export const ACTIONS = {
   book: { label: 'Cuaderno', def: 'KeyC' }, vision: { label: 'Visión de antenas (mantener)', def: 'KeyV' }, sound: { label: 'Sonido', def: 'KeyM' }
 };
 
-const cfg = { audio: false, big: false, rate: 1.05, keys: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])) };
+const cfg = { audio: false, big: false, rate: 1, keys: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])) };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); cfg.keys = { ...Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])), ...(cfg.keys || {}) }; } catch { /* sin almacenamiento */ }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch { /* nada */ } };
 
@@ -21,23 +23,15 @@ export const keyFor = (action) => cfg.keys[action];
 export const actionFor = (code) => Object.keys(cfg.keys).find((k) => cfg.keys[k] === code) || null;
 export const keyName = (code) => ({ Space: 'Espacio', Enter: 'Enter', Tab: 'Tab', Escape: 'Esc', ShiftLeft: 'Shift', ShiftRight: 'Shift', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' }[code] || code.replace(/^Key|^Digit/, ''));
 
-/* ---------- Voz para descripciones (síntesis del navegador) ---------- */
-let voice = null;
-function pickVoice() {
-  const vs = speechSynthesis?.getVoices?.() || [];
-  voice = vs.find((v) => /es[-_](AR|UY)/i.test(v.lang)) || vs.find((v) => /es[-_](419|MX|US)/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null;
-}
-if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-
+/* ---------- Voz: la misma voz rioplatense de la narración, por la misma cola ---------- */
 const live = () => document.getElementById('sr-live');
-// Decir algo: lo lee la voz (en modo audio) y lo recibe el lector de pantalla (siempre)
-export function speak(text, { interrupt = false, force = false } = {}) {
-  const el = live(); if (el) { el.textContent = ''; setTimeout(() => (el.textContent = text), 30); }
-  if (!(cfg.audio || force) || !('speechSynthesis' in window)) return;
-  if (interrupt) speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = voice?.lang || 'es-AR'; if (voice) u.voice = voice; u.rate = cfg.rate;
-  speechSynthesis.speak(u);
+// Decir algo: lo recibe siempre el lector de pantalla; en modo audio (o si force) lo dice la voz.
+// parts: texto o lista de fragmentos pregenerados (ver speechvocab.js). interrupt: es urgente y corta lo que suena.
+export function speak(parts, { interrupt = false, force = false } = {}) {
+  const list = (Array.isArray(parts) ? parts : [parts]).filter(Boolean);
+  const el = live(); if (el) { el.textContent = ''; setTimeout(() => (el.textContent = list.join(' ')), 30); }
+  if (!(cfg.audio || force)) return;
+  Speech.say(list, { prio: interrupt ? 'urgent' : 'info' });
 }
 
 /* ---------- Direcciones relativas al escarabajo ---------- */
@@ -100,27 +94,27 @@ export function setupPanel({ onChange } = {}) {
     for (const b of panel.querySelectorAll('[data-k]')) b.addEventListener('click', () => capture(b));
   };
   function capture(btn) {
-    btn.textContent = 'Apretá una tecla…'; speak('Apretá la nueva tecla', { interrupt: true });
+    btn.textContent = 'Apretá una tecla…'; speak(MISC.pressKey, { interrupt: true, force: true });
     const once = (e) => {
       e.preventDefault(); e.stopPropagation(); removeEventListener('keydown', once, true);
       if (e.code !== 'Escape' && !/^(Key[WASD]|Arrow)/.test(e.code)) {
         const other = actionFor(e.code); if (other) cfg.keys[other] = cfg.keys[btn.dataset.k]; // intercambiar si ya estaba usada
         cfg.keys[btn.dataset.k] = e.code; save();
-        speak(`${ACTIONS[btn.dataset.k].label}: tecla ${keyName(e.code)}`, { interrupt: true });
+        speak(MISC.keyChanged, { interrupt: true, force: true });
       }
       render(); apply();
     };
     addEventListener('keydown', once, true);
   }
-  panel.querySelector('#acc-audio').addEventListener('change', (e) => { cfg.audio = e.target.checked; save(); apply(); speak(cfg.audio ? 'Modo audio activado.' : 'Modo audio desactivado.', { interrupt: true, force: true }); });
+  panel.querySelector('#acc-audio').addEventListener('change', (e) => { cfg.audio = e.target.checked; save(); apply(); speak(cfg.audio ? MISC.audioOn : MISC.audioOff, { interrupt: true, force: true }); });
   panel.querySelector('#acc-big').addEventListener('change', (e) => { cfg.big = e.target.checked; save(); apply(); });
-  panel.querySelector('#acc-rate').addEventListener('input', (e) => { cfg.rate = +e.target.value; save(); });
-  panel.querySelector('#acc-test').addEventListener('click', () => speak('Así suena la voz que describe el juego.', { interrupt: true, force: true }));
+  panel.querySelector('#acc-rate').addEventListener('input', (e) => { cfg.rate = +e.target.value; Speech.setRate(cfg.rate); save(); });
+  panel.querySelector('#acc-test').addEventListener('click', () => speak(MISC.test, { interrupt: true, force: true }));
   panel.querySelector('#acc-close').addEventListener('click', () => toggle(false));
   panel.addEventListener('click', (e) => { if (e.target === panel) toggle(false); });
   function toggle(open = panel.hidden) { panel.hidden = !open; if (open) { render(); panel.querySelector('#acc-audio').focus(); } }
   for (const b of document.querySelectorAll('.b-acc')) b.addEventListener('click', () => toggle(true));
-  render(); apply();
+  Speech.setRate(cfg.rate); render(); apply();
   return {
     toggle,
     get open() { return !panel.hidden; },

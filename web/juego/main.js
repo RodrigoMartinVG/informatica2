@@ -12,6 +12,7 @@ import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL } from './config.js';
 import * as S from './audio.js';
 import * as V from './narrator.js';
 import * as A from './access.js';
+import * as SV from './speechvocab.js';
 import { SPECIES, photo, credit } from './species.js';
 
 const $ = (s) => document.querySelector(s);
@@ -124,7 +125,7 @@ function birdStart() {
   bird.t = 0; bird.checked = false; birdShadow.mesh.visible = true; S.bird();
   tip('bird' + Date.now(), '¡Un pájaro! Escondete debajo de un sombrero o trepá un tallo.', { repeat: true });
   const near = flora.nearest(beetle.pos, null, 40) || unexploredNear()[0];
-  if (near) { beetle.heading(H); const r = A.direction(beetle.pos, H, near); A.speak(`¡Un pájaro! El hongo más cercano para esconderte está ${r.where}, a ${A.cm(r.d)}.`, { interrupt: true }); }
+  if (near) A.speak([SV.MISC.bird, ...whereParts(near)], { interrupt: true });
 }
 // ¿Está a salvo? Debajo de un sombrero (en el suelo, cerca del tallo) o trepado al tallo
 function hidden() {
@@ -376,7 +377,7 @@ function showPhoto(m) {
   const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
   clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
   tip('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
-  A.speak(`Se parece a ${sp.name}: ${sp.tag}.`);
+  A.speak(SV.speciesPhrase(sp));
 }
 
 /* ---------- Foto en grande ---------- */
@@ -394,39 +395,39 @@ $('#lightbox').addEventListener('click', closePhoto);
 addEventListener('keydown', (e) => { if (e.code === 'Escape') closePhoto(); });
 
 /* ---------- Descripciones habladas (accesibilidad) ---------- */
-// Cómo se describe un hongo con palabras: su rasgo del claro y si ya lo conocés
-function describeMushroom(m) {
-  const L = m.level ? levelOf(m) : null;
-  const trait = !L ? '' : L.trait === 'ring' ? (m.yes ? 'con anillo' : 'sin anillo') : L.trait === 'bruise' ? (!m.traitKnown ? 'sin tocar todavía' : m.yes ? 'que se mancha' : 'que no se mancha')
-    : L.trait === 'color' ? (m.yes ? 'de color llamativo' : 'de color común') : L.trait === 'size' ? (m.yes ? 'chico' : 'grande')
-    : L.trait === 'stem' ? (m.yes ? 'de tallo grueso' : 'de tallo fino') : 'idéntico a los demás';
-  const known = m.known ? (m.toxic ? 'venenoso' : 'comestible') : 'sin explorar';
-  return `hongo ${trait}${trait ? ', ' : ''}${known}${m.eaten ? ', ya comido' : ''}`;
+// Cómo se describe un hongo con palabras (fragmentos pregenerados: rasgo + estado)
+function mushParts(m) {
+  const L = m.level ? levelOf(m) : null, M = SV.MUSH;
+  const trait = !L ? M.decor : L.trait === 'ring' ? (m.yes ? M.ringYes : M.ringNo) : L.trait === 'bruise' ? (!m.traitKnown ? M.bruiseUnknown : m.yes ? M.bruiseYes : M.bruiseNo)
+    : L.trait === 'color' ? (m.yes ? M.colorYes : M.colorNo) : L.trait === 'size' ? (m.yes ? M.sizeYes : M.sizeNo)
+    : L.trait === 'stem' ? (m.yes ? M.stemYes : M.stemNo) : M.twin;
+  return [trait, m.known ? (m.toxic ? SV.STATE.tox : SV.STATE.ed) : SV.STATE.unknown, m.eaten ? SV.STATE.eaten : null];
 }
+// Dirección y distancia como fragmentos («adelante a la izquierda,» «a 14 centímetros.»)
+function whereParts(to) { beetle.heading(H); const r = A.direction(beetle.pos, H, to); return [`${r.where},`, SV.distPhrase(SV.distStep(r.d))]; }
 const unexploredNear = () => {
   const p = beetle.pos;
   const pool = flora.all.filter((s) => (s.level ? state.awake.has(s.level) && !state.done.has(s.level) && !(s.known && s.traitKnown) : !s.known) && s !== beetle.on);
   return pool.map((s) => [s, Math.hypot(s.x - p.x, s.z - p.z)]).filter(([, d]) => d < 90).sort((a, b) => a[1] - b[1]).map(([s]) => s);
 };
 function describe() {
-  beetle.heading(H);
-  const p = beetle.pos, parts = [];
-  parts.push(beetle.mode === 'cap' ? 'Estás arriba de un sombrero.' : beetle.mode === 'stem' ? 'Estás trepando un tallo.' : '');
-  if (state.cur) parts.push(`Estás en ${state.cur.place}.`);
+  const parts = [];
+  if (beetle.mode === 'cap') parts.push(SV.MISC.onCap); else if (beetle.mode === 'stem') parts.push(SV.MISC.onStem);
+  if (state.cur) parts.push(SV.placeIn(state.cur));
   const near = unexploredNear().slice(0, 3);
   if (near.length) {
-    parts.push(`${near.length === 1 ? 'Hay un hongo sin explorar cerca' : `Los ${near.length} hongos sin explorar más cercanos`}:`);
-    near.forEach((m) => { const r = A.direction(p, H, m); parts.push(`${describeMushroom(m)}, ${r.where}, a ${A.cm(r.d)}.`); });
-    parts.push('Con Espacio volás al más cercano.');
+    parts.push(near.length === 1 ? SV.MISC.nearOne : SV.MISC.nearMany);
+    near.forEach((mm) => parts.push(...mushParts(mm), ...whereParts(mm)));
+    parts.push(SV.MISC.flyHint);
   } else {
     const next = LEVELS.find((L) => state.awake.has(L.id) && !state.done.has(L.id));
-    if (next) { const r = A.direction(p, H, next.at); parts.push(`El claro ${next.title.toLowerCase()} está ${r.where}, a ${A.cm(r.d)}.`); }
-    else parts.push('No quedan hongos sin explorar cerca.');
+    if (next && next !== state.cur) parts.push(SV.placeDir(next), ...whereParts(next.at)); else parts.push(SV.MISC.noneNear);
   }
-  A.speak(parts.filter(Boolean).join(' '), { interrupt: true, force: true });
+  A.speak(parts, { interrupt: true, force: true });
 }
 function status() {
-  A.speak(`Tenés ${game.lives} ${game.lives === 1 ? 'vida' : 'vidas'} y ${Math.round(game.energy)} de energía. Descubriste ${state.done.size} de ${LEVELS.length} claros.${game.poison > 0 ? ' Estás envenenado.' : ''}`, { interrupt: true, force: true });
+  A.speak([SV.livesPhrase(game.lives), SV.energyPhrase(SV.ENERGY_STEPS.reduce((b, s) => (Math.abs(s - game.energy) < Math.abs(b - game.energy) ? s : b), 0)),
+    SV.donePhrase(state.done.size, LEVELS.length), game.poison > 0 ? SV.MISC.poisoned : null], { interrupt: true, force: true });
 }
 
 /* ---------- Azar equilibrado ---------- */
@@ -637,8 +638,7 @@ function showInsight(L) {
   gsap.fromTo(el, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8 });
   gsap.fromTo('#ins-main .stamp', { opacity: 0, scale: 2.6, rotate: -6 }, { opacity: 1, scale: 1, rotate: 10, duration: 0.45, ease: 'power4.in', delay: 1.2, onComplete: S.stamp });
   state.done.add(L.id); state.insighting = false; renderBook();
-  const nums = L.nums ? L.nums.map((n) => `${n[0]} ${n[1].replace('<br>', ' ')}`) : [`${Math.round(L.research[0] * 100)} por ciento de venenosos ${L.yes}`, `${Math.round(L.research[1] * 100)} por ciento ${L.no}`];
-  A.speak(`Descubrimiento: ${L.title}. ${L.stamp}. ${$('#ins-main h2').textContent} ${nums.join('; ')}. ${L.small} Apretá Enter para seguir.`, { interrupt: true });
+  A.speak(SV.insightText(L), { interrupt: true });
   setTimeout(() => $('#insight-ok').focus(), 900);
 }
 $('#insight-ok').addEventListener('click', () => {
@@ -780,7 +780,7 @@ function frame() {
     if (ev === 'arriba') S.climb();
     if (ev === 'llegó:cap') tip('c2', 'Desde acá arriba se ve todo el claro. Arrastrá el mouse hacia abajo para mirar el bosque desde lo alto.');
     if (ev === 'saltó') { S.jump(); tip('c3', 'Del borde del sombrero se salta al suelo.'); }
-    if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak(`Aterrizaste sobre un ${describeMushroom(beetle.on)}.`, { interrupt: true }); }
+    if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak([SV.MISC.landed, ...mushParts(beetle.on)]); }
 
     // Magulladura: al tocar un tallo se descubre si se mancha
     if (beetle.touching) touchCheck(beetle.touching);
@@ -792,7 +792,7 @@ function frame() {
     if (!state.busy) state.near = flora.nearest(head, beetle.mode === 'ground' ? null : beetle.on);
     if (state.near !== state.lastNear) {
       state.lastNear = state.near;
-      if (state.near && beetle.mode === 'ground' && !beetle.flying) A.speak(`Cerca: ${describeMushroom(state.near)}.`);
+      if (state.near && beetle.mode === 'ground' && !beetle.flying) A.speak([SV.MISC.near, ...mushParts(state.near)]);
     }
     const pr = $('#prompt'), m = state.near;
     if (m && !state.busy) {
