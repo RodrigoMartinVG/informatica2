@@ -85,6 +85,7 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/config.js` | Mapa del bosque, claros y altura del terreno |
 | `juego/surfaces.js` | Superficies caminables: suelo, ramas, piedras y hojas |
 | `juego/narrator.js` | Narración en off (subtítulos y voz opcional) |
+| `juego/look.js` | Efectos de luz en TSL: translucidez a contraluz, niebla a ras del suelo y cielo |
 
 Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Parámetros útiles: `?q=baja` (calidad baja), `?gl` (forzar WebGL 2), `?auto` (saltar la intro).
 

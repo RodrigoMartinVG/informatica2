@@ -1,6 +1,7 @@
 // «Bajo el sombrero»: arranque, cámara, controles, hambre y veneno, narración y el primer mito.
 import * as THREE from 'three/webgpu';
-import { pass, uniform, screenUV, smoothstep, vec3, vec4, float, mix } from 'three/tsl';
+import { pass, mrt, output, normalView, uniform, screenUV, smoothstep, vec3, vec4, float, mix } from 'three/tsl';
+import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { dof } from 'three/addons/tsl/display/DepthOfFieldNode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { buildWorld, sporeTrail, environment, obstacles } from './world.js';
@@ -31,7 +32,15 @@ const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.05, 1
 // Postprocesado: profundidad de campo + bloom contenido + efectos de veneno y daño
 const post = new THREE.PostProcessing(renderer);
 const scenePass = pass(scene, camera);
-const colorTex = scenePass.getTextureNode('output');
+let colorTex = scenePass.getTextureNode('output');
+// Oclusión ambiental (GTAO): sombras de contacto donde las cosas se tocan
+let aoPass = null;
+if (quality === 'alta') {
+  scenePass.setMRT(mrt({ output, normal: normalView }));
+  aoPass = ao(scenePass.getTextureNode('depth'), scenePass.getTextureNode('normal'), camera);
+  aoPass.resolutionScale = 0.5; aoPass.radius.value = 0.6; aoPass.distanceExponent.value = 1.2; aoPass.scale.value = 1.2; aoPass.thickness.value = 1.5;
+  colorTex = aoPass.getTextureNode().mul(colorTex);
+}
 const focus = uniform(6), focal = uniform(7), bokeh = uniform(2.2);
 const poisonU = uniform(0), hurtU = uniform(0), lowU = uniform(0);
 const base = quality === 'alta' ? dof(colorTex, scenePass.getViewZNode(), focus, focal, bokeh) : colorTex;

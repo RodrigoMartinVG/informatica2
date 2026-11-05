@@ -4,6 +4,7 @@ import * as THREE from 'three/webgpu';
 import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
 import { addTwig, addPebble, addLeaf } from './surfaces.js';
+import { SUN, backlight, sky, groundFog } from './look.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
 const CX = (BOUNDS.maxX + BOUNDS.minX) / 2, CZ = (BOUNDS.maxZ + BOUNDS.minZ) / 2;
@@ -65,6 +66,7 @@ function grass(scene, count) {
   const w = sin(time.mul(1.6).add(phase)).add(sin(time.mul(3.1).add(phase.mul(2.3))).mul(0.35)).mul(gust.mul(0.8).add(0.3));
   mat.positionNode = positionLocal.add(vec3(w.mul(h2).mul(1.1), 0, w.mul(h2).mul(0.5)));
   mat.colorNode = mix(color('#1f3312'), color('#c8c86a'), h.pow(1.4));
+  mat.emissiveNode = color('#d6e070').mul(backlight(4)).mul(h.mul(0.8).add(0.2)).mul(0.55); // el sol atraviesa las hojas de pasto
   // El pasto muy cerca de la cámara se desvanece (tramado) para no tapar la vista
   const near = smoothstep(0.7, 2.6, positionWorld.distance(cameraPosition));
   const dither = hash(screenCoordinate.x.mul(12.9898).add(screenCoordinate.y.mul(78.233)));
@@ -108,7 +110,8 @@ function leaves(scene, count) {
     g.lineWidth = 1.5; for (let i = 1; i < 8; i++) { const y = h - (i / 8) * h; g.beginPath(); g.moveTo(w / 2, y); g.lineTo(w / 2 - 70, y - 40); g.moveTo(w / 2, y); g.lineTo(w / 2 + 70, y - 40); g.stroke(); }
     const r = rng(5); for (let i = 0; i < 300; i++) { g.fillStyle = `rgba(70,35,10,${r() * 0.12})`; g.beginPath(); g.arc(r() * w, r() * h, 2 + r() * 8, 0, 7); g.fill(); }
   });
-  const mat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.7 });
+  const mat = new THREE.MeshStandardNodeMaterial({ map: tex, bumpMap: tex, bumpScale: 2.5, side: THREE.DoubleSide, roughness: 0.7 });
+  mat.emissiveNode = color('#ff9a45').mul(backlight(4)).mul(0.35); // a contraluz, la hoja brilla
   const mesh = new THREE.InstancedMesh(geo, mat, count);
   const palette = ['#b4562a', '#c9822f', '#8a3b1e', '#d6a23d', '#6e4a26', '#a8722d', '#5c3a1c'].map((x) => new THREE.Color(x));
   const r = rng(31), m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3(), e = new THREE.Euler();
@@ -279,10 +282,10 @@ export function environment(renderer, scene, sunDir) {
 
 export function buildWorld(scene, { quality = 'alta' } = {}) {
   const hi = quality === 'alta';
-  scene.background = new THREE.Color('#d9a877');
-  scene.fog = new THREE.FogExp2('#c99a6c', 0.0058);
+  sky(scene);
+  groundFog(scene, 0.0056);
 
-  const sunDir = new THREE.Vector3(0.62, 0.5, -0.6).normalize(); // sol bajo, de costado: luz rasante y contraluz suave
+  const sunDir = SUN.clone(); // sol bajo, de costado: luz rasante y contraluz suave
   const sun = new THREE.DirectionalLight('#ffbd75', 3.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);

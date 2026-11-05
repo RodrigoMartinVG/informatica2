@@ -7,6 +7,7 @@ import { build } from '../viewer3d.js';
 import { profile } from '../profiles.js';
 import { height, inClearing, rng, RING, BOUNDS } from './config.js';
 import { obstacles } from './world.js';
+import { translucent } from './look.js';
 
 const R = window.RESEARCH;
 const ARQ = Object.fromEntries(R.arquetipos.map((a) => [a.id, a]));
@@ -26,6 +27,12 @@ function template(shape, pal, ring) {
     const a = { ...ARQ[shape], ...PALETTES[pal], ring };
     const g = build(a, 64); g.scale.setScalar(0.1); // mm → cm
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    // [tallo, sombrero, láminas, anillo]: sombrero y láminas translúcidos; tallo más mate y cálido
+    const [stem, cap, gills] = g.children;
+    cap.material = translucent(cap.material, '#ffb470', 1.2);
+    gills.material = translucent(gills.material, '#ffc58a', 0.9);
+    stem.material = stem.material.clone(); stem.material.color = new THREE.Color('#e3d3b8'); stem.material.roughness = 0.92;
+    if (g.children[3]) g.children[3].material = stem.material;
     templates.set(key, { g, a, p: profile(a) });
   }
   return templates.get(key);
@@ -107,11 +114,28 @@ function ringClearing(scene, list) {
   }
 }
 
+// Rocío: gotitas sobre los sombreros que destellan con el sol
+function dew(scene, all) {
+  const r = rng(131), drops = [];
+  for (const m of all) {
+    const n = 3 + Math.floor(r() * 7);
+    for (let i = 0; i < n; i++) {
+      const rr = Math.sqrt(r()) * m.Rw * 0.8, a = r() * Math.PI * 2, s = 0.035 + r() * 0.06;
+      drops.push([m.x + Math.cos(a) * rr, m.base + m.capY(rr) + s * 0.45, m.z + Math.sin(a) * rr, s]);
+    }
+  }
+  const mat = new THREE.MeshPhysicalMaterial({ color: '#bcd6e8', roughness: 0, metalness: 0, clearcoat: 1, envMapIntensity: 1.4, transparent: true, opacity: 0.32, depthWrite: false });
+  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), mat, drops.length);
+  const mx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), v = new THREE.Vector3();
+  drops.forEach(([x, y, z, s], i) => { sc.set(s, s * 0.7, s); v.set(x, y, z); mx.compose(v, q, sc); mesh.setMatrixAt(i, mx); });
+  scene.add(mesh);
+}
+
 export function buildFlora(scene) {
   const all = [];
   scatter(scene, all);
   ringClearing(scene, all);
-  const tox = new THREE.Color('#ff5a1f'), ed = new THREE.Color('#2f7dff');
+  dew(scene, all);
 
   // Marca discreta en la base (se crea recién cuando conocés el hongo)
   function mark(m) {
@@ -124,7 +148,11 @@ export function buildFlora(scene) {
     halo.rotation.x = Math.PI / 2; halo.position.set(m.x, m.base + 0.2, m.z);
     halo.scale.setScalar(m.stemR(0.2) + 0.9);
     scene.add(halo); m.halo = halo; m.haloK = k;
-    const cap = m.mesh.children[1]; cap.material = cap.material.clone(); m.capMat = cap.material; // [tallo, sombrero, láminas, anillo]
+    const cap = m.mesh.children[1], base = cap.material;
+    m.tintK = uniform(0);
+    cap.material = base.clone();
+    cap.material.emissiveNode = base.userData.scatter.add(color(m.toxic ? '#ff5a1f' : '#2f7dff').mul(m.tintK)); // translucidez + tinte de lo que sabés
+    m.capMat = cap.material;
   }
 
   return {
@@ -153,8 +181,7 @@ export function buildFlora(scene) {
         const pulse = 0.85 + 0.15 * Math.sin(t * 2.4 + m.x);
         m.haloK.value = m.glow * pulse;
         m.halo.rotation.z = t * 0.4;
-        m.capMat.emissive = m.toxic ? tox : ed;
-        m.capMat.emissiveIntensity = m.glow * (0.06 + vision.value * 0.35) * pulse;
+        m.tintK.value = m.glow * (0.05 + vision.value * 0.4) * pulse;
       }
     }
   };
