@@ -1044,7 +1044,7 @@ function frame() {
     // Hambre: baja de a poco; más rápido si caminás o corrés
     const freeFly = beetle.flying && beetle.state.mode === 'air'; // volar libre cansa (el vuelo automático casi no)
     // (planear sin batir las alas cansa menos; subir, más)
-    game.energy -= dt * (0.35 + (moved > 0.001 && !freeFly ? 0.45 : 0) + (inp.run ? 1 : 0) + (freeFly ? (inp.up ? 1.6 : beetle.dive > 0.5 ? 0.4 : 0.7) : 0));
+    game.energy -= dt * 0.7 * (0.35 + (moved > 0.001 && !freeFly ? 0.45 : 0) + (inp.run ? 1 : 0) + (freeFly ? (inp.up ? 1.6 : beetle.dive > 0.5 ? 0.4 : 0.7) : 0)); // (×0,7: un poco más lento que antes)
     if (game.energy <= 0) {
       game.energy = 0; game.starving += dt;
       tip('starve', 'Sin energía, cada paso cuesta. Si no comés, no vas a aguantar.');
