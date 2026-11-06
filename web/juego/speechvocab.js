@@ -29,11 +29,11 @@ export function insightText(L) {
 }
 export const MISC = {
   near: 'Cerca:', landed: 'Aterrizaste sobre:', onCap: 'Estás arriba de un sombrero.', onStem: 'Estás trepando un tallo.',
-  nearOne: 'Hay un hongo sin explorar cerca:', nearMany: 'Los hongos sin explorar más cercanos:', flyHint: 'Con Espacio volás al más cercano.',
+  nearOne: 'Hay un hongo sin explorar cerca:', nearMany: 'Los hongos sin explorar más cercanos:', flyHint: 'Con G volás al más cercano.',
   noneNear: 'No quedan hongos sin explorar cerca.', poisoned: 'Estás envenenado.', bird: '¡Un pájaro! El hongo más cercano para esconderte está',
   keyChanged: 'Tecla cambiada.', pressKey: 'Apretá la nueva tecla.', test: 'Así suena la voz que describe el juego.',
-  audioOn: 'Modo audio activado. Espacio: volar a un hongo. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas.',
-  audioOnIntro: 'Modo audio activado. Espacio: volar a un hongo. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas. Apretá Enter para entrar al bosque.',
+  audioOn: 'Modo audio activado. G: volar a un hongo. Espacio: saltar. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas.',
+  audioOnIntro: 'Modo audio activado. G: volar a un hongo. Espacio: saltar. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas. Apretá Enter para entrar al bosque.',
   audioOff: 'Modo audio desactivado.', nearest: 'El más cercano:', arrived: 'Llegaste a un claro nuevo.',
   tox: 'Venenoso.', ed: 'Comestible.', ateEd: 'Era comestible: más energía.', ateTox: 'Era venenoso: perdiste una vida.',
   safe: 'A salvo.', hit: 'Te picoteó: menos energía.', faint: 'Te desmayaste.', wake: 'Despertaste. Tenés tres vidas.'

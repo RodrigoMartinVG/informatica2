@@ -65,8 +65,9 @@
         <li>Arrastrá el mouse para mirar · rueda para acercar</li>
         <li><kbd>E</kbd> Olfatear: te dice si es venenoso, pero cansa</li>
         <li><kbd>F</kbd> Comer: da energía… o te envenena (tenés 3 vidas)</li>
-        <li><kbd>Espacio</kbd> Volar al próximo hongo sin explorar</li>
-        <li>Empujá contra un tallo para treparlo; del borde del sombrero se salta</li>
+        <li><kbd>Espacio</kbd> Saltar · mantenelo para volar y subir · <kbd>X</kbd> bajar</li>
+        <li><kbd>G</kbd> Volar solo hasta un hongo sin explorar</li>
+        <li>Empujá contra un tallo, un árbol o un tronco caído para treparlo</li>
         <li><kbd>V</kbd> visión de antenas · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</li>
       </ul>
     </div>
@@ -103,14 +104,16 @@
     </aside>
     <p class="narr" id="narr" hidden aria-live="polite"></p>
     <p class="tip" id="tip" hidden aria-live="polite"></p>
-    <button class="flybtn" id="b-fly" hidden title="Volar al próximo hongo sin explorar (Espacio)"><span class="ico">✈</span><span>Volar al próximo hongo <kbd>Espacio</kbd><small>a uno sin explorar · casi no gasta energía</small></span></button>
+    <button class="flybtn" id="b-fly" hidden title="Volar al próximo hongo sin explorar (G)"><span class="ico">✈</span><span>Volar al próximo hongo <kbd>G</kbd><small>a uno sin explorar · casi no gasta energía</small></span></button>
     <p class="prompt" id="prompt" hidden></p>
     <div id="tags"></div>
     <div class="touch" id="touch" hidden>
       <div class="stick" id="stick"><span></span></div>
       <button class="act" id="act">Olfatear</button>
       <button class="act eat" id="act-eat">Comer</button>
-      <button class="act fly" id="act-fly">Volar</button>
+      <button class="act fly" id="act-fly">Ir a un hongo</button>
+      <button class="act jump" id="act-jump" aria-label="Saltar; mantener para volar">Saltar</button>
+      <button class="act down" id="act-down" aria-label="Bajar volando">Bajar</button>
     </div>
   </div>
 
@@ -155,7 +158,7 @@
       <h3>Teclas</h3>
       <p class="acc-help">Tocá una tecla para cambiarla. Caminar es siempre con W A S D o las flechas.</p>
       <ul class="acc-keys" id="acc-keys"></ul>
-      <p class="acc-help">Jugar sin ver, en cuatro teclas: <b>Espacio</b> volar a un hongo sin explorar · <b>E</b> olfatear · <b>F</b> comer · <b>Q</b> qué hay cerca · <b>R</b> tus vidas y energía.</p>
+      <p class="acc-help">Jugar sin ver, en cuatro teclas: <b>G</b> volar a un hongo sin explorar · <b>E</b> olfatear · <b>F</b> comer · <b>Q</b> qué hay cerca · <b>R</b> tus vidas y energía.</p>
     </div>
   </section>
   <p class="sr-only" id="sr-live" aria-live="assertive"></p>

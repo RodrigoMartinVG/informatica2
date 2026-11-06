@@ -3,13 +3,14 @@
 import * as THREE from 'three/webgpu';
 import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
-import { addTwig, addPebble, addLeaf } from './surfaces.js';
+import { addTwig, addPebble, addLeaf, addLog, addShelf } from './surfaces.js';
 import { SUN, backlight, sky, groundFog, nightU, duskU, sunDir as sunU } from './look.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
 const CX = (BOUNDS.maxX + BOUNDS.minX) / 2, CZ = (BOUNDS.maxZ + BOUNDS.minZ) / 2;
 
-export const obstacles = []; // círculos {x, z, r} que el escarabajo no puede atravesar
+export const obstacles = []; // círculos {x, z, r} que el escarabajo no puede atravesar (los árboles, además, se trepan: climb)
+export const logs = [];      // troncos caídos {x, z, cy, yaw, len, rad}: se caminan por arriba y les crecen hongos
 
 function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -203,7 +204,91 @@ function trunks(scene) {
     for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < -400) { const k = 1 + 0.35 * Math.max(0, Math.sin(Math.atan2(p.getZ(i), p.getX(i)) * 5)); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } }
     geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, mat); m.position.set(x, 440, z); m.rotation.y = r() * 6; m.castShadow = true; m.receiveShadow = true; scene.add(m);
-    obstacles.push({ x, z, r: R * 1.3 });
+    // Radio de la corteza a la altura h (el tronco se ensancha abajo, en las raíces)
+    const base = height(x, z);
+    const stemR = (h) => { const y = base + h + 10; return R * (1.25 - 0.4 * y / 900) * (1 + 0.1 * Math.max(0, 1 - y / 150)); };
+    obstacles.push({ x, z, r: R * 1.3, climb: { kind: 'trunk', x, z, base, stemR, climbTop: 40, Rw: 0, top: 0, capY: () => 0, shelves: [] } });
+  }
+  return bark;
+}
+
+/* ---------- Hongos repisa en los troncos: escalones para trepar y saltar ---------- */
+function shelves(scene) {
+  // Bandas concéntricas como las de Trametes (cola de pavo): marrones y ocres arriba, borde claro, poros cremas abajo
+  const tex = canvasTexture(8, 256, (g, w, h) => {
+    const bands = ['#d8c29a', '#8d6a48', '#c49a5c', '#7a5a3e', '#a8743e', '#6b4a32', '#8a5a32', '#5a3a22'];
+    g.fillStyle = '#e6d8b8'; g.fillRect(0, 0, w, 90);    // los poros de abajo
+    g.fillStyle = '#efe4c8'; g.fillRect(0, 90, w, 38);   // el borde
+    for (let i = 128; i < 256; i++) { g.fillStyle = bands[Math.floor((i - 128) / 16) % bands.length]; g.fillRect(0, i, w, 1); }
+  });
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.flipY = false;
+  // Perfil (de abajo al centro, hacia el borde y arriba): abajo plano, borde redondeado, arriba casi plano (radio 1; la altura en cm)
+  const pts = [];
+  for (let i = 6; i >= 1; i--) { const k = 1 - i / 6; pts.push(new THREE.Vector2(Math.max(0.001, 0.95 * k), -1.8 * (0.25 + 0.75 * (1 - 0.95 * k)))); }
+  pts.push(new THREE.Vector2(0.97, -0.4), new THREE.Vector2(1, -0.15));
+  for (let i = 8; i >= 0; i--) { const k = i / 8; pts.push(new THREE.Vector2(k * 0.98, 0.8 * (1 - k * k))); }
+  const geo = new THREE.LatheGeometry(pts, 24, 0, Math.PI);
+  const list = [], r = rng(211);
+  for (const o of obstacles) {
+    const c = o.climb; if (!c || o.x < BOUNDS.minX || o.x > BOUNDS.maxX || o.z < BOUNDS.minZ || o.z > BOUNDS.maxZ) continue;
+    // una escalera en espiral alrededor del tronco
+    let th = r() * Math.PI * 2;
+    for (let y = 4 + r() * 3; y < 36; y += 5 + r() * 3) {
+      const rad = 3.5 + r() * 3.5, R = c.stemR(y);
+      const cx = c.x + Math.cos(th) * (R - 0.4), cz = c.z + Math.sin(th) * (R - 0.4), cy = c.base + y;
+      addShelf(cx, cz, cy, Math.cos(th), Math.sin(th), rad, 1.8);
+      c.shelves.push({ th, y: cy, rad, arc: Math.min(1.1, (rad * 0.75) / R) });
+      list.push({ cx, cz, cy, th, rad });
+      th += 0.7 + r() * 0.9;
+    }
+  }
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.82 }), list.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3(), col = new THREE.Color();
+  list.forEach(({ cx, cz, cy, th, rad }, i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -th); // la media repisa (+x del torno) sale hacia afuera del tronco
+    s.set(rad, 1, rad); v.set(cx, cy, cz); m.compose(v, q, s); mesh.setMatrixAt(i, m);
+    mesh.setColorAt(i, col.setHSL(0.07 + r() * 0.04, 0.25 + r() * 0.25, 0.75 + r() * 0.2));
+  });
+  mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh);
+}
+
+/* ---------- Troncos caídos: puentes y paredes cubiertas de musgo, donde crecen hongos ---------- */
+function fallenLogs(scene, bark) {
+  const end = canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#b48a5a'; g.fillRect(0, 0, w, h);
+    for (let i = 14; i > 0; i--) { g.strokeStyle = i % 2 ? 'rgba(90,60,30,0.55)' : 'rgba(210,170,120,0.4)'; g.lineWidth = 4; g.beginPath(); g.arc(w / 2, h / 2, i * 8.5, 0, 7); g.stroke(); }
+    g.fillStyle = '#3b2a1a'; g.beginPath(); g.arc(w / 2, h / 2, 125, 0, 7); g.lineWidth = 10; g.strokeStyle = '#3b2a1a'; g.stroke();
+  });
+  const btex = bark.clone(); btex.repeat.set(5, 1); btex.needsUpdate = true;
+  const side = new THREE.MeshStandardMaterial({ map: btex, roughness: 0.95, color: '#c8bba8' });
+  const cap = new THREE.MeshStandardMaterial({ map: end, roughness: 0.9 });
+  const mossMat = new THREE.MeshStandardMaterial({ color: '#5e7a32', roughness: 1 });
+  const r = rng(307), spots = [];
+  // uno al borde de cada claro de nivel (a un costado, para no tapar la entrada) y algunos sueltos por el bosque
+  for (const c of [RING, ...SLEEPING]) { const a = r() * Math.PI * 2, d = c.r * 0.98 + 4; spots.push([c.x + Math.cos(a) * d, c.z + Math.sin(a) * d, a + Math.PI / 2]); }
+  let guard = 0;
+  while (spots.length < 16 && guard++ < 400) {
+    const x = BOUNDS.minX + 25 + r() * 340, z = BOUNDS.minZ + 25 + r() * 380;
+    if (inClearing(x, z, 1.35) || nearPath(x, z) < 10 || obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 40)) continue;
+    spots.push([x, z, r() * Math.PI]);
+  }
+  for (const [x, z, yaw] of spots) {
+    const len = 34 + r() * 30, rad = 2.4 + r() * 2;
+    const ax = Math.cos(yaw), az = -Math.sin(yaw);
+    if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + len / 2 + 2)) continue;
+    let gy = Infinity; for (let t = -0.5; t <= 0.5; t += 0.25) gy = Math.min(gy, height(x + ax * len * t, z + az * len * t));
+    const cy = gy + rad * 0.78; // un poco hundido en la tierra
+    const geo = new THREE.CylinderGeometry(rad * 0.94, rad, len, 20, 1); geo.rotateZ(Math.PI / 2);
+    const mesh = new THREE.Mesh(geo, [side, cap, cap]); mesh.position.set(x, cy, z); mesh.rotation.y = yaw; mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh);
+    // parches de musgo arriba
+    for (let i = 0; i < 5; i++) {
+      const t = (r() - 0.5) * len * 0.8, mr = 2 + r() * 3;
+      const mm = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), mossMat);
+      mm.scale.set(mr, 0.3, rad * 0.75); mm.position.set(x + ax * t, cy + rad * 0.86, z + az * t);
+      mm.rotation.y = yaw; mm.receiveShadow = true; scene.add(mm);
+    }
+    addLog(x, z, cy, yaw, len, rad);
+    logs.push({ x, z, cy, yaw, len, rad, ax, az });
   }
 }
 
@@ -305,7 +390,9 @@ export function buildWorld(scene, { quality = 'alta' } = {}) {
   moss(scene, hi ? 900 : 400);
   pebbles(scene, 140);
   twigs(scene, 55);
-  trunks(scene);
+  const bark = trunks(scene);
+  shelves(scene);
+  fallenLogs(scene, bark);
   atmosphere(scene, sunDir, hi ? 1600 : 600);
   const sleepers = sleepingClearings(scene);
 

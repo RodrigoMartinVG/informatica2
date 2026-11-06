@@ -9,13 +9,21 @@ import { MISC } from './speechvocab.js';
 const KEY = 'bajo-el-sombrero:acceso';
 
 export const ACTIONS = {
-  sniff: { label: 'Olfatear', def: 'KeyE' }, eat: { label: 'Comer', def: 'KeyF' }, fly: { label: 'Volar al próximo hongo', def: 'Space' },
+  sniff: { label: 'Olfatear', def: 'KeyE' }, eat: { label: 'Comer', def: 'KeyF' },
+  jump: { label: 'Saltar · mantener para volar y subir', def: 'Space' }, down: { label: 'Bajar volando', def: 'KeyX' },
+  autofly: { label: 'Volar al próximo hongo sin explorar', def: 'KeyG' },
   describe: { label: 'Describir alrededor', def: 'KeyQ' }, status: { label: 'Decir vidas y energía', def: 'KeyR' },
   book: { label: 'Cuaderno', def: 'KeyC' }, vision: { label: 'Visión de antenas (mantener)', def: 'KeyV' }, sound: { label: 'Sonido', def: 'KeyM' }
 };
 
 const cfg = { audio: false, big: false, rate: 1, keys: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])) };
-try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); cfg.keys = { ...Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])), ...(cfg.keys || {}) }; } catch { /* sin almacenamiento */ }
+try {
+  Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}'));
+  // solo las acciones que existen (versiones viejas tenían "fly" en Espacio); si una tecla quedó repetida, vuelve a la de fábrica
+  const saved = Object.fromEntries(Object.entries(cfg.keys || {}).filter(([k]) => ACTIONS[k]));
+  cfg.keys = Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def]));
+  for (const [k, code] of Object.entries(saved)) if (!Object.entries(cfg.keys).some(([o, c]) => o !== k && c === code)) cfg.keys[k] = code;
+} catch { /* sin almacenamiento */ }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch { /* nada */ } };
 
 export const settings = cfg;

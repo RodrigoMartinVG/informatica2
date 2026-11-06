@@ -118,7 +118,9 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .prompt .tox { color: var(--tox); font-weight: 600; } .prompt .ed { color: var(--ed); font-weight: 600; }
 
 .tag.bru { background: #3f5f9e; } .tag.neutral { background: #6b6152; }
-.act.fly { right: 40px; bottom: 160px; width: 72px; height: 72px; background: rgba(159,232,200,.2); }
+.act.fly { right: 40px; bottom: 160px; width: 72px; height: 72px; background: rgba(159,232,200,.2); font-size: 12px; }
+.act.jump { right: 124px; bottom: 132px; width: 72px; height: 72px; background: rgba(200,220,255,.22); }
+.act.down { right: 206px; bottom: 120px; width: 58px; height: 58px; background: rgba(200,220,255,.16); font-size: 12px; }
 .q-intro { display: inline-block; margin: 14px 8px 0 0; background: transparent; color: var(--ink-2); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 8px 16px; font-size: 14px; }
 .q-intro:hover { background: rgba(255,255,255,.08); }
 

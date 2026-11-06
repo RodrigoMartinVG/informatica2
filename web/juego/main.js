@@ -224,7 +224,7 @@ function followTarget(dt = 1) {
   const target = Math.max(1.1, cam.dist * hit - (hit < 1 ? 0.35 : 0));
   cam.arm += (target - cam.arm) * Math.min(1, dt * (target < cam.arm ? 14 : 2.5)); // se acerca rápido, se aleja lento
   want.copy(wantLook).addScaledVector(tv, cam.arm);
-  want.y = Math.max(want.y, walkHeight(want.x, want.z) + 0.25);
+  want.y = Math.max(want.y, walkHeight(want.x, want.z, Math.max(want.y, p.y) + 3) + 0.25);
 }
 
 function updateCamera(dt, t) {
@@ -247,11 +247,12 @@ function updateCamera(dt, t) {
 /* ---------- Controles: teclado, mouse y táctil ---------- */
 const keys = new Set();
 const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'KeyV'];
+const HELD = ['jump', 'down', 'vision']; // acciones que se mantienen apretadas
 addEventListener('keydown', (e) => {
   if (acc.open) return; // el panel de accesibilidad maneja sus propias teclas
   const act = A.actionFor(e.code);
   if (MOVE.includes(e.code) || act) e.preventDefault();
-  if (e.repeat && !MOVE.includes(e.code) && act !== 'vision') return;
+  if (e.repeat && !MOVE.includes(e.code) && !HELD.includes(act)) return;
   keys.add(e.code);
   // En la pantalla de inicio: A activa el modo audio, Enter entra al bosque
   if (state.phase === 'title') {
@@ -262,7 +263,8 @@ addEventListener('keydown', (e) => {
   if (state.phase === 'play') {
     if (act === 'sniff') sniff();
     if (act === 'eat') eat();
-    if (act === 'fly') fly();
+    if (act === 'jump' && !e.repeat) state.jumpQ = true;
+    if (act === 'autofly') fly();
     if (act === 'describe') describe();
     if (act === 'status') status();
   }
@@ -288,7 +290,7 @@ addEventListener('pointermove', (e) => {
 $('#c').addEventListener('wheel', (e) => { cam.dist = Math.min(16, Math.max(2.2, cam.dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: true });
 $('#c').addEventListener('contextmenu', (e) => e.preventDefault());
 
-const touch = { x: 0, y: 0 };
+const touch = { x: 0, y: 0, up: false, down: false };
 const coarse = matchMedia('(pointer: coarse)').matches;
 if (matchMedia('(pointer: coarse)').matches) {
   $('#touch').hidden = false;
@@ -305,15 +307,22 @@ if (matchMedia('(pointer: coarse)').matches) {
   $('#act').addEventListener('click', () => sniff());
   $('#act-eat').addEventListener('click', () => eat());
   $('#act-fly').addEventListener('click', () => fly());
+  // Saltar (un toque) o volar (mantener) · bajar volando
+  const hold = (el, on, off) => { el.addEventListener('pointerdown', (e) => { e.stopPropagation(); el.setPointerCapture(e.pointerId); on(); }); el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); };
+  hold($('#act-jump'), () => { state.jumpQ = true; touch.up = true; }, () => (touch.up = false));
+  hold($('#act-down'), () => (touch.down = true), () => (touch.down = false));
 }
 
 function input() {
   const k = (...c) => c.some((x) => keys.has(x));
-  if (state.phase !== 'play' || state.busy) return { fwd: 0, turn: 0, run: false };
+  const jump = state.jumpQ; state.jumpQ = false;
+  const canFly = game.energy > 1;
+  if (state.phase !== 'play' || state.busy) return { fwd: 0, turn: 0, run: false, jump: false, up: false, down: false, canFly };
   return {
     fwd: (k('KeyW', 'ArrowUp') ? 1 : 0) - (k('KeyS', 'ArrowDown') ? 1 : 0) - touch.y,
     turn: (k('KeyD', 'ArrowRight') ? 1 : 0) - (k('KeyA', 'ArrowLeft') ? 1 : 0) + touch.x,
-    run: (k('ShiftLeft', 'ShiftRight') || Math.hypot(touch.x, touch.y) > 0.95) && game.energy > 5
+    run: (k('ShiftLeft', 'ShiftRight') || Math.hypot(touch.x, touch.y) > 0.95) && game.energy > 5,
+    jump, up: keys.has(A.keyFor('jump')) || !!touch.up, down: keys.has(A.keyFor('down')) || !!touch.down, canFly
   };
 }
 
@@ -401,7 +410,7 @@ async function toggleAudioMode() {
   await window.__enableAudio();
   acc.setAudio(!A.settings.audio);
   const on = A.settings.audio, tipEl = $('.sr-tip');
-  tipEl.innerHTML = on ? '<b>🔊 Modo audio activado.</b> Espacio: volar a un hongo · E: olfatear · F: comer · Q: qué hay cerca · R: tus vidas. Apretá <b>Enter</b> para entrar.' : 'Modo audio desactivado. Para activarlo, apretá la tecla A.';
+  tipEl.innerHTML = on ? '<b>🔊 Modo audio activado.</b> G: volar a un hongo · Espacio: saltar · E: olfatear · F: comer · Q: qué hay cerca · R: tus vidas. Apretá <b>Enter</b> para entrar.' : 'Modo audio desactivado. Para activarlo, apretá la tecla A.';
   tipEl.classList.toggle('on', on);
   A.speak(on ? SV.MISC.audioOnIntro : SV.MISC.audioOff, { interrupt: true, force: true });
 }
@@ -733,7 +742,7 @@ function flyTarget() {
     || nearestOf(flora.all.filter((s) => !s.known));
 }
 function fly() {
-  if (state.phase !== 'play' || state.busy || beetle.flying || beetle.state.mode === 'transit') return;
+  if (state.phase !== 'play' || state.busy || beetle.state.mode === 'transit') return;
   if (game.energy < FLY_COST) { tip('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
   const target = flyTarget();
   if (!target) { tip('flynone', 'Ya exploraste todos los hongos que hay cerca.', { repeat: true }); return; }
@@ -766,7 +775,8 @@ function frame() {
   if (state.phase === 'play') {
     const moved = prev.distanceTo(beetle.pos);
     // Hambre: baja de a poco; más rápido si caminás o corrés
-    game.energy -= dt * (0.35 + (moved > 0.001 ? 0.45 : 0) + (inp.run ? 1 : 0));
+    const freeFly = beetle.flying && beetle.state.mode === 'air'; // volar libre cansa (el vuelo automático casi no)
+    game.energy -= dt * (0.35 + (moved > 0.001 && !freeFly ? 0.45 : 0) + (inp.run ? 1 : 0) + (freeFly ? 1.3 : 0));
     if (game.energy <= 0) {
       game.energy = 0; game.starving += dt;
       tip('starve', 'Sin energía, cada paso cuesta. Si no comés, no vas a aguantar.');
@@ -787,17 +797,26 @@ function frame() {
     if (ev === 'trepa') { S.climb(); tip('c1', 'Los tallos se trepan. Seguí subiendo hasta el sombrero.'); }
     if (ev === 'arriba') S.climb();
     if (ev === 'llegó:cap') tip('c2', 'Desde acá arriba se ve todo el claro. Arrastrá el mouse hacia abajo para mirar el bosque desde lo alto.');
-    if (ev === 'saltó') { S.jump(); tip('c3', 'Del borde del sombrero se salta al suelo.'); }
+    if (ev === 'saltó') S.jump();
+    if (ev === 'cae') tip('c3', 'Del borde se cae… sobre lo que haya abajo: el suelo, una rama u otro sombrero.');
+    if (ev === 'cayó:cap' || ev === 'cayó:ground') S.land();
+    if (ev === 'cayó:cap') { tip('fall1', 'Caíste sobre otro sombrero. Desde acá podés olfatearlo o comerlo.'); if (beetle.on) A.speak([SV.MISC.landed, ...mushParts(beetle.on)]); }
+    if (ev === 'despegó') { S.fly(); tip('free1', 'Volando: mantené Espacio para subir, X para bajar, W A S D para ir. Sin tocar nada, planeás y bajás despacio. Volar libre cansa.'); }
+    if (ev === 'sin-fuerzas') tip('flyweak', 'Sin energía no podés volar: comé algo.', { repeat: true });
+    if (ev === 'agarró') { S.climb(); tip('grab1', 'Te agarraste. Para soltarte, saltá (Espacio).'); }
+    if (ev === 'trepa-tronco') { S.climb(); tip('tree1', 'Un árbol entero para trepar. Las repisas de hongos son escalones: pasá por una y te subís.'); }
+    if (ev === 'repisa') { S.land(); tip('shelf1', 'Un hongo repisa: crece en la madera de los árboles. Desde acá podés saltar a otra.'); }
+    if (ev === 'aterrizó:ground') S.land();
     if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak(mushParts(beetle.on)); }
 
     // Magulladura: al tocar un tallo se descubre si se mancha
     if (beetle.touching) touchCheck(beetle.touching);
-    if (beetle.mode === 'ground' && walkHeight(beetle.pos.x, beetle.pos.z) > height(beetle.pos.x, beetle.pos.z) + 0.6) tip('twig', 'Las ramas no son paredes: para un escarabajo, son puentes.');
+    if (beetle.mode === 'ground' && beetle.state.fy > height(beetle.pos.x, beetle.pos.z) + 0.6 && beetle.state.fy < height(beetle.pos.x, beetle.pos.z) + 4) tip('twig', 'Las ramas no son paredes: para un escarabajo, son puentes.');
 
     // ¿Hay un hongo al alcance?
     beetle.heading(H);
     const head = beetle.pos.clone().addScaledVector(H, 0.7);
-    if (!state.busy) state.near = flora.nearest(head, beetle.mode === 'ground' ? null : beetle.on);
+    if (!state.busy) state.near = beetle.airborne || beetle.onTrunk ? null : flora.nearest(head, beetle.mode === 'ground' ? null : beetle.on);
     if (state.near !== state.lastNear) {
       state.lastNear = state.near;
     }
@@ -811,7 +830,8 @@ function frame() {
       pr.hidden = false;
       if (beetle.mode === 'ground') tip('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
     } else if (beetle.state.mode !== 'transit') {
-      pr.innerHTML = '<kbd>Espacio</kbd> Volar al próximo hongo sin explorar';
+      pr.innerHTML = beetle.airborne ? '<kbd>Espacio</kbd> Subir · <kbd>X</kbd> Bajar · <kbd>G</kbd> Ir a un hongo sin explorar'
+        : '<kbd>Espacio</kbd> Saltar (mantené para volar) · <kbd>G</kbd> Volar a un hongo sin explorar';
       pr.hidden = false;
     } else pr.hidden = true;
 
@@ -821,7 +841,7 @@ function frame() {
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
         if (L.night) S.setMood('dark');
-        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); tip('flyhint', 'Si no querés caminar, apretá Espacio (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
+        if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); tip('flyhint', 'Si no querés caminar, apretá G (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
     }
     for (const s of SLEEPING) {

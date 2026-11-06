@@ -130,6 +130,8 @@ export function heartbeat() { if (!go()) return; const t = now(); thump.triggerA
 // Trepar y saltar
 export function climb() { if (!go()) return; const t = now(); [0, 1, 2].forEach((k) => pluck.triggerAttackRelease(n5(k, 4), '32n', t + k * 0.07, 0.35)); }
 export function jump() { if (!go()) return; const t = now(); [3, 1, 0].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + i * 0.08, 0.35)); }
+// Aterrizar o caer: un golpecito grave y un rebote corto
+export function land() { if (!go()) return; const t = now(); step.triggerAttackRelease(140, 0.03, t, 0.8); pluck.triggerAttackRelease(n5(0, 4), '32n', t + 0.05, 0.25); }
 // Narración: una nota suave cuando aparece un mensaje
 export function whisper() { if (go()) lead.triggerAttackRelease(n5(Math.floor(Math.random() * 5), 5), '8n', now(), 0.18); }
 // Volar: zumbido de alas (notas rápidas) y un arpegio que sube
