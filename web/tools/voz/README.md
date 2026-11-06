@@ -26,4 +26,4 @@ python3 web/tools/voz/grabar_server.py      # desde la raíz del repo
 # abrir http://localhost:8770/web/promo2/grabar.html
 ```
 
-La página muestra cada frase del guion (`web/promo2/guion.json`) con cómo decirla y qué se ve en ese momento. Cada toma se limpia sola (recorta silencios, empareja el volumen) y, al usarla, se guarda como `web/promo2/voz/<frase>.m4a` y se actualiza `duraciones.json`: los tiempos del tráiler se acomodan solos a tu voz. Las frases que todavía no grabaste suenan con la voz sintética (Kokoro, `kokoro_tts.py`), que queda como respaldo en `voz/sintetica/` (no se sube).
+La página muestra cada frase del guion (`web/promo2/guion.json`) con cómo decirla y qué se ve en ese momento. Cada toma se limpia sola (recorta silencios, empareja el volumen) y, al usarla, se guarda como `web/promo2/voz/<frase>.m4a` y se actualiza `duraciones.json`: los tiempos del tráiler se acomodan solos a tu voz. Las frases que todavía no grabaste suenan con la voz rioplatense sintética (Piper, `tts.py`), que queda como respaldo en `voz/sintetica/` (no se sube).
