@@ -270,7 +270,8 @@ const tip = (id, text, opts) => { const shown = V.tip(id, text, opts); if (shown
 const objective = (txt) => { const el = $('#objective'); el.textContent = txt; gsap.fromTo(el, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.6 }); };
 
 /* ---------- Cámara: órbita libre + brazo con resorte ---------- */
-const cam = { yaw: 0, pitch: 0.36, dist: 5.6, arm: 5.6, mode: 'title' };
+const cam = { yaw: 0, pitch: 0.36, dist: 5.6, arm: 5.6, mode: 'title', lead: new THREE.Vector3(), dragT: 0 };
+const AHEAD = new THREE.Vector3();
 const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), want = new THREE.Vector3(), wantLook = new THREE.Vector3();
 const shot = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
 const H = new THREE.Vector3(), tv = new THREE.Vector3();
@@ -297,10 +298,24 @@ function armHit(a, b) {
 
 function followTarget(dt = 1) {
   const p = beetle.pos, mode = beetle.mode;
+  // Si giraste la cámara con el mouse, a los pocos segundos vuelve sola atrás del escarabajo
+  if (!drag && performance.now() - cam.dragT > 2500) { cam.yaw = Math.atan2(Math.sin(cam.yaw), Math.cos(cam.yaw)); cam.yaw *= Math.exp(-dt * 1.4); }
+  // La cámara mira hacia adelante, a donde mira el escarabajo (no solo a su espalda)
   let az, el = cam.pitch;
-  if (mode === 'stem') { const n = beetle.up; az = Math.atan2(n.x, n.z) + cam.yaw; el = cam.pitch - 0.15; }
-  else { beetle.heading(H); az = Math.atan2(-H.x, -H.z) + cam.yaw; }
-  wantLook.set(p.x, p.y + 0.45, p.z);
+  if (mode === 'stem' && !beetle.airborne) {
+    // trepando: un poco más abajo, mirando hacia arriba por el tallo, hacia el sombrero
+    const n = beetle.up; az = Math.atan2(n.x, n.z) + cam.yaw; el = cam.pitch - 0.34;
+    beetle.forward(AHEAD).multiplyScalar(2.2);
+  } else {
+    beetle.heading(H); az = Math.atan2(-H.x, -H.z) + cam.yaw;
+    // también mira para arriba o para abajo, según hacia dónde apunta el escarabajo (una pendiente, la curva de un sombrero)
+    beetle.forward(AHEAD); const tilt = Math.asin(Math.max(-1, Math.min(1, AHEAD.y)));
+    el = Math.max(-0.3, Math.min(1.4, el - tilt * 0.6));
+    if (mode === 'cap' && !beetle.airborne) { AHEAD.multiplyScalar(2.4); AHEAD.y -= 0.9; el += 0.12; } // arriba de un sombrero: hacia el borde y un poco abajo, para ver dónde saltar
+    else AHEAD.multiplyScalar(beetle.airborne ? 2.2 : 1.4);
+  }
+  cam.lead.lerp(AHEAD, 1 - Math.exp(-dt * 3)); // (suave, para que no dé tirones al girar)
+  wantLook.set(p.x, p.y + 0.45, p.z).add(cam.lead);
   tv.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
   want.copy(wantLook).addScaledVector(tv, cam.dist);
   const hit = armHit(wantLook, want);
@@ -371,7 +386,7 @@ $('#c').addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.cli
 addEventListener('pointerup', (e) => { if (drag && drag.id === e.pointerId) drag = null; });
 addEventListener('pointermove', (e) => {
   if (!drag || drag.id !== e.pointerId) return;
-  cam.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
+  cam.yaw = drag.yaw - (e.clientX - drag.x) * 0.006; cam.dragT = performance.now();
   cam.pitch = Math.max(-0.35, Math.min(1.35, drag.pitch + (e.clientY - drag.y) * 0.005));
 });
 $('#c').addEventListener('wheel', (e) => { cam.dist = Math.min(16, Math.max(2.2, cam.dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: true });
