@@ -185,17 +185,31 @@ export function resetCache() {
   for (const t of texCache.values()) t.dispose(); texCache.clear();
   for (const m of matCache.values()) for (const x of Object.values(m)) x.dispose?.(); matCache.clear();
 }
-function materials(look, id, colorName) {
-  const key = `${id}|${colorName}`;
+// Podredumbre: la misma textura, más apagada, con manchas oscuras y moho blanco (rot 1: pasado · 2: muerto)
+function rotTex(base, rot, key) {
+  return canvasTex(`${key}|rot${rot}`, base.image.width, base.image.height, (g, w, h) => {
+    const r = rng(key.length * 13 + rot);
+    g.drawImage(base.image, 0, 0);
+    g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${rot === 1 ? 0.55 : 0.9})`; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = rot === 1 ? '#b8a48a' : '#6a5a4a'; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < (rot === 1 ? 40 : 90); i++) { const x = r() * w, y = r() * h, s = (6 + r() * 26) * (w / 512); g.fillStyle = `rgba(${30 + r() * 20},${22 + r() * 12},${14},${0.35 + r() * 0.4})`; g.beginPath(); g.ellipse(x, y, s, s * (0.5 + r() * 0.6), r() * 3, 0, 7); g.fill(); }
+    for (let i = 0; i < (rot === 1 ? 300 : 1400); i++) { const x = r() * w, y = r() * h; g.fillStyle = `rgba(240,238,228,${0.25 + r() * 0.45})`; g.beginPath(); g.arc(x, y, (0.6 + r() * 1.8) * (w / 512), 0, 7); g.fill(); } // moho
+  });
+}
+function materials(look, id, colorName, rot = 0) {
+  const key = `${id}|${colorName}|${rot}`;
   if (matCache.has(key)) return matCache.get(key);
-  const capBase = new THREE.MeshStandardMaterial({ map: capTexture(look, id, colorName), roughness: look.gloss, side: THREE.DoubleSide });
-  const underBase = new THREE.MeshStandardMaterial({ map: underTexture(look, id), roughness: 0.92, side: THREE.DoubleSide });
-  const stem = new THREE.MeshStandardMaterial({ map: stemTexture(look, id), roughness: 0.85 });
+  const R = (t, k) => (rot ? rotTex(t, rot, k) : t);
+  const capBase = new THREE.MeshStandardMaterial({ map: R(capTexture(look, id, colorName), `cap|${id}|${colorName}`), roughness: rot ? 0.95 : look.gloss, side: THREE.DoubleSide });
+  const underBase = new THREE.MeshStandardMaterial({ map: R(underTexture(look, id), `under|${id}`), roughness: 0.95, side: THREE.DoubleSide });
+  const stem = new THREE.MeshStandardMaterial({ map: R(stemTexture(look, id), `stem|${id}`), roughness: 0.92 });
   const out = {
     cap: translucent(capBase, '#ffb470', 1.1), under: translucent(underBase, '#ffc58a', 0.9), stem,
-    plate: translucent(new THREE.MeshStandardMaterial({ color: new THREE.Color(look.gill), roughness: 0.95, side: THREE.DoubleSide }), '#ffc58a', 0.9),
-    white: new THREE.MeshStandardMaterial({ color: look.warts || '#f2ede2', roughness: 0.9, flatShading: true }),
-    volva: new THREE.MeshStandardMaterial({ color: '#efeadb', roughness: 0.95, side: THREE.DoubleSide })
+    plate: translucent(new THREE.MeshStandardMaterial({ color: new THREE.Color(look.gill).lerp(new THREE.Color('#3a2c20'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide }), '#ffc58a', 0.9),
+    mold: new THREE.MeshStandardMaterial({ color: '#f1efe6', roughness: 1, flatShading: true }),
+    white: new THREE.MeshStandardMaterial({ color: new THREE.Color(look.warts || '#f2ede2').lerp(new THREE.Color('#6a5a48'), rot * 0.3), roughness: 0.9, flatShading: true }),
+    volva: new THREE.MeshStandardMaterial({ color: new THREE.Color('#efeadb').lerp(new THREE.Color('#5a4a3a'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide })
   };
   matCache.set(key, out); return out;
 }
@@ -212,7 +226,8 @@ function lerpTable(tab, x) {
 // group.children: [tallo, sombrero, abajo del sombrero, …detalles]
 // what: el nombre de una especie (LOOKS) o un aspecto armado en el taller (mismos campos)
 // Cada hongo además tiene su propia edad (joven, maduro o viejo) e imperfecciones: no hay dos iguales.
-export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null, perfect = false } = {}) {
+// rot: 0 sano · 1 pasado (se está pudriendo) · 2 muerto (podrido)
+export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null, perfect = false, rot = 0 } = {}) {
   const look = typeof what === 'string' ? LOOKS[what] : what;
   const id = typeof what === 'string' ? what : 'u' + hashStr(JSON.stringify(what));
   let shape = look.shapes.includes(row.shape) ? SHAPE_ID[row.shape] : SHAPE_ID[look.shapes[0]];
@@ -220,7 +235,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   if (look.puff) shape = 'esferica';
   if (id === 'conica' && shape !== 'conica') shape = 'campana';
   const r = rng((seed * 2654435761) % 2147483629 + 1); r(); r(); // semilla mezclada: con semillas chicas, los primeros números salen casi en cero
-  const age = forceAge ?? (look.puff ? 0.5 : r());
+  const age = rot ? 1 : forceAge ?? (look.puff ? 0.5 : r());
   const colorName = look.colors.includes(row.color) ? row.color : look.colors[0];
   // Medidas reales (acotadas para que el juego siga siendo jugable)
   // (algunas especies tienen proporciones propias: la parasol es alta y de tallo fino; la mycena, un hilo)
@@ -228,7 +243,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const H = Math.min(19, look.hmax ? Math.max(1, D * look.hmax) : Infinity, Math.max(1.5, row.h, look.hr ? D * look.hr : 0)) * (perfect ? 1 : 0.88 + age * 0.2);
   const Wmm = Math.min(D * 10 * 0.5, look.wr ? D * look.wr : Infinity, Math.max(2, row.w, look.wmin ? D * look.wmin : 0));
   const p = profile({ id: shape, cap: D, alto: H, grosor: Wmm, ring: false }); // en mm
-  const mats = materials(look, id, colorName);
+  const mats = materials(look, id, colorName, rot);
   const k = 0.1;
   const g = new THREE.Group();
 
@@ -238,6 +253,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
     let f = 1;
     if (look.bulb) f *= 1 + (look.bulb - 1) * Math.exp(-(((u - 0.06) / (look.club ? 0.32 : 0.12)) ** 2));
     if (look.taper) f *= look.taper + (1 - look.taper) * u;
+    if (rot) f *= 1 - 0.18 * rot * Math.sin(Math.PI * u); // marchito: más fino en el medio
     return [sr * f * k, sy * k];
   });
   const stemR = stemPts.map(([sr, sy]) => [sy, sr]);
@@ -249,7 +265,11 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const ageK = perfect || look.funnel || shape === 'conica' ? 1 : 1.25 - 0.5 * age;
   const hk = (look.thick || 1) * (look.stretch || 1) * ageK;
   const topPts = p.capTop.map(([cr, cy]) => [cr * k, (capBase + (cy - capBase) * hk) * k]);
-  if (!perfect && age > 0.75 && !look.funnel) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, q[0] / R0 - 0.75) * (age - 0.75) * R0 * 0.5; }
+  if (!perfect && age > 0.75 && !look.funnel && !rot) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, q[0] / R0 - 0.75) * (age - 0.75) * R0 * 0.5; }
+  if (rot) { // pasado: se aplana y el borde se cae; muerto: se hunde
+    const R0 = topPts[topPts.length - 1][0], base = capBase * k;
+    for (const q of topPts) { q[1] = base + (q[1] - base) * (1 - 0.3 * rot); q[1] -= Math.max(0, q[0] / R0 - 0.5) * R0 * 0.22 * rot; }
+  }
   if (look.umbo) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, 1 - q[0] / (R0 * 0.22)) * R0 * 0.07; }
   const underPts = p.capUnder.map(([cr, cy]) => [cr * k, cy * k]);
   const capGeo = new THREE.LatheGeometry(topPts.map(V2), segs);
@@ -292,7 +312,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
     const pts = look.ring === 'skirt' ? [[sr * 0.98, 0.15], [sr * 1.5, 0.02], [sr * 2.0, -0.35], [sr * 2.15, -0.75], [sr * 2.05, -0.85]]
       : look.ring === 'collar' ? [[sr * 0.98, 0.25], [sr * 1.9, 0.2], [sr * 2.0, 0], [sr * 1.9, -0.2], [sr * 0.98, -0.25]]
         : [[sr * 0.98, 0.06], [sr * 1.35, -0.02], [sr * 1.45, -0.14]];
-    const ringMat = look.ringColor ? new THREE.MeshStandardMaterial({ color: look.ringColor, roughness: 0.9, side: THREE.DoubleSide }) : look.ring === 'collar' ? mats.under : mats.volva;
+    const ringMat = look.ringColor ? new THREE.MeshStandardMaterial({ color: new THREE.Color(look.ringColor).lerp(new THREE.Color('#3a2c20'), rot * 0.3), roughness: 0.9, side: THREE.DoubleSide }) : look.ring === 'collar' ? mats.under : mats.volva;
     const ring = new THREE.Mesh(new THREE.LatheGeometry(pts.map(V2), segs), ringMat);
     ring.position.y = y; g.add(ring);
   }
@@ -318,12 +338,20 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
     const w = new THREE.Mesh(mergeGeometries(bumps), mats.white); g.add(w);
   }
 
+  // Moho blanco sobre el sombrero de los que se pudren
+  if (rot) {
+    const fuzz = [], n = rot === 1 ? 10 : 34;
+    for (let i = 0; i < n; i++) { const rr = Math.sqrt(r()) * maxR * 0.85, th = r() * Math.PI * 2, sz = (0.06 + r() * 0.12) * Math.max(1, D / 6); const b = new THREE.IcosahedronGeometry(sz, 0); b.scale(1, 0.45, 1); b.translate(Math.cos(th) * rr, lerpTable(top, rr) + sz * 0.15, Math.sin(th) * rr); fuzz.push(b); }
+    g.add(new THREE.Mesh(mergeGeometries(fuzz), mats.mold));
+  }
+
   // Imperfecciones: sombrero un poco desparejo, a veces una mordida (de babosa) y, de viejo, el borde roto
   const flaws = []; // lo que se le nota a este ejemplar (se muestra en la ficha)
   if (!perfect) {
     const R0 = maxR, a1 = 0.03 + r() * 0.05, a2 = r() * 0.04, p1 = r() * 6, p2 = r() * 6;
     const bites = [];
-    if (r() < 0.3) { bites.push({ at: r() * Math.PI * 2, w: 0.3 + r() * 0.3, d: 0.15 + r() * 0.15 }); flaws.push('mordida'); }
+    if (r() < 0.3 || rot) { bites.push({ at: r() * Math.PI * 2, w: 0.3 + r() * 0.3, d: 0.15 + r() * 0.15 + rot * 0.08 }); if (!rot) flaws.push('mordida'); }
+    if (rot === 2) for (let i = 0; i < 3; i++) bites.push({ at: r() * Math.PI * 2, w: 0.15 + r() * 0.2, d: 0.2 + r() * 0.15 });
     if (age > 0.8) { for (let i = 0; i < 3; i++) bites.push({ at: r() * Math.PI * 2, w: 0.08 + r() * 0.08, d: 0.06 + r() * 0.05 }); flaws.push('borde roto'); }
     if (a1 + a2 > 0.08) flaws.push('desparejo');
     const sr0 = lerpTable(stemR, H * 0.9) * 1.1;
@@ -340,14 +368,14 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
       }
       pos.needsUpdate = true; o.geometry.computeVertexNormals();
     }
-    g.rotation.z = (r() - 0.5) * (look.tilt || 0.08); g.rotation.x = (r() - 0.5) * (look.tilt ? look.tilt * 0.5 : 0.06);
+    g.rotation.z = (r() - 0.5) * (look.tilt || 0.08) + (rot ? (r() < 0.5 ? -1 : 1) * 0.12 * rot : 0); g.rotation.x = (r() - 0.5) * (look.tilt ? look.tilt * 0.5 : 0.06);
     if (!look.tilt && Math.hypot(g.rotation.x, g.rotation.z) > 0.03) flaws.push('torcido');
   }
 
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const under0 = p.capUnder[p.capUnder.length - 1][1] * k;
   return {
-    group: g, colorName, shape, D, H, W: Wmm, age, flaws,
+    group: g, colorName, shape, D, H, W: Wmm, age, flaws, rot,
     climb: {
       stemR: (h) => lerpTable(stemR, h), capY: (rr) => lerpTable(top, rr), Rw: maxR,
       climbTop: Math.min(under0, H) - 0.2, top: Math.max(...top.map((t) => t[1]))

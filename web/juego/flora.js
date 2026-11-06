@@ -16,14 +16,14 @@ const BRUISE = new THREE.Color('#4f6fae'); // el azul de la magulladura
 
 let yawSeed = rng(5), buildSeed = 1;
 // species: especie (foto) · look: aspecto 3D (casi siempre la misma especie) · row: fila del Excel · base: altura donde crece
-function plant(scene, list, { x, z, species, look = species, row, toxic, base = height(x, z) - 0.05, quality }) {
-  const b = buildMushroom(look, row, buildSeed++, { segs: quality === 'alta' ? 48 : 32 });
+function plant(scene, list, { x, z, species, look = species, row, toxic, base = height(x, z) - 0.05, quality, rot = 0 }) {
+  const b = buildMushroom(look, row, buildSeed++, { segs: quality === 'alta' ? 48 : 32, rot });
   const mesh = b.group;
   mesh.position.set(x, base, z); mesh.rotation.y = yawSeed() * 6;
   scene.add(mesh);
   const m = {
     mesh, x, z, base, toxic, species, row, colorName: b.colorName, look: typeof look === 'string' ? LOOKS[look] : look,
-    age: b.age, flaws: b.flaws, level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
+    age: b.age, flaws: b.flaws, rot: b.rot, level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
     ...b.climb
   };
   list.push(m);
@@ -33,6 +33,9 @@ function plant(scene, list, { x, z, species, look = species, row, toxic, base = 
 // Especies reales para los hongos sueltos del bosque
 const DECOR = { tox: ['phalloides', 'muscaria', 'conica', 'russula'], ed: ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba', 'suillus', 'coprinus', 'lactarius', 'lycoperdon'] };
 const pickDecor = (toxic, r = Math.random) => { const p = DECOR[toxic ? 'tox' : 'ed']; return p[Math.floor(r() * p.length)]; };
+
+// Algunos hongos ya están pasados o muertos (podridos): ~1 de cada 6
+const rotFor = (r) => { const v = r(); return v < 0.07 ? 2 : v < 0.17 ? 1 : 0; };
 
 /* ---------- Hongos dispersos por el bosque (también se pueden comer) ---------- */
 function scatter(scene, list, quality) {
@@ -54,7 +57,7 @@ function scatter(scene, list, quality) {
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 4)) continue; // no adentro de un tronco
       if (logs.some((l) => Math.abs((x - l.x) * l.az - (z - l.z) * l.ax) < l.rad + 3 && Math.abs((x - l.x) * l.ax + (z - l.z) * l.az) < l.len / 2 + 3)) continue;
       placed.push([x, z]);
-      plant(scene, list, { x, z, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality });
+      plant(scene, list, { x, z, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality, rot: rotFor(r) });
     }
     n++;
   }
@@ -69,7 +72,7 @@ function scatter(scene, list, quality) {
         const t = t0 + (r() - 0.5) * 6, side = (r() - 0.5) * 1.2; // cerca de la línea de arriba del tronco
         const x = l.x + l.ax * t - l.az * side, z = l.z + l.az * t + l.ax * side;
         const base = l.cy + Math.sqrt(Math.max(0, l.rad * l.rad - side * side)) - 0.1;
-        const m = plant(scene, list, { x, z, base, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality });
+        const m = plant(scene, list, { x, z, base, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality, rot: rotFor(r) });
         m.wood = true;
       }
     }
@@ -117,6 +120,13 @@ function levelClearing(scene, list, L, seed, quality) {
     m.level = L.id; m.trait = L.trait; m.yes = yes;
     m.traitKnown = L.trait !== 'bruise' && L.trait !== 'twin'; // la mancha hay que provocarla; los gemelos, olfatearlos
   });
+  // En el borde del claro, unos pocos ya podridos: no cuentan para el mito (no cambian las proporciones de los datos)
+  for (let i = 0; i < 3; i++) {
+    const a = r() * Math.PI * 2, d = L.spread + 5 + r() * 6, x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
+    if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 4)) continue;
+    const toxic = r() < 0.5, pool = L.photos[r() < 0.5 ? 'yes' : 'no'][toxic ? 'tox' : 'ed'], species = pool[Math.floor(r() * pool.length)];
+    plant(scene, list, { x, z, species, look: L.trait === 'twin' ? 'gemelo' : species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality, rot: 1 + (i % 2) });
+  }
 }
 
 // Rocío: gotitas sobre los sombreros que destellan con el sol

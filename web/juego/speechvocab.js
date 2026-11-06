@@ -8,7 +8,7 @@ export const MUSH = {
   colorYes: 'Hongo de color llamativo,', colorNo: 'Hongo de color común,', sizeYes: 'Hongo chico,', sizeNo: 'Hongo grande,',
   stemYes: 'Hongo de tallo grueso,', stemNo: 'Hongo de tallo fino,', twin: 'Hongo idéntico a los demás,'
 };
-export const STATE = { unknown: 'sin explorar.', tox: 'venenoso.', ed: 'comestible.', eaten: 'Ya comido.' };
+export const STATE = { unknown: 'sin explorar.', tox: 'venenoso.', ed: 'comestible.', rot: 'Pero está podrido.', eaten: 'Ya comido.' };
 export const DIRS = ['adelante,', 'adelante a la derecha,', 'a la derecha,', 'atrás a la derecha,', 'atrás,', 'adelante a la izquierda,', 'a la izquierda,', 'atrás a la izquierda,'];
 const DIST_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 150];
 export const distPhrase = (n) => (n === 1 ? 'a un centímetro.' : `a ${n} centímetros.`);
@@ -38,6 +38,7 @@ export const MISC = {
   tox: 'Venenoso.', ed: 'Comestible.', ateEd: 'Era comestible: más energía.', ateTox: 'Era venenoso: perdiste una vida.',
   shelfSniff: 'Un hongo repisa: Trametes versicolor, la «cola de pavo». Crece sobre la madera de los árboles y no es venenoso… pero es duro como un cuero.',
   shelfEat: 'Lo mordiste, pero es duro como la madera: no se puede comer. Los hongos repisa sirven de escalón, no de comida.',
+  rot: 'Podrido. No se come.', ateRot: 'Estaba podrido: perdiste energía.',
   safe: 'A salvo.', hit: 'Te picoteó: menos energía.', faint: 'Te desmayaste.', wake: 'Despertaste. Tenés tres vidas.'
 };
 

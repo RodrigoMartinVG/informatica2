@@ -315,7 +315,7 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .ficha-e p + p { margin-top: 4px; }
 .ficha-e b { color: var(--ink); font-weight: 600; }
 .ficha.noimg { grid-template-columns: 1fr; }
-.xl { margin-top: 16px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 10px; }
+.xl { margin: 0 0 16px; border: 1px solid rgba(159,232,200,.35); border-radius: 10px; padding: 8px 12px; background: rgba(159,232,200,.06); }
 .xl summary { cursor: pointer; font: 600 12px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 .xl-k { font: 400 12px/1.4 var(--sans); color: var(--ink-3); margin: 6px 0; }
 .xl-w { overflow-x: auto; }

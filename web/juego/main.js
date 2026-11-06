@@ -372,10 +372,10 @@ let fichaT = 0, fichaM = null;
 const FLAWS = { mordida: 'con una mordida de babosa', 'borde roto': 'con el borde roto', desparejo: 'de sombrero desparejo', torcido: 'un poco torcido' };
 const dec = (v) => String(v).replace('.', ',');
 function specimen(m) {
-  const age = m.age < 0.33 ? 'Joven' : m.age < 0.75 ? 'Maduro' : 'Viejo';
-  const ageNote = m.age < 0.33 ? 'sombrero todavía cerrado' : m.age < 0.75 ? 'sombrero abierto' : 'sombrero aplanado';
+  const age = m.rot === 2 ? 'Muerto' : m.rot === 1 ? 'Pasado' : m.age < 0.33 ? 'Joven' : m.age < 0.75 ? 'Maduro' : 'Viejo';
+  const ageNote = m.rot === 2 ? 'podrido, con moho: no se come' : m.rot === 1 ? 'se está pudriendo: no se come' : m.age < 0.33 ? 'sombrero todavía cerrado' : m.age < 0.75 ? 'sombrero abierto' : 'sombrero aplanado';
   const extra = [...(m.flaws || []).map((f) => FLAWS[f]), m.eaten ? 'mordido por vos' : ''].filter(Boolean);
-  return `<p><b>Este ejemplar:</b> ${age} (${ageNote})${extra.length ? ', ' + extra.join(', ') : ', sin defectos'}.</p>
+  return `<p><b>Este ejemplar:</b> <span class="${m.rot ? 'tox' : ''}">${age} (${ageNote})</span>${m.rot ? '' : extra.length ? ', ' + extra.join(', ') : ', sin defectos'}.</p>
     <p><b>Su fila del Excel:</b> sombrero de ${dec(m.row.d)} cm · tallo de ${dec(m.row.h)} cm de alto y ${dec(m.row.w)} mm de ancho · ${m.row.shape.toLowerCase()} · ${m.row.color.toLowerCase()}.</p>`;
 }
 function closeFicha() {
@@ -451,7 +451,7 @@ function mushParts(m) {
   const trait = !L ? M.decor : L.trait === 'ring' ? (m.yes ? M.ringYes : M.ringNo) : L.trait === 'bruise' ? (!m.traitKnown ? M.bruiseUnknown : m.yes ? M.bruiseYes : M.bruiseNo)
     : L.trait === 'color' ? (m.yes ? M.colorYes : M.colorNo) : L.trait === 'size' ? (m.yes ? M.sizeYes : M.sizeNo)
     : L.trait === 'stem' ? (m.yes ? M.stemYes : M.stemNo) : M.twin;
-  return [trait, m.known ? (m.toxic ? SV.STATE.tox : SV.STATE.ed) : SV.STATE.unknown, m.eaten ? SV.STATE.eaten : null];
+  return [trait, m.known ? (m.toxic ? SV.STATE.tox : SV.STATE.ed) : SV.STATE.unknown, m.known && m.rot ? SV.STATE.rot : null, m.eaten ? SV.STATE.eaten : null];
 }
 // Dirección y distancia como fragmentos («adelante a la izquierda,» «a 14 centímetros.»)
 function whereParts(to) { beetle.heading(H); const r = A.direction(beetle.pos, H, to); return [`${r.where},`, SV.distPhrase(SV.distStep(r.d))]; }
@@ -518,14 +518,15 @@ function sniff() {
   if (state.phase === 'play' && !state.busy && onShelf()) return shelfAct('sniff');
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
-  if (m.known) { tip('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
+  if (m.known) { tip('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : m.rot ? 'Ese ya lo conocés: está podrido.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
   decide(m);
   touchCheck(m); // para olfatearlo hay que tocarlo
   state.busy = true; S.sniff(); game.energy -= 6; game.sniffs++; drawStatus();
   gsap.timeline({ onUpdate: () => beetle.setSniff(anim.v), onComplete: () => (state.busy = false) })
     .to(anim, { v: 1, duration: 0.35, ease: 'power2.out' })
     .add(() => {
-      flora.reveal(m); S.found(m.toxic); showPhoto(m); A.speak(m.toxic ? SV.MISC.tox : SV.MISC.ed); tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
+      flora.reveal(m); S.found(m.toxic || !!m.rot); showPhoto(m); A.speak(m.rot && !m.toxic ? SV.MISC.rot : m.toxic ? SV.MISC.tox : SV.MISC.ed); tag(m, m.rot && !m.toxic ? 'Podrido' : m.toxic ? 'Venenoso' : 'Comestible', m.toxic || m.rot ? 'tox' : 'ed');
+      if (m.rot) tip('rot0', 'Este hongo ya está pasado: aunque sea de los que se comen, podrido hace mal.'); tally(); checkInsight(levelOf(m));
       if (!tip('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
         tip('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
     }, 0.75)
@@ -551,9 +552,16 @@ function eat() {
       bits.emit(mouth, [m.look.cap[m.colorName]?.[1] || '#c8a070', m.look.cap[m.colorName]?.[0] || '#a07050', '#f3ead8'], 22);
       if (m.toxic) bits.emit(mouth, ['#9b5bd6', '#c58cff', '#6b3aa6'], 16, 0.6);
       flora.eat(m); showPhoto(m); game.eats.push({ level: m.level, yes: m.yes, trait: m.traitKnown, blind, toxic: m.toxic });
-      tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
-      if (m.toxic) poisoned(blind); else fed();
+      tag(m, m.rot && !m.toxic ? 'Podrido' : m.toxic ? 'Venenoso' : 'Comestible', m.toxic || m.rot ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));
+      if (m.toxic) poisoned(blind); else if (m.rot) rotten(); else fed();
     }, 1.2);
+}
+// Comer uno podrido: aunque la especie se coma, hace mal (bacterias y mohos). No quita vidas, pero sí energía, y marea.
+function rotten() {
+  game.energy = Math.max(0, game.energy - 20); game.poison = Math.max(game.poison, 0.55); drawStatus(); S.poison(true); S.hurt();
+  floatText('−20 energía', 'loss'); A.speak(SV.MISC.ateRot);
+  gsap.fromTo(hurtU, { value: 0.7 }, { value: 0, duration: 1 });
+  tip('rot1' + Date.now(), 'Estaba podrido. Aunque la especie se coma, un hongo pasado hace mal: lo descomponen bacterias y mohos.', { repeat: true });
 }
 function fed() {
   const before = game.energy; game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
@@ -701,7 +709,7 @@ function report(L) {
       ${L.nums ? '' : `<div class="rep-chart">${bars([...L.research, cap1(L.yes), cap1(L.no)])}</div>`}
       <p class="small">${L.small}</p>
       ${me ? `<div class="mine"><p class="eyebrow">Tu partida</p>${me}</div>` : ''}`,
-    side: `<p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p><div class="gallery">${gallery(L)}</div>${excelTable(L)}`
+    side: `${excelTable(L)}<p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p><div class="gallery">${gallery(L)}</div>`
   };
 }
 function showInsight(L) {
@@ -891,7 +899,7 @@ function frame() {
       const L = m.level ? levelOf(m) : null;
       const what = !L ? '' : L.trait === 'ring' ? (m.yes ? ' · tiene anillo' : ' · sin anillo')
         : !m.traitKnown ? ' · empujalo para ver si se mancha' : (m.yes ? ' · se mancha' : ' · no se mancha');
-      const sn = m.known ? (m.toxic ? '<span class="tox">venenoso</span>' : '<span class="ed">comestible</span>') + ' · <kbd>I</kbd> Ficha' : '<kbd>E</kbd> Olfatear';
+      const sn = m.known ? (m.toxic ? '<span class="tox">venenoso</span>' : m.rot ? '<span class="tox">podrido</span>' : '<span class="ed">comestible</span>') + (m.rot && m.toxic ? ' · <span class="tox">podrido</span>' : '') + ' · <kbd>I</kbd> Ficha' : '<kbd>E</kbd> Olfatear';
       pr.innerHTML = `${sn} · ${m.eaten ? 'ya comido' : '<kbd>F</kbd> Comer'}${what}`;
       pr.hidden = false;
       if (beetle.mode === 'ground') tip('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');

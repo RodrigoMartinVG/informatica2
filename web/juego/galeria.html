@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Galería de hongos</title>
-  <!-- Herramienta de prueba: todas las especies del juego en fila, con medidas reales del Excel. ?giro anima la cámara -->
+  <!-- Herramienta de prueba: todas las especies del juego en fila, con medidas reales del Excel. ?giro anima la cámara · ?podrido=1 (pasados) o 2 (muertos) -->
   <script type="importmap">{ "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
     "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
@@ -42,7 +42,7 @@
     let x = 0; const placed = [];
     for (const id of ids) {
       const look = LOOKS[id], row = pickRow(r, look, { tox: !['campestris', 'procera', 'cantharellus', 'edulis', 'pulverulentus', 'gibba'].includes(id) });
-      const b = buildMushroom(id, row, 7); x += b.climb.Rw + 2;
+      const b = buildMushroom(id, row, 7, { rot: +(p.get('podrido') || 0) }); x += b.climb.Rw + 2;
       b.group.position.x = x; scene.add(b.group); placed.push({ id, x, b, row }); x += b.climb.Rw + 2;
     }
     for (const q of placed) q.b.group.position.x -= x / 2;
