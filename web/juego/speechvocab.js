@@ -36,6 +36,8 @@ export const MISC = {
   audioOnIntro: 'Modo audio activado. G: volar a un hongo. Espacio: saltar. E: olfatear. F: comer. Q: qué hay cerca. R: tus vidas. Apretá Enter para entrar al bosque.',
   audioOff: 'Modo audio desactivado.', nearest: 'El más cercano:', arrived: 'Llegaste a un claro nuevo.',
   tox: 'Venenoso.', ed: 'Comestible.', ateEd: 'Era comestible: más energía.', ateTox: 'Era venenoso: perdiste una vida.',
+  shelfSniff: 'Un hongo repisa: Trametes versicolor, la «cola de pavo». Crece sobre la madera de los árboles y no es venenoso… pero es duro como un cuero.',
+  shelfEat: 'Lo mordiste, pero es duro como la madera: no se puede comer. Los hongos repisa sirven de escalón, no de comida.',
   safe: 'A salvo.', hit: 'Te picoteó: menos energía.', faint: 'Te desmayaste.', wake: 'Despertaste. Tenés tres vidas.'
 };
 

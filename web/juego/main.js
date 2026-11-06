@@ -7,7 +7,7 @@ import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { buildWorld, sporeTrail, environment, obstacles } from './world.js';
 import { createBeetle } from './beetle.js';
 import { buildFlora, vision } from './flora.js';
-import { walkHeight } from './surfaces.js';
+import { walkHeight, shelfAt } from './surfaces.js';
 import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL } from './config.js';
 import * as S from './audio.js';
 import * as V from './narrator.js';
@@ -472,7 +472,20 @@ function decide(m) {
 
 /* ---------- Olfatear: dice la verdad, pero cansa ---------- */
 const anim = { v: 0 };
+// Hongos repisa de los árboles (Trametes versicolor, «cola de pavo»): no son venenosos, pero son duros como la madera
+function onShelf() { return beetle.mode === 'ground' && !beetle.airborne ? shelfAt(beetle.pos.x, beetle.pos.z, beetle.state.fy) : null; }
+function shelfAct(kind) {
+  state.busy = true;
+  const a = { v: 0 }, set = kind === 'sniff' ? (v) => beetle.setSniff(v) : (v) => beetle.setChew(v);
+  if (kind === 'sniff') { S.sniff(); game.energy -= 3; } else S.chew();
+  drawStatus();
+  gsap.timeline({ onUpdate: () => set(a.v), onComplete: () => (state.busy = false) }).to(a, { v: 1, duration: 0.35 }).to(a, { v: 1, duration: kind === 'sniff' ? 0.6 : 0.9 }).to(a, { v: 0, duration: 0.3 });
+  const text = kind === 'sniff' ? SV.MISC.shelfSniff : SV.MISC.shelfEat;
+  tip('shelf-' + kind + Date.now(), text, { repeat: true }); A.speak(text);
+}
+
 function sniff() {
+  if (state.phase === 'play' && !state.busy && onShelf()) return shelfAct('sniff');
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
   if (m.known) { tip('known', m.toxic ? 'Ese ya lo conocés: es venenoso.' : 'Ese ya lo conocés: es comestible.', { repeat: true }); return; }
@@ -492,6 +505,7 @@ function sniff() {
 /* ---------- Comer: alimenta… o envenena ---------- */
 const chewA = { v: 0 };
 function eat() {
+  if (state.phase === 'play' && !state.busy && onShelf()) return shelfAct('eat');
   const m = state.near;
   if (state.phase !== 'play' || state.busy || !m) return;
   if (m.eaten) { tip('eaten', 'De ese ya comiste. Buscá otro.', { repeat: true }); return; }
@@ -830,6 +844,9 @@ function frame() {
       pr.innerHTML = `${sn} · ${m.eaten ? 'ya comido' : '<kbd>F</kbd> Comer'}${what}`;
       pr.hidden = false;
       if (beetle.mode === 'ground') tip('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
+    } else if (onShelf() && !state.busy) {
+      pr.innerHTML = 'Hongo repisa · <kbd>E</kbd> Olfatear · <kbd>F</kbd> Morder';
+      pr.hidden = false;
     } else if (beetle.state.mode !== 'transit') {
       pr.innerHTML = beetle.airborne ? '<kbd>Espacio</kbd> Subir · <kbd>X</kbd> Bajar · <kbd>G</kbd> Ir a un hongo sin explorar'
         : '<kbd>Espacio</kbd> Saltar (mantené para volar) · <kbd>G</kbd> Volar a un hongo sin explorar';

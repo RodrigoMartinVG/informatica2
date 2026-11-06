@@ -35,13 +35,18 @@ const pickDecor = (toxic, r = Math.random) => { const p = DECOR[toxic ? 'tox' : 
 
 /* ---------- Hongos dispersos por el bosque (también se pueden comer) ---------- */
 function scatter(scene, list, quality) {
-  const r = rng(97);
+  const r = rng(97), centers = [];
   let n = 0;
   while (n < 40) {
     const cx = BOUNDS.minX + 20 + r() * 350, cz = BOUNDS.minZ + 20 + r() * 400;
     if (inClearing(cx, cz, 1.3) || Math.hypot(cx, cz - 18) < 25) continue;
-    // un grupito de la misma especie, como crecen de verdad
-    const toxic = r() < R.stats.toxicos, species = pickDecor(toxic, r), k = 1 + Math.floor(r() * 4), placed = [];
+    // un grupito chico de la misma especie, como crecen de verdad; el grupo vecino casi siempre es del otro tipo
+    let near = null, nd = Infinity;
+    for (const c of centers) { const d = Math.hypot(c.x - cx, c.z - cz); if (d < nd) { nd = d; near = c; } }
+    const toxic = near && nd < 70 ? (r() < 0.75 ? !near.toxic : near.toxic) : r() < R.stats.toxicos;
+    let species = pickDecor(toxic, r); if (near && near.species === species) species = pickDecor(toxic, r);
+    centers.push({ x: cx, z: cz, toxic, species });
+    const k = 1 + Math.floor(r() * 2), placed = [];
     for (let i = 0; i < k; i++) {
       const x = cx + (r() - 0.5) * 14, z = cz + (r() - 0.5) * 14;
       if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 6)) continue;
@@ -53,10 +58,11 @@ function scatter(scene, list, quality) {
     n++;
   }
   // Sobre los troncos caídos crecen los de la madera: Galerina (mortal) y Mycena, en racimos
-  for (const l of logs) {
-    const groups = 2 + Math.floor(r() * 2);
+  for (const [li, l] of logs.entries()) {
+    if (li % 2) continue; // en la mitad de los troncos (son todos de los que no se comen)
+    const groups = 1 + Math.floor(r() * 2);
     for (let gi = 0; gi < groups; gi++) {
-      const species = r() < 0.5 ? 'galerina' : 'mycena', t0 = (r() - 0.5) * l.len * 0.7, k = 3 + Math.floor(r() * 3);
+      const species = (gi + Math.floor(r() * 2)) % 2 ? 'galerina' : 'mycena', t0 = (gi ? 0.25 : -0.25) * l.len + (r() - 0.5) * l.len * 0.3, k = 2 + Math.floor(r() * 3);
       for (let i = 0; i < k; i++) {
         const t = t0 + (r() - 0.5) * 6, side = (r() - 0.5) * 1.2; // cerca de la línea de arriba del tronco
         const x = l.x + l.ax * t - l.az * side, z = l.z + l.az * t + l.ax * side;
@@ -72,22 +78,37 @@ function scatter(scene, list, quality) {
 // Proporciones de la investigación (ver LEVELS en config.js), con los hongos entremezclados
 function levelClearing(scene, list, L, seed, quality) {
   const r = rng(seed), n = L.nYes + L.nNo, pts = [], c = L.at;
-  const gap = L.trait === 'size' ? 9 : 7;
-  let guard = 0;
-  while (pts.length < n && guard++ < 8000) {
+  // separados lo más posible, pero tienen que entrar todos (las proporciones del claro son las de los datos)
+  let gap = L.trait === 'size' ? 9 : 7, guard = 0;
+  while (pts.length < n) {
+    if (++guard % 3000 === 0) gap *= 0.92;
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * L.spread;
     const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
     if (pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > gap)) pts.push([x, z]);
   }
-  // Mezclar: qué lugar le toca a cada grupo
-  const groups = Array.from({ length: pts.length }, (_, i) => i < L.nYes);
-  for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
-  const pick = (count, tox) => { const s = new Set(); while (s.size < tox) s.add(Math.floor(r() * count)); return s; };
-  const toxYes = pick(L.nYes, L.toxYes), toxNo = pick(L.nNo, L.toxNo);
-  let iy = 0, ino = 0;
+  // Quiénes crecen en el claro: cada grupo con su cantidad de venenosos (proporciones de los datos),
+  // y las especies de cada grupo y toxicidad repartidas parejo (no siempre la primera de la lista)
+  const items = [], used = {};
+  for (const yes of [true, false]) {
+    const n = yes ? L.nYes : L.nNo, tox = yes ? L.toxYes : L.toxNo;
+    for (let k = 0; k < n; k++) {
+      const toxic = k < tox, key = `${yes}|${toxic}`, pool = L.photos[yes ? 'yes' : 'no'][toxic ? 'tox' : 'ed'];
+      used[key] = (used[key] ?? Math.floor(r() * pool.length)) + 1;
+      items.push({ yes, toxic, species: pool[used[key] % pool.length] });
+    }
+  }
+  // Dónde crece cada uno: mezclados de verdad. Se reparte al azar y después se intercambian lugares
+  // mientras baje la "rareza": vecinos de la misma especie, o todos venenosos (o todos comestibles) juntos.
+  const near = pts.map((p, i) => pts.map((q, j) => (i !== j && Math.hypot(p[0] - q[0], p[1] - q[1]) < gap * 2.2 ? j : -1)).filter((j) => j >= 0));
+  const at = items.map((_, i) => i); for (let i = at.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [at[i], at[j]] = [at[j], at[i]]; }
+  const cost = (i) => { const a = items[at[i]]; let c = 0; for (const j of near[i] || []) { const b = items[at[j]]; c += (a.species === b.species ? 2 : 0) + (a.toxic === b.toxic ? 1 : 0) + (a.yes === b.yes ? 0.4 : 0); } return c; };
+  for (let it = 0; it < 4000; it++) {
+    const i = Math.floor(r() * at.length), j = Math.floor(r() * at.length); if (i === j) continue;
+    const before = cost(i) + cost(j); [at[i], at[j]] = [at[j], at[i]];
+    if (cost(i) + cost(j) > before) [at[i], at[j]] = [at[j], at[i]];
+  }
   pts.forEach(([x, z], i) => {
-    const yes = groups[i], k = yes ? iy++ : ino++, toxic = yes ? toxYes.has(k) : toxNo.has(k);
-    const pool = L.photos[yes ? 'yes' : 'no'][toxic ? 'tox' : 'ed'], species = pool[k % pool.length];
+    const { yes, toxic, species } = items[at[i]];
     const look = L.trait === 'twin' ? 'gemelo' : species; // los gemelos se ven iguales
     const row = pickRow(r, LOOKS[look], { tox: toxic, trait: L.trait, yes });
     const m = plant(scene, list, { x, z, species, look, row, toxic, quality });

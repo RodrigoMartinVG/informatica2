@@ -83,6 +83,14 @@ export function wallTop(x, z, y) {
   return top;
 }
 
+// ¿Está parado sobre un hongo repisa? Devuelve la repisa o null
+export function shelfAt(x, z, y) {
+  const list = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (!list) return null;
+  for (const s of list) { if (s.type !== 3) continue; const sp = span(s, x, z); if (sp && Math.abs(sp[1] - y) < 0.4) return s; }
+  return null;
+}
+
 // Normal de la superficie (diferencias centrales)
 export function walkNormal(x, z, out, maxY = Infinity, e = 0.3) {
   const hx = walkHeight(x + e, z, maxY) - walkHeight(x - e, z, maxY), hz = walkHeight(x, z + e, maxY) - walkHeight(x, z - e, maxY);
