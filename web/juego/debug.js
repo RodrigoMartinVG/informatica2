@@ -13,9 +13,11 @@ export function run(c) {
   if (p.has('sobre')) { const m = flora.specimens[+p.get('sobre')]; Object.assign(beetle.state, { mode: 'cap', m, x: m.x + m.Rw * 0.3, z: m.z, yaw: Math.PI / 2 }); }
   if (p.has('veneno')) setInterval(() => (game.poison = 0.9), 30);
   if (p.has('pitch')) cam.pitch = +p.get('pitch');
-  if (p.has('sobre') || p.has('pitch')) { for (let i = 0; i < 40; i++) beetle.update(0.02, { fwd: 0, turn: 0, run: false }); c.snapCamera(); }
+  if (p.has('dist')) cam.dist = +p.get('dist');
+  if (p.has('giro')) cam.yaw = +p.get('giro');
+  if (p.has('sobre') || p.has('pitch') || p.has('dist')) { for (let i = 0; i < 40; i++) beetle.update(0.02, { fwd: 0, turn: 0, run: false }); c.snapCamera(); }
   if (p.has('mancha')) flora.specimens.filter((s) => s.level === 'magulladura').forEach((s) => { flora.touch(s); s.bruise = 1; if (s.stemMat) s.stemMat.color.lerp(new THREE.Color('#4f6fae'), 0.75); });
-  if (p.has('alas')) Object.assign(beetle.state, { fly: 1 });
+  if (p.has('alas')) { Object.assign(beetle.state, { fly: 1, flying: true }); setInterval(() => (beetle.state.flying = true), 30); } // alas abiertas (para mirar el vuelo de cerca)
   if (p.has('noche')) world.setNight(1);
   if (p.has('hora')) world.setTime(+p.get('hora'));
   if (p.has('pajaro')) { state.entered.add('anillo'); c.birdNow(); }

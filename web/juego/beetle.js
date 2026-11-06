@@ -26,63 +26,109 @@ export function createBeetle(scene) {
   const root = new THREE.Group(); // posición + orientación sobre la superficie
   const body = new THREE.Group(); root.add(body);
 
-  const shell = new THREE.MeshPhysicalMaterial({
-    color: '#2d6a3e', metalness: 0.7, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08,
-    iridescence: 1, iridescenceIOR: 1.7, iridescenceThicknessRange: [250, 800]
+  // Texturas dibujadas por código: surcos de los élitros (relieve) y nervaduras de las alas
+  const canvasTex = (w, h, draw, srgb = false) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  };
+  // Los surcos (estrías) corren de adelante hacia atrás, paralelos al borde; entre surco y surco, puntitos
+  const striae = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#9a9a9a'; g.fillRect(0, 0, w, h);
+    for (let i = 1; i < 10; i++) { const y = (i / 10) * h; g.fillStyle = '#4a4a4a'; g.fillRect(0, y - 2, w, 3); g.fillStyle = '#c4c4c4'; g.fillRect(0, y + 1, w, 2); }
+    for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(40,40,40,.6)'; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 1, 0, 7); g.fill(); }
   });
-  const dark = new THREE.MeshStandardMaterial({ color: '#15110c', roughness: 0.45, metalness: 0.2 });
-  const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#050505', roughness: 0.05, clearcoat: 1 });
+  const pits = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#9a9a9a'; g.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(50,50,50,.55)'; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 1.2, 0, 7); g.fill(); } });
+  const veins = canvasTex(256, 128, (g, w, h) => {
+    g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(210,225,235,0.55)'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(60,40,25,0.85)'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, h * 0.18); g.quadraticCurveTo(w * 0.5, h * 0.05, w, h * 0.3); g.stroke();  // borde de ataque
+    g.lineWidth = 1.6; for (const k of [0.35, 0.55, 0.75]) { g.beginPath(); g.moveTo(0, h * 0.2); g.quadraticCurveTo(w * 0.45, h * k, w * 0.95, h * (k + 0.1)); g.stroke(); }
+    g.lineWidth = 1; for (let i = 1; i < 6; i++) { const x = (i / 6) * w; g.beginPath(); g.moveTo(x, h * 0.15); g.lineTo(x + 10, h * 0.9); g.stroke(); }
+    g.fillStyle = 'rgba(60,40,25,0.7)'; g.beginPath(); g.ellipse(w * 0.62, h * 0.18, 9, 4, 0, 0, 7); g.fill(); // la mancha del ala (estigma)
+  }, true);
+
+  // Caparazón verde metálico iridiscente (como los escarabajos joya)
+  const shellOpts = { color: '#2d6a3e', metalness: 0.7, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.06, iridescence: 1, iridescenceIOR: 1.7, iridescenceThicknessRange: [250, 800] };
+  const shellE = new THREE.MeshPhysicalMaterial({ ...shellOpts, bumpMap: striae, bumpScale: 1.2 });
+  const shell = new THREE.MeshPhysicalMaterial({ ...shellOpts, bumpMap: pits, bumpScale: 0.6 });
+  const inner = new THREE.MeshStandardMaterial({ color: '#3a2a16', roughness: 0.6, side: THREE.BackSide }); // el lado de adentro del élitro
+  const dark = new THREE.MeshPhysicalMaterial({ color: '#16130e', roughness: 0.35, metalness: 0.35, clearcoat: 0.6 });
+  const legMat = new THREE.MeshPhysicalMaterial({ color: '#1d2a1c', roughness: 0.3, metalness: 0.5, clearcoat: 0.7 });
+  const belly = new THREE.MeshPhysicalMaterial({ color: '#2a1f14', roughness: 0.4, metalness: 0.3, clearcoat: 0.5 });
+  const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0a08', roughness: 0.05, clearcoat: 1, iridescence: 0.5 });
   const add = (geo, mat, [x, y, z], [sx, sy, sz] = [1, 1, 1], parent = body) => {
     const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz);
     m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
   };
   const sph = new THREE.SphereGeometry(1, 40, 28);
-  const dome = new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2);
-  // Élitros: dos mitades que se abren para volar, con las alas membranosas debajo
+
+  // Abdomen: arriba (se ve cuando se abren los élitros) y abajo, en segmentos
+  add(sph, belly, [0, -0.01, -0.14], [0.3, 0.12, 0.5]);
+  for (let i = 0; i < 4; i++) { const z = 0.1 - i * 0.16, k = Math.sqrt(Math.max(0.05, 1 - ((z + 0.14) / 0.5) ** 2)); const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.06, 5, 32, Math.PI), belly); r.position.set(0, -0.01, z); r.scale.set(0.3 * k, 0.12 * k, 0.5); body.add(r); } // los segmentos (arcos sobre el abdomen)
+  for (let i = 0; i < 4; i++) add(sph, belly, [0, -0.07, 0.12 - i * 0.2], [0.36 - i * 0.05, 0.08, 0.14]);
+
+  // Élitros: las dos alas duras. Cada una es una cáscara con espesor (por fuera verde, por dentro marrón),
+  // con bisagra adelante: para volar se levantan y se abren en V.
   const elytra = [-1, 1].map((side) => {
-    const pivot = new THREE.Group(); pivot.position.set(0, -0.03, 0.46); body.add(pivot);
-    const geo = new THREE.SphereGeometry(1, 24, 20, side > 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI, 0, Math.PI / 2);
-    const m = new THREE.Mesh(geo, shell); m.position.set(0, 0, -0.58); m.scale.set(0.43, 0.3, 0.62); m.castShadow = true; pivot.add(m);
+    const pivot = new THREE.Group(); pivot.position.set(side * 0.015, 0.0, 0.4); pivot.rotation.order = 'YXZ'; body.add(pivot);
+    const geo = new THREE.SphereGeometry(1, 28, 22, side > 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI, 0, Math.PI / 2);
+    // la textura se mapea por la distancia a la unión (x): así los surcos corren de adelante hacia atrás
+    { const pos = geo.attributes.position, uv = geo.attributes.uv; for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getZ(i) * 0.5 + 0.5, Math.abs(pos.getX(i))); }
+    const out = new THREE.Mesh(geo, shellE); out.position.set(0, 0, -0.56); out.scale.set(0.42, 0.3, 0.64); out.castShadow = true; pivot.add(out);
+    const ins = new THREE.Mesh(geo, inner); ins.position.copy(out.position); ins.scale.set(0.4, 0.28, 0.62); pivot.add(ins);
     return { pivot, side };
   });
-  const wingMat = new THREE.MeshPhysicalMaterial({ color: '#d7e3ea', roughness: 0.15, transparent: true, opacity: 0.4, side: THREE.DoubleSide, iridescence: 0.6, depthWrite: false });
-  const wingGeo = new THREE.PlaneGeometry(1.05, 0.34); wingGeo.rotateX(-Math.PI / 2); wingGeo.translate(0.52, 0, -0.05);
+  // Escutelo: el triangulito entre los élitros
+  const scut = new THREE.ConeGeometry(0.07, 0.16, 3); scut.rotateX(-Math.PI / 2);
+  add(scut, shell, [0, 0.28, 0.38], [1, 0.25, 1]);
+
+  // Alas membranosas: plegadas debajo de los élitros; al volar se despliegan y baten en forma de ocho
+  const wingShape = new THREE.Shape();
+  wingShape.moveTo(0, 0.06); wingShape.bezierCurveTo(0.35, 0.16, 0.9, 0.2, 1.22, 0.04);
+  wingShape.bezierCurveTo(1.3, -0.08, 1.05, -0.22, 0.7, -0.24); wingShape.bezierCurveTo(0.35, -0.24, 0.1, -0.12, 0, -0.04);
+  const wingGeo = new THREE.ShapeGeometry(wingShape, 16); wingGeo.rotateX(-Math.PI / 2);
+  { const uv = wingGeo.attributes.uv, pos = wingGeo.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 1.3, 0.5 - pos.getZ(i) * 1.8); }
+  const wingMat = new THREE.MeshPhysicalMaterial({ map: veins, color: '#e6eef2', roughness: 0.2, transparent: true, opacity: 0.75, side: THREE.DoubleSide, iridescence: 0.8, iridescenceIOR: 1.3, depthWrite: false });
   const wings = [-1, 1].map((side) => {
-    const pivot = new THREE.Group(); pivot.position.set(side * 0.1, 0.12, 0.3); body.add(pivot);
+    const pivot = new THREE.Group(); pivot.position.set(side * 0.1, 0.16, 0.22); pivot.rotation.order = 'YXZ'; body.add(pivot);
     const w = new THREE.Mesh(wingGeo, wingMat); w.scale.x = side; pivot.add(w); pivot.visible = false;
     return { pivot, side };
   });
-  add(sph, dark, [0, -0.05, -0.1], [0.4, 0.1, 0.6]);                       // vientre
-  add(sph, shell, [0, 0.02, 0.47], [0.31, 0.17, 0.22]);                    // pronoto
-  const head = new THREE.Group(); head.position.set(0, 0, 0.68); body.add(head);
-  add(sph, dark, [0, 0, 0.04], [0.17, 0.12, 0.15], head);
-  add(sph, eyeMat, [0.12, 0.03, 0.08], [0.05, 0.05, 0.05], head);
-  add(sph, eyeMat, [-0.12, 0.03, 0.08], [0.05, 0.05, 0.05], head);
-  const mand = new THREE.ConeGeometry(0.035, 0.16, 8); mand.rotateX(Math.PI / 2);
-  const mandL = add(mand, dark, [0.06, -0.04, 0.2], [1, 1, 1], head), mandR = add(mand, dark, [-0.06, -0.04, 0.2], [1, 1, 1], head);
 
-  const seg = new THREE.CylinderGeometry(0.012, 0.014, 1, 6); seg.translate(0, 0.5, 0);
+  // Pronoto: el escudo de adelante, ancho
+  add(sph, shell, [0, 0.03, 0.5], [0.34, 0.17, 0.22]);
+
+  // Cabeza: placa frontal (clípeo), ojos compuestos, mandíbulas y antenas en abanico
+  const head = new THREE.Group(); head.position.set(0, 0, 0.7); body.add(head);
+  add(sph, dark, [0, 0, 0.03], [0.17, 0.11, 0.14], head);
+  add(sph, shell, [0, 0.04, 0.12], [0.13, 0.04, 0.08], head);              // clípeo
+  add(sph, eyeMat, [0.135, 0.02, 0.05], [0.055, 0.06, 0.065], head);
+  add(sph, eyeMat, [-0.135, 0.02, 0.05], [0.055, 0.06, 0.065], head);
+  const mand = new THREE.ConeGeometry(0.03, 0.15, 8); mand.rotateX(Math.PI / 2);
+  const mandL = add(mand, dark, [0.055, -0.04, 0.19], [1, 1, 1], head), mandR = add(mand, dark, [-0.055, -0.04, 0.19], [1, 1, 1], head);
+
+  const seg = new THREE.CylinderGeometry(0.011, 0.014, 1, 6); seg.translate(0, 0.5, 0);
   const antennae = [-1, 1].map((side) => {
-    const base = new THREE.Group(); base.position.set(side * 0.08, 0.07, 0.12); head.add(base);
-    const a = new THREE.Mesh(seg, dark); a.scale.set(1, 0.22, 1); base.add(a);
-    const mid = new THREE.Group(); mid.position.y = 0.22; base.add(mid);
-    const b = new THREE.Mesh(seg, dark); b.scale.set(1, 0.24, 1); mid.add(b);
-    const club = new THREE.Mesh(sph, dark); club.scale.set(0.03, 0.06, 0.03); club.position.y = 0.26; mid.add(club);
+    const base = new THREE.Group(); base.position.set(side * 0.09, 0.05, 0.12); head.add(base);
+    const a = new THREE.Mesh(seg, legMat); a.scale.set(1, 0.18, 1); base.add(a);
+    const mid = new THREE.Group(); mid.position.y = 0.18; base.add(mid);
+    const b = new THREE.Mesh(seg, legMat); b.scale.set(1, 0.16, 1); mid.add(b);
+    // el abanico (antena lamelada, como la de los escarabajos de los hongos y de las flores)
+    for (let k = 0; k < 3; k++) { const leaf = new THREE.Mesh(sph, legMat); leaf.scale.set(0.034, 0.055, 0.011); leaf.position.set(0, 0.2, (k - 1) * 0.02); leaf.rotation.x = (k - 1) * 0.35; mid.add(leaf); }
     return { base, mid, side };
   });
 
-  // Patas: cadera (en el cuerpo) → rodilla → pie (en la superficie)
-  const legGeo = new THREE.CylinderGeometry(0.032, 0.045, 1, 7);
+  // Patas: cadera (en el cuerpo) → rodilla → pie (en la superficie), y un tarso con uñas apoyado en el suelo
+  const femurGeo = new THREE.CylinderGeometry(0.03, 0.055, 1, 8), tibiaGeo = new THREE.CylinderGeometry(0.022, 0.034, 1, 7), tarsGeo = new THREE.CylinderGeometry(0.012, 0.018, 1, 5);
   const A = 0.34, B = 0.4, REACH = A + B;
   const LEGS = [
     { hip: [0.18, -0.06, 0.42], rest: [0.5, -CLEAR, 0.66] }, { hip: [0.2, -0.08, 0.12], rest: [0.56, -CLEAR, 0.12] }, { hip: [0.18, -0.08, -0.2], rest: [0.52, -CLEAR, -0.52] }
   ].flatMap((l, i) => [-1, 1].map((side) => ({
     hip: new THREE.Vector3(l.hip[0] * side, l.hip[1], l.hip[2]), rest: new THREE.Vector3(l.rest[0] * side, l.rest[1], l.rest[2]),
     group: (i + (side > 0 ? 1 : 0)) % 2,
-    femur: new THREE.Mesh(legGeo, dark), tibia: new THREE.Mesh(legGeo, dark),
+    femur: new THREE.Mesh(femurGeo, legMat), tibia: new THREE.Mesh(tibiaGeo, legMat), tarsus: new THREE.Mesh(tarsGeo, legMat),
     foot: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1
   })));
-  for (const l of LEGS) { l.femur.castShadow = l.tibia.castShadow = true; scene.add(l.femur, l.tibia); }
+  for (const l of LEGS) { l.femur.castShadow = l.tibia.castShadow = true; scene.add(l.femur, l.tibia, l.tarsus); }
   scene.add(root);
 
   /* ---------- Estado ---------- */
@@ -157,7 +203,8 @@ export function createBeetle(scene) {
       root.position.copy(pos); root.quaternion.slerpQuaternions(tr.qa, tr.qb, k);
       N.set(0, 1, 0).applyQuaternion(root.quaternion); smoothN.copy(N);
     } else orient(poseOf(st.mode), dt);
-    body.rotation.set(-st.sniff * 0.12 - st.chew * 0.15, 0, Math.sin(st.t * 3.1) * 0.12 * st.wobble);
+    // en vuelo el cuerpo va más erguido (como vuelan los escarabajos de verdad)
+    body.rotation.set(-st.sniff * 0.12 - st.chew * 0.15 - st.fly * 0.42, 0, Math.sin(st.t * 3.1) * 0.12 * st.wobble);
     root.updateMatrixWorld(true);
     world.copy(body.matrixWorld);
   }
@@ -453,6 +500,9 @@ export function createBeetle(scene) {
       const up = N.clone().addScaledVector(dir, -N.dot(dir)).normalize();
       const knee = hip.clone().addScaledVector(dir, A * cosA).addScaledVector(up, A * sinA);
       bone(l.femur, hip, knee); bone(l.tibia, knee, foot);
+      // tarso: el "pie" articulado, apoyado hacia afuera y adelante (en el aire, cuelga)
+      tmp3.subVectors(foot, hip).addScaledVector(N, -tmp3.copy(foot).sub(hip).dot(N)).normalize();
+      bone(l.tarsus, foot, tmp.copy(foot).addScaledVector(tmp3, 0.15).addScaledVector(N, air ? -0.06 : -0.01));
     }
 
     for (const a of antennae) {
@@ -461,10 +511,14 @@ export function createBeetle(scene) {
       a.mid.rotation.set(-0.7 + st.sniff * 0.5 + w * 0.6, 0, a.side * 0.2);
     }
     st.fly += ((st.flying ? 1 : 0) - st.fly) * Math.min(1, dt * (st.flying ? 10 : 4));
-    for (const e of elytra) { e.pivot.rotation.x = st.fly * 0.75; e.pivot.rotation.z = e.side * st.fly * 0.55; }
+    // Élitros: se levantan desde la bisagra de adelante y se abren en V (no se "parten": así vuelan los escarabajos)
+    for (const e of elytra) e.pivot.rotation.set(st.fly * 0.72, -e.side * st.fly * 0.5, e.side * st.fly * 0.25);
+    // Alas: se despliegan desde abajo de los élitros y, ya abiertas, baten en forma de ocho
+    const open = Math.min(1, st.fly * 1.25), beat = Math.max(0, (st.fly - 0.5) * 2);
     for (const w of wings) {
-      w.pivot.visible = st.fly > 0.05; w.pivot.scale.setScalar(Math.max(0.001, st.fly));
-      w.pivot.rotation.set(0.25 * st.fly, 0, w.side * (0.2 + Math.sin(st.t * 75) * 0.7) * st.fly);
+      w.pivot.visible = st.fly > 0.03; w.pivot.scale.setScalar(Math.max(0.001, 0.35 + 0.65 * open));
+      const ph = st.t * 72;
+      w.pivot.rotation.set(0.32 * Math.cos(ph) * beat, w.side * ((1 - open) * 1.45 + 0.15), w.side * (0.12 + Math.sin(ph) * 0.8 * beat));
     }
     const c = Math.sin(st.t * 26) * st.chew * 0.5;
     mandL.rotation.y = -0.4 - c; mandR.rotation.y = 0.4 + c;
