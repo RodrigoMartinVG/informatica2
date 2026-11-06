@@ -19,7 +19,7 @@ function setup() {
 
   const padF = new Tone.Filter(1100, 'lowpass').connect(music);
   pad = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fattriangle', count: 2, spread: 16 }, envelope: { attack: 3, decay: 1, sustain: 0.7, release: 4 }, volume: -20 }).connect(padF);
-  pad.maxPolyphony = 12;
+  pad.maxPolyphony = 24; // (los acordes se superponen al cambiar: el anterior se apaga despacio)
   new Tone.LFO({ frequency: 0.05, min: 600, max: 1600 }).connect(padF.frequency).start();
   lead = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 1.4, sustain: 0, release: 1.5 }, volume: -19 })
     .connect(new Tone.FeedbackDelay({ delayTime: '4n.', feedback: 0.3, wet: 0.3 }).connect(music));
@@ -51,6 +51,7 @@ function setup() {
 
   scheduleLoops();
   ready = true;
+  setStyle(style);
 }
 
 const DORIAN = ['D', 'E', 'F', 'G', 'A', 'B', 'C'], PENTA = ['D', 'F', 'G', 'A', 'C'];
@@ -58,12 +59,77 @@ const n5 = (i, o) => PENTA[((i % 5) + 5) % 5] + (o + Math.floor(i / 5));
 const CHORDS = [['D2', 'A2', 'F3', 'C4', 'E4'], ['Bb1', 'F2', 'D3', 'A3', 'C4'], ['F2', 'C3', 'A3', 'E4'], ['C2', 'G2', 'E3', 'B3', 'D4']];
 let mood = 'calm'; // calm | wonder | dark
 
+// Estilos de música (todo generado en el momento, sin archivos): se eligen con el botón «Música» o la tecla N
+export const STYLES = {
+  bosque: { name: 'Bosque', every: 8, chords: CHORDS },
+  cajita: { name: 'Cajita de música', every: 6.4, chords: [['C3', 'G3', 'E4'], ['F2', 'C3', 'A3'], ['A2', 'E3', 'C4'], ['G2', 'D3', 'B3']] },
+  lluvia: { name: 'Lluvia', every: 10, chords: [['A2', 'E3', 'G3', 'B3', 'C4'], ['F2', 'C3', 'E3', 'A3'], ['C3', 'G3', 'B3', 'E4'], ['G2', 'D3', 'E3', 'B3']] },
+  lofi: { name: 'Lo-fi', every: 6.67, chords: [['D3', 'F3', 'A3', 'C4', 'E4'], ['G2', 'F3', 'B3', 'E4'], ['C3', 'E3', 'G3', 'B3', 'D4'], ['A2', 'G3', 'C4', 'E4']] },
+  noche: { name: 'Noche estrellada', every: 12, chords: [['D2', 'A2', 'E4'], ['Bb1', 'F2', 'D4'], ['G1', 'D2', 'A3'], ['A1', 'E2', 'C#4']] },
+  nada: { name: 'Solo el bosque', every: 0, chords: [] }
+};
+let style = 'bosque';
+try { const sv = localStorage.getItem('bajo-el-sombrero:musica'); if (STYLES[sv]) style = sv; } catch { /* sin almacenamiento */ }
+let rainGain, padTick = 99, ci = 0;
+export const styleName = () => STYLES[style].name;
+export function setStyle(key) {
+  if (!STYLES[key]) return; style = key; padTick = 99; ci = 0;
+  try { localStorage.setItem('bajo-el-sombrero:musica', key); } catch { /* nada */ }
+  if (!ready) return;
+  pad.releaseAll?.();
+  pad.volume.rampTo(key === 'cajita' ? -28 : key === 'noche' ? -22 : key === 'lofi' ? -21 : -20, 1.5);
+  rainGain.gain.rampTo(key === 'lluvia' ? 0.07 : 0, 3);
+  cricket.volume.rampTo(key === 'noche' ? -30 : -40, 2);
+}
+// La próxima (para el botón)
+export function nextStyle() { const ks = Object.keys(STYLES); setStyle(ks[(ks.indexOf(style) + 1) % ks.length]); return styleName(); }
+
 function scheduleLoops() {
-  const r = rng(11); let ci = 0;
-  // Acorde nuevo cada 8 s
-  new Tone.Loop((t) => { pad.triggerAttackRelease(CHORDS[ci++ % CHORDS.length], 9, t, mood === 'dark' ? 0.5 : 0.7); }, 8).start(0.1);
-  // Melodía: frases cortas que aparecen y desaparecen
+  const r = rng(11);
+  // Lluvia: ruido rosa filtrado (sube solo con el estilo «Lluvia»)
+  rainGain = new Tone.Gain(0).connect(amb);
+  new Tone.Noise('pink').connect(new Tone.Filter(900, 'highpass').connect(new Tone.Filter(5200, 'lowpass').connect(rainGain))).start();
+  // Acordes: cada estilo tiene su progresión y su ritmo (se revisa cada 1/3 s)
+  const tick = 1 / 3;
   new Tone.Loop((t) => {
+    const st = STYLES[style]; if (!st.every) return;
+    padTick += tick; if (padTick < st.every) return; padTick = 0;
+    pad.triggerAttackRelease(st.chords[ci++ % st.chords.length], st.every + 1, t, mood === 'dark' ? 0.5 : 0.7);
+  }, tick).start(0.1);
+  // Cajita de música: arpegios agudos y lentos sobre el acorde
+  new Tone.Loop((t) => {
+    if (style !== 'cajita') return;
+    const ch = STYLES.cajita.chords[(ci + 3) % 4], i = Math.floor(t / 0.4) % 8, n = ch[[0, 1, 2, 1, 2, 0, 2, 1][i] % ch.length];
+    bell.triggerAttackRelease(Tone.Frequency(n).transpose(i % 4 === 3 ? 31 : 24).toNote(), '8n', t, 0.22 + r() * 0.12);
+  }, 0.4).start(0.3);
+  // Lluvia: notas graves y sueltas, como un piano lejano, y alguna gota aguda
+  new Tone.Loop((t) => {
+    if (style !== 'lluvia') return;
+    if (r() < 0.55) pluck.triggerAttackRelease(['A3', 'C4', 'E4', 'G4', 'D4', 'B3'][Math.floor(r() * 6)], '2n', t, 0.5);
+    if (r() < 0.25) bell.triggerAttackRelease(['E6', 'A6', 'B6'][Math.floor(r() * 3)], '32n', t + 0.6, 0.08);
+  }, 2.5).start(1);
+  // Lo-fi: un ritmo tranquilo (72 por minuto): bombo, chasquido y platillo cerrado, y una melodía perezosa
+  let beat = 0;
+  const kick = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 4, envelope: { attack: 0.002, decay: 0.4, sustain: 0 }, volume: -14 }).connect(music);
+  const lp = new Tone.Filter(2600, 'lowpass').connect(music);
+  const snare = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.003, decay: 0.16, sustain: 0 }, volume: -26 }).connect(lp);
+  const hat = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.03, sustain: 0 }, volume: -36 }).connect(new Tone.Filter(7000, 'highpass').connect(music));
+  new Tone.Loop((t) => {
+    if (style !== 'lofi') { beat = 0; return; }
+    const b = beat++ % 8;
+    if (b === 0 || b === 5) kick.triggerAttackRelease('C1', 0.3, t, 0.8);
+    if (b === 2 || b === 6) snare.triggerAttackRelease(0.1, t, 0.6);
+    hat.triggerAttackRelease(0.02, t + (b % 2 ? 0.07 : 0), b % 2 ? 0.4 : 0.7); // (un poco «arrastrado», como el lo-fi)
+    if (b === 3 && r() < 0.5) lead.triggerAttackRelease(['A4', 'C5', 'D5', 'E5', 'G4'][Math.floor(r() * 5)], '4n', t, 0.3);
+  }, 60 / 72 / 2).start(0.2);
+  // Noche estrellada: destellos agudos aislados
+  new Tone.Loop((t) => {
+    if (style !== 'noche' || r() < 0.45) return;
+    bell.triggerAttackRelease(['D6', 'E6', 'F#6', 'A6', 'B6', 'C#7'][Math.floor(r() * 6)], '16n', t, 0.12 + r() * 0.1);
+  }, 1.7).start(0.8);
+  // Melodía del bosque: frases cortas que aparecen y desaparecen
+  new Tone.Loop((t) => {
+    if (style !== 'bosque') return;
     if (r() < 0.45) return;
     const start = Math.floor(r() * 6), len = 3 + Math.floor(r() * 4);
     for (let i = 0; i < len; i++) lead.triggerAttackRelease(n5(start + Math.floor(r() * 4) - 1 + i, 4), '8n', t + i * (0.5 + r() * 0.35), 0.35 + r() * 0.3);

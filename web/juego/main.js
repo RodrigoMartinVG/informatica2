@@ -357,6 +357,7 @@ addEventListener('keydown', (e) => {
   if (state.phase === 'play' || state.phase === 'book') {
     if (act === 'book') toggleBook();
     if (act === 'sound') sndToggle();
+    if (act === 'music') musNext();
     if (e.code === 'Escape' && state.phase === 'book') toggleBook();
   }
   if (state.phase === 'insight' && e.code === 'Enter') $('#insight-ok').click();
@@ -964,6 +965,10 @@ $('#b-fly').addEventListener('click', (e) => { e.currentTarget.blur(); fly(); })
 const sndLabel = () => ($('#b-snd').textContent = `Sonido: ${S.isOn() ? 'sí' : 'no'}`);
 async function sndToggle() { await S.toggle(); sndLabel(); }
 $('#b-snd').addEventListener('click', sndToggle);
+// Música de fondo: varios estilos generados en el momento (bosque, cajita de música, lluvia, lo-fi, noche, o sin música)
+const musLabel = () => ($('#b-mus').textContent = `Música: ${S.styleName()}`);
+function musNext() { const name = S.nextStyle(); musLabel(); floatText(`♪ ${name}`, 'gain'); }
+$('#b-mus').addEventListener('click', musNext); musLabel();
 $('#b-voz').addEventListener('click', () => { const on = V.setVoice(!V.hasVoice()); $('#b-voz').textContent = `Voz: ${on ? 'sí' : 'no'}`; });
 
 /* ---------- Cada cuadro ---------- */
