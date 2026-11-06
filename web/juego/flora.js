@@ -1,108 +1,29 @@
-// Los hongos del bosque. Son los mismos modelos 3D de la investigación (perfil girado 360°,
-// con las medidas promedio de cada forma), escalados de milímetros a centímetros.
+// Los hongos del bosque. Cada uno es una especie real (la de la foto) con las medidas de una fila real del Excel:
+// diámetro del sombrero, alto y ancho del tallo, forma y color (ver hongos3d.js).
 // Cada hongo sabe su propia forma: el escarabajo puede trepar el tallo y caminar sobre el sombrero.
 import * as THREE from 'three/webgpu';
 import { color, uniform } from 'three/tsl';
-import { build } from '../viewer3d.js';
-import { profile } from '../profiles.js';
 import { height, inClearing, rng, BOUNDS, LEVELS } from './config.js';
-import { obstacles } from './world.js';
-import { translucent } from './look.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { obstacles, logs } from './world.js';
+import { buildMushroom, pickRow, LOOKS } from './hongos3d.js';
 
 const R = window.RESEARCH;
-const ARQ = Object.fromEntries(R.arquetipos.map((a) => [a.id, a]));
-
-const PALETTES = [
-  { fill: '#8a6446', tallo: '#ece6da' }, { fill: '#e9e2d2', tallo: '#f2eee6' }, { fill: '#b98a4e', tallo: '#efe8d8' },
-  { fill: '#6e4a30', tallo: '#d9cdb8' }, { fill: '#c9b48a', tallo: '#f0ebe0' }, { fill: '#9a3b25', tallo: '#efe6d6' }
-];
 
 // "Visión de antenas": mantener V resalta lo que ya conocés
 export const vision = uniform(0);
 const BRUISE = new THREE.Color('#4f6fae'); // el azul de la magulladura
 
-const templates = new Map();
-// pal: índice de PALETTES o un objeto { fill, tallo }; gk: factor de grosor del tallo
-function template(shape, pal, ring, gk = 1) {
-  const key = `${shape}|${JSON.stringify(pal)}|${ring}|${gk}`;
-  if (!templates.has(key)) {
-    const colors = typeof pal === 'number' ? PALETTES[pal] : pal;
-    const a = { ...ARQ[shape], ...colors, ring, grosor: ARQ[shape].grosor * gk };
-    const g = build(a, 64); g.scale.setScalar(0.1); // mm → cm
-    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    // [tallo, sombrero, láminas, anillo]: sombrero y láminas translúcidos; tallo más mate y cálido
-    const [stem, cap, gills] = g.children;
-    cap.material = translucent(cap.material, '#ffb470', 1.2);
-    gills.material = translucent(gills.material, '#ffc58a', 0.9);
-    stem.material = stem.material.clone(); stem.material.color = new THREE.Color('#e3d3b8'); stem.material.roughness = 0.92;
-    if (g.children[3]) g.children[3].material = stem.material;
-    const p = profile(a);
-    addDetail(g, a, p, gills.material, shape, key);
-    templates.set(key, { g, a, p });
-  }
-  return templates.get(key);
-}
-
-// Detalle 3D: láminas debajo del sombrero y verrugas/escamas sobre algunos sombreros (en mm, antes de escalar)
-function addDetail(g, a, p, gillMat, shape, key) {
-  // Láminas: placas radiales finas que van del tallo al borde, siguiendo la cara de abajo del sombrero
-  const under = [...p.capUnder].sort((u, v) => u[0] - v[0]); // [radio, altura] de adentro hacia afuera
-  const yAt = (r) => lerpTable(under, r);
-  const r0 = under[0][0] * 1.05, r1 = under[under.length - 1][0] * 0.97, n = 56, plates = [];
-  if (r1 - r0 > 2) {
-    for (let i = 0; i < n; i++) {
-      const th = (i / n) * Math.PI * 2, c = Math.cos(th), s = Math.sin(th), steps = 6, pos = [], idx = [];
-      const short = i % 2 === 1; // una lámina larga y una corta, como en los hongos reales
-      for (let k = 0; k <= steps; k++) {
-        const r = (short ? r0 + (r1 - r0) * 0.45 : r0) + ((r1 - (short ? r0 + (r1 - r0) * 0.45 : r0)) * k) / steps;
-        const y = yAt(r), depth = Math.min(6, (r1 - r0) * 0.12) * Math.sin(Math.PI * Math.min(1, 0.15 + 0.85 * k / steps));
-        pos.push(c * r, y - 0.2, s * r, c * r, y - 0.2 - depth, s * r);
-        if (k < steps) { const b = k * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
-      }
-      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
-      plates.push(geo);
-    }
-    const lam = new THREE.Mesh(mergeGeometries(plates), gillMat); lam.castShadow = false; lam.receiveShadow = true; g.add(lam);
-  }
-  // Verrugas o escamas en relieve: en las esféricas y en algunas convexas y planas
-  const h = [...key].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) >>> 0, 7), r = rng(h);
-  if (!(shape === 'esferica' || ((shape === 'convexa' || shape === 'plana') && r() < 0.45))) return;
-  const top = []; let maxR = -1; for (const [rr, yy] of p.capTop) { if (rr <= maxR) break; maxR = rr; top.push([rr, yy]); }
-  const capY = (rr) => lerpTable(top, rr), bumps = [], count = shape === 'esferica' ? 70 : 40, big = shape === 'esferica' ? 1.6 : 1.1;
-  for (let i = 0; i < count; i++) {
-    const rr = Math.sqrt(r()) * maxR * 0.92, th = r() * Math.PI * 2, sz = (0.6 + r() * 0.8) * big * Math.max(1, maxR / 30);
-    const b = new THREE.IcosahedronGeometry(sz, 0); b.scale(1, 0.55, 1);
-    b.translate(Math.cos(th) * rr, capY(rr) + sz * 0.25, Math.sin(th) * rr); bumps.push(b);
-  }
-  const wart = new THREE.Color(a.fill).lerp(new THREE.Color('#f3ead6'), 0.65);
-  const mesh = new THREE.Mesh(mergeGeometries(bumps), new THREE.MeshStandardMaterial({ color: wart, roughness: 0.85, flatShading: true }));
-  mesh.castShadow = true; g.add(mesh);
-}
-
-// Interpolación lineal en una lista de pares [x, y] ordenada por x
-function lerpTable(tab, x) {
-  if (x <= tab[0][0]) return tab[0][1];
-  for (let i = 1; i < tab.length; i++) if (x <= tab[i][0]) { const [x0, y0] = tab[i - 1], [x1, y1] = tab[i]; return y0 + (y1 - y0) * ((x - x0) / (x1 - x0 || 1)); }
-  return tab[tab.length - 1][1];
-}
-
-let yawSeed = rng(5);
-function plant(scene, list, { x, z, shape, pal, ring = false, scale = 1, toxic, gk = 1 }) {
-  const { g, a, p } = template(shape, pal, ring, gk), k = 0.1 * scale;
-  const mesh = g.clone(true);
-  const base = height(x, z) - 0.05;
-  mesh.position.set(x, base, z); mesh.scale.multiplyScalar(scale); mesh.rotation.y = yawSeed() * 6;
+let yawSeed = rng(5), buildSeed = 1;
+// species: especie (foto) · look: aspecto 3D (casi siempre la misma especie) · row: fila del Excel · base: altura donde crece
+function plant(scene, list, { x, z, species, look = species, row, toxic, base = height(x, z) - 0.05, quality }) {
+  const b = buildMushroom(look, row, buildSeed++, { segs: quality === 'alta' ? 48 : 32 });
+  const mesh = b.group;
+  mesh.position.set(x, base, z); mesh.rotation.y = yawSeed() * 6;
   scene.add(mesh);
-  // Geometría para trepar: radio del tallo según la altura, y altura del sombrero según el radio
-  const stem = p.stem.map(([r, y]) => [y * k, r * k]);                 // [altura, radio]
-  const top = []; let maxR = -1;
-  for (const [r, y] of p.capTop) { if (r <= maxR) break; maxR = r; top.push([r * k, y * k]); } // [radio, altura]
-  const under = p.capUnder[p.capUnder.length - 1][1] * k;
   const m = {
-    mesh, a, x, z, base, scale, toxic, level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
-    stemR: (h) => lerpTable(stem, h), capY: (r) => lerpTable(top, r), Rw: maxR * k,
-    climbTop: Math.min(under, a.alto * scale) - 0.2, top: Math.max(...top.map((t) => t[1]))
+    mesh, x, z, base, toxic, species, row, colorName: b.colorName, look: LOOKS[look],
+    level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
+    ...b.climb
   };
   list.push(m);
   return m;
@@ -113,35 +34,45 @@ const DECOR = { tox: ['phalloides', 'galerina', 'muscaria', 'conica', 'mycena'],
 const pickDecor = (toxic, r = Math.random) => { const p = DECOR[toxic ? 'tox' : 'ed']; return p[Math.floor(r() * p.length)]; };
 
 /* ---------- Hongos dispersos por el bosque (también se pueden comer) ---------- */
-function scatter(scene, list) {
-  const r = rng(97), shapes = ['convexa', 'plana', 'hundida', 'campana', 'conica', 'convexa', 'plana'];
+function scatter(scene, list, quality) {
+  const r = rng(97);
   let n = 0;
-  while (n < 46) {
+  while (n < 40) {
     const cx = BOUNDS.minX + 20 + r() * 350, cz = BOUNDS.minZ + 20 + r() * 400;
     if (inClearing(cx, cz, 1.3) || Math.hypot(cx, cz - 18) < 25) continue;
-    const k = 1 + Math.floor(r() * 4), shape = shapes[Math.floor(r() * shapes.length)], pal = Math.floor(r() * PALETTES.length);
-    const placed = [];
+    // un grupito de la misma especie, como crecen de verdad
+    const toxic = r() < R.stats.toxicos, species = pickDecor(toxic, r), k = 1 + Math.floor(r() * 4), placed = [];
     for (let i = 0; i < k; i++) {
-      const x = cx + (r() - 0.5) * 12, z = cz + (r() - 0.5) * 12;
-      if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 5)) continue;
+      const x = cx + (r() - 0.5) * 14, z = cz + (r() - 0.5) * 14;
+      if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 6)) continue;
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 4)) continue; // no adentro de un tronco
+      if (logs.some((l) => Math.abs((x - l.x) * l.az - (z - l.z) * l.ax) < l.rad + 3 && Math.abs((x - l.x) * l.ax + (z - l.z) * l.az) < l.len / 2 + 3)) continue;
       placed.push([x, z]);
-      const toxic = r() < R.stats.toxicos, m = plant(scene, list, { x, z, shape, pal, scale: 0.6 + r() * 0.9, toxic });
-      m.species = pickDecor(toxic, r);
+      plant(scene, list, { x, z, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality });
     }
     n++;
+  }
+  // Sobre los troncos caídos crecen los de la madera: Galerina (mortal) y Mycena, en racimos
+  for (const l of logs) {
+    const groups = 2 + Math.floor(r() * 2);
+    for (let gi = 0; gi < groups; gi++) {
+      const species = r() < 0.5 ? 'galerina' : 'mycena', t0 = (r() - 0.5) * l.len * 0.7, k = 3 + Math.floor(r() * 3);
+      for (let i = 0; i < k; i++) {
+        const t = t0 + (r() - 0.5) * 6, side = (r() - 0.5) * 1.2; // cerca de la línea de arriba del tronco
+        const x = l.x + l.ax * t - l.az * side, z = l.z + l.az * t + l.ax * side;
+        const base = l.cy + Math.sqrt(Math.max(0, l.rad * l.rad - side * side)) - 0.1;
+        const m = plant(scene, list, { x, z, base, species, toxic: true, row: pickRow(r, LOOKS[species], { tox: true }), quality });
+        m.wood = true;
+      }
+    }
   }
 }
 
 /* ---------- Claros de los niveles: los dos grupos crecen mezclados ---------- */
 // Proporciones de la investigación (ver LEVELS en config.js), con los hongos entremezclados
-// Colores llamativos y comunes (claro de los colores)
-const VIVID = ['#b8352a', '#d9782a', '#6f8a3a', '#c8708a', '#7a4a7a', '#d4b13a'];
-const COMMON = ['#ebe4d4', '#8a6446', '#9a948c', '#d9c9a3', '#6e4a30'];
-
-function levelClearing(scene, list, L, seed) {
+function levelClearing(scene, list, L, seed, quality) {
   const r = rng(seed), n = L.nYes + L.nNo, pts = [], c = L.at;
-  const gap = L.trait === 'size' ? 7 : 5.2;
+  const gap = L.trait === 'size' ? 9 : 7;
   let guard = 0;
   while (pts.length < n && guard++ < 8000) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * L.spread;
@@ -154,20 +85,14 @@ function levelClearing(scene, list, L, seed) {
   const pick = (count, tox) => { const s = new Set(); while (s.size < tox) s.add(Math.floor(r() * count)); return s; };
   const toxYes = pick(L.nYes, L.toxYes), toxNo = pick(L.nNo, L.toxNo);
   let iy = 0, ino = 0;
-  const ALL = ['convexa', 'plana', 'hundida', 'campana', 'conica'];
   pts.forEach(([x, z], i) => {
     const yes = groups[i], k = yes ? iy++ : ino++, toxic = yes ? toxYes.has(k) : toxNo.has(k);
-    const o = { x, z, shape: ALL[Math.floor(r() * ALL.length)], pal: Math.floor(r() * 5), scale: 0.85 + r() * 0.45, toxic };
-    if (L.trait === 'ring') { o.ring = yes; o.shape = yes ? ['convexa', 'plana', 'esferica', 'campana'][Math.floor(r() * 4)] : o.shape; }
-    if (L.trait === 'color') { const list = yes ? VIVID : COMMON; o.pal = { fill: list[Math.floor(r() * list.length)], tallo: '#efe8d8' }; }
-    if (L.trait === 'size') o.scale = yes ? 0.42 + r() * 0.16 : 1.55 + r() * 0.45;     // ~3 cm contra ~11 cm de sombrero
-    if (L.trait === 'stem') { o.gk = yes ? 1.8 : 0.5; o.shape = ['convexa', 'plana', 'hundida'][Math.floor(r() * 3)]; }
-    if (L.trait === 'twin') { o.shape = 'convexa'; o.pal = { fill: '#ece5d6', tallo: '#f2eee6' }; o.ring = true; o.scale = 1.05 + r() * 0.08; }
-    const m = plant(scene, list, o);
+    const pool = L.photos[yes ? 'yes' : 'no'][toxic ? 'tox' : 'ed'], species = pool[k % pool.length];
+    const look = L.trait === 'twin' ? 'gemelo' : species; // los gemelos se ven iguales
+    const row = pickRow(r, LOOKS[look], { tox: toxic, trait: L.trait, yes });
+    const m = plant(scene, list, { x, z, species, look, row, toxic, quality });
     m.level = L.id; m.trait = L.trait; m.yes = yes;
     m.traitKnown = L.trait !== 'bruise' && L.trait !== 'twin'; // la mancha hay que provocarla; los gemelos, olfatearlos
-    const pool = L.photos[yes ? 'yes' : 'no'][toxic ? 'tox' : 'ed'];
-    m.species = pool[k % pool.length];
   });
 }
 
@@ -188,10 +113,10 @@ function dew(scene, all) {
   scene.add(mesh);
 }
 
-export function buildFlora(scene) {
+export function buildFlora(scene, { quality = 'baja' } = {}) {
   const all = [];
-  scatter(scene, all);
-  LEVELS.forEach((L, i) => levelClearing(scene, all, L, 113 + i * 17));
+  scatter(scene, all, quality);
+  LEVELS.forEach((L, i) => levelClearing(scene, all, L, 113 + i * 17, quality));
   dew(scene, all);
 
   // Marca discreta en la base (se crea recién cuando conocés el hongo)
@@ -231,7 +156,6 @@ export function buildFlora(scene) {
       return best;
     },
     // Cambiar un hongo suelto al otro tipo (para que no salgan tres iguales seguidos)
-    flipDecor(m) { m.toxic = !m.toxic; m.species = pickDecor(m.toxic); },
     reveal(m) { m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m); },
     // Empujar un tallo: si es de los que se manchan, se pone azul de a poco
     touch(m) {

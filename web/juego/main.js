@@ -71,7 +71,7 @@ const world = buildWorld(scene, { quality });
 const clock24 = { k: 0 }; // hora del día del bosque (0 tarde · 1 noche)
 await step(0.6);
 environment(renderer, scene, scene.userData.sunDir);
-const flora = buildFlora(scene);
+const flora = buildFlora(scene, { quality });
 await step(0.8);
 let trail = sporeTrail(scene, TRAIL);
 const beetle = createBeetle(scene);
@@ -461,10 +461,11 @@ function decide(m) {
     if (m.level) {
       const L = levelOf(m), p = (m.yes ? L.toxYes / L.nYes : L.toxNo / L.nNo);
       if (p >= 0.3 && p <= 0.7) {
-        const other = flora.specimens.find((s) => s.level === m.level && s.yes === m.yes && !s.decided && !s.known && s.toxic === want);
+        // solo con otro que se vea igual (misma especie en 3D): si no, cambiaría el aspecto delante tuyo
+        const other = flora.specimens.find((s) => s.level === m.level && s.yes === m.yes && !s.decided && !s.known && s.toxic === want && s.look === m.look);
         if (other) { [m.toxic, other.toxic] = [other.toxic, m.toxic]; [m.species, other.species] = [other.species, m.species]; }
       }
-    } else flora.flipDecor(m);
+    }
   }
   h.push(m.toxic);
 }
@@ -503,7 +504,7 @@ function eat() {
     .to(chewA, { v: 0, duration: 0.3 }, 1.15)
     .add(() => {
       const mouth = beetle.pos.clone().addScaledVector(beetle.forward(new THREE.Vector3()), 0.75);
-      bits.emit(mouth, [m.a.fill, m.a.fill, '#f3ead8'], 22);
+      bits.emit(mouth, [m.look.cap[m.colorName]?.[1] || '#c8a070', m.look.cap[m.colorName]?.[0] || '#a07050', '#f3ead8'], 22);
       if (m.toxic) bits.emit(mouth, ['#9b5bd6', '#c58cff', '#6b3aa6'], 16, 0.6);
       flora.eat(m); showPhoto(m); game.eats.push({ level: m.level, yes: m.yes, trait: m.traitKnown, blind, toxic: m.toxic });
       tag(m, m.toxic ? 'Venenoso' : 'Comestible', m.toxic ? 'tox' : 'ed'); tally(); checkInsight(levelOf(m));

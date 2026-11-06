@@ -78,12 +78,15 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 |---|---|
 | `juego/index.html`, `juego/juego.css` | Pantalla de inicio, interfaz, cuaderno de campo |
 | `juego/main.js` | Render (WebGPU con respaldo WebGL 2), postprocesado (profundidad de campo + bloom), cámara, controles y la lógica del mito |
-| `juego/world.js` | Terreno, pasto con viento (shader TSL), hojas, musgo, troncos, rayos de sol, polvo, esporas guía |
-| `juego/beetle.js` | Escarabajo procedural: marcha en trípode y cinemática inversa de las patas |
-| `juego/flora.js` | Hongos: los mismos modelos 3D de la investigación (`viewer3d.js` + `profiles.js`) |
+| `juego/world.js` | Terreno, pasto con viento (shader TSL), hojas, musgo, árboles trepables con hongos repisa, troncos caídos, rayos de sol, polvo, esporas guía |
+| `juego/beetle.js` | Escarabajo procedural: marcha en trípode, cinemática inversa de las patas, gravedad, salto, caídas, vuelo libre y trepar tallos y troncos |
+| `juego/flora.js` | Dónde crece cada hongo: claros de los niveles, grupos sueltos y racimos sobre los troncos caídos |
+| `juego/hongos3d.js` | Hongos 3D por especie (verrugas, volva, escamas, poros, pliegues…) con las medidas de una fila real del Excel |
+| `juego/filas.js` | Muestra de 2.431 filas reales del Excel (generada con `tools/filas_juego.py`) |
+| `juego/galeria.html` | Herramienta de prueba: todas las especies en fila (`?solo=muscaria,procera`) |
 | `juego/audio.js` | Música y sonidos generativos con Tone.js |
 | `juego/config.js` | Mapa del bosque, claros y altura del terreno |
-| `juego/surfaces.js` | Superficies caminables: suelo, ramas, piedras y hojas |
+| `juego/surfaces.js` | Superficies: suelo, ramas, troncos caídos, piedras, hojas y repisas, con su altura sólida (para caminar por debajo, chocar o caer encima) |
 | `juego/narrator.js` | Narración en off: subtítulos + voz rioplatense pregenerada (`juego/voz/`, ver `tools/voz/`) |
 | `juego/species.js` | Especies reales: nombre, peligrosidad, nota y crédito de cada foto |
 | `juego/access.js` | Accesibilidad: modo audio (descripciones habladas), sonidos espaciales, texto grande y teclas reasignables |
@@ -94,4 +97,6 @@ Tecnologías: three.js r180 (WebGPURenderer + TSL), GSAP, Tone.js. Arranca con *
 
 Mecánicas: hambre (la energía baja con el tiempo), olfatear (dice la verdad pero gasta energía), comer (alimenta o envenena: tres vidas), trepar ramas, piedras, hojas y hongos (empujando contra el tallo), saltar desde el borde del sombrero, cámara libre (arrastrar el mouse) con brazo con resorte, visión de antenas (V) y narración en off (con voz opcional). Al final del claro, el juego compara tus decisiones con los datos de la investigación.
 
-Niveles (definidos en `LEVELS`, `config.js`), en orden: **el anillo**, **la magulladura** (empujar los tallos para ver cuáles se manchan de azul), **los colores** (llamativos 68 % contra comunes 48 %), **el tamaño** (chicos 70 % contra grandes 43 %), **las proporciones** (tallo grueso 49 % contra fino 60 %) y **los gemelos**, de noche: *Amanita phalloides* y *Agaricus campestris* idénticos a la vista. En cada claro los dos grupos crecen mezclados con las proporciones de los datos; con 2 hongos conocidos de cada grupo (dificultad fácil, por defecto) o 4 (normal) se descubre el mito, aparece un resumen con fotos reales de las especies del claro y el escarabajo vuela gratis al claro siguiente. Al olfatear o comer un hongo aparece una ficha con la foto real de una especie parecida (`species.js`, fotos de Wikimedia Commons). Con **Espacio** el escarabajo vuela al próximo hongo sin explorar.
+Niveles (definidos en `LEVELS`, `config.js`), en orden: **el anillo**, **la magulladura** (empujar los tallos para ver cuáles se manchan de azul), **los colores** (llamativos 68 % contra comunes 48 %), **el tamaño** (chicos 70 % contra grandes 43 %), **las proporciones** (tallo grueso 49 % contra fino 60 %) y **los gemelos**, de noche: *Amanita phalloides* y *Agaricus campestris* idénticos a la vista. En cada claro los dos grupos crecen mezclados con las proporciones de los datos; con 2 hongos conocidos de cada grupo (dificultad fácil, por defecto) o 4 (normal) se descubre el mito, aparece un resumen con fotos reales de las especies del claro y el escarabajo vuela gratis al claro siguiente. Al olfatear o comer un hongo aparece una ficha con la foto real de una especie parecida (`species.js`, fotos de Wikimedia Commons). Controles de movimiento: **Espacio** salta (mantenido, abre las alas y sube; volar libre gasta energía), **X** baja volando, **G** vuela solo al próximo hongo sin explorar. Hay gravedad: desde el borde de un sombrero se cae sobre lo que haya abajo (otro sombrero, una rama o el suelo), y el vuelo tiene un techo suave de 30 cm. Los tallos, los árboles y los troncos caídos se trepan empujando contra ellos; las repisas de los árboles son escalones.
+
+Los hongos son especies reales (las de las fotos) con las medidas de una fila real del Excel que cumple el rasgo del claro y la toxicidad del hongo (diámetro del sombrero, alto y ancho del tallo, forma y color). Sobre los troncos caídos crecen los de la madera: *Galerina marginata* y *Mycena*.

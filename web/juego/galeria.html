@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galería de hongos</title>
+  <!-- Herramienta de prueba: todas las especies del juego en fila, con medidas reales del Excel. ?giro anima la cámara -->
+  <script type="importmap">{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  } }</script>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #1d1813; color: #efe6d6; font: 13px/1.4 system-ui, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .labels { position: fixed; left: 0; right: 0; bottom: 12px; display: flex; justify-content: space-around; padding: 0 16px; pointer-events: none; }
+    .labels span { text-align: center; font-size: 11px; opacity: .85; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="labels" id="labels"></div>
+  <script src="../data.js"></script>
+  <script type="module">
+    import * as THREE from 'three/webgpu';
+    import { buildMushroom, pickRow, LOOKS } from './hongos3d.js';
+    import { rng } from './config.js';
+    const p = new URLSearchParams(location.search);
+    const renderer = new THREE.WebGPURenderer({ canvas: document.getElementById('c'), antialias: true });
+    renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
+    await renderer.init();
+    const scene = new THREE.Scene(); scene.background = new THREE.Color('#2a231b');
+    scene.add(new THREE.HemisphereLight('#ffe6c4', '#5a4026', 1.6));
+    const sun = new THREE.DirectionalLight('#ffd9a8', 2.6); sun.position.set(-30, 60, 40); sun.castShadow = true;
+    Object.assign(sun.shadow.camera, { left: -80, right: 80, top: 40, bottom: -10 }); sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), new THREE.MeshStandardMaterial({ color: '#5a4630', roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const ids = (p.get('solo') || Object.keys(LOOKS).join(',')).split(','), r = rng(+(p.get('semilla') || 3));
+    let x = 0; const placed = [];
+    for (const id of ids) {
+      const look = LOOKS[id], row = pickRow(r, look, { tox: !['campestris', 'procera', 'cantharellus', 'edulis', 'pulverulentus', 'gibba'].includes(id) });
+      const b = buildMushroom(id, row, 7); x += b.climb.Rw + 2;
+      b.group.position.x = x; scene.add(b.group); placed.push({ id, x, b, row }); x += b.climb.Rw + 2;
+    }
+    for (const q of placed) q.b.group.position.x -= x / 2;
+    document.getElementById('labels').innerHTML = placed.map((q) => `<span>${q.id}<br>${q.row.d} cm · ${q.row.h} cm · ${q.row.w} mm<br>${q.b.colorName}</span>`).join('');
+    const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 2000);
+    const dist = x * 0.95 + 20;
+    const draw = (t) => { const a = p.has('giro') ? t * 0.0002 : 0; cam.position.set(Math.sin(a) * dist, dist * 0.28, Math.cos(a) * dist); cam.lookAt(0, 6, 0); renderer.render(scene, cam); };
+    renderer.setAnimationLoop(draw);
+  </script>
+</body>
+</html>
