@@ -4,11 +4,11 @@ import { pass, mrt, output, normalView, uniform, screenUV, smoothstep, vec3, vec
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { dof } from 'three/addons/tsl/display/DepthOfFieldNode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { buildWorld, sporeTrail, environment, obstacles } from './world.js';
+import { buildWorld, sporeTrail, environment, obstacles, logs } from './world.js';
 import { createBeetle } from './beetle.js';
 import { buildFlora, vision } from './flora.js';
 import { walkHeight, shelfAt, wallTop } from './surfaces.js';
-import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL } from './config.js';
+import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL, BOUNDS } from './config.js';
 import * as S from './audio.js';
 import * as V from './narrator.js';
 import * as A from './access.js';
@@ -826,25 +826,48 @@ function showInsight(L) {
 }
 // Al terminar un claro aparece un hilo de esporas de otro color hasta el siguiente: lo seguís cuando quieras
 // (mientras tanto podés seguir explorando, buscar secretos…). O, si preferís, volás directo como antes.
-// El camino del hilo esquiva los árboles y las paredes altas (troncos caídos grandes, piedras): se lo puede seguir caminando
+// El camino del hilo esquiva los árboles (con sus raíces), los troncos caídos y las piedras grandes:
+// se busca el camino más corto sobre una grilla del bosque (A*, de a 3 cm) y después se lo endereza.
+const GRID = { c: 3, map: null };
+function gridBlocked(x, z) {
+  for (const o of obstacles) if (Math.hypot(x - o.x, z - o.z) < (o.climb ? (o.r / 1.3) * 1.7 : o.r) + 3) return true;
+  for (const l of logs) { const rx = x - l.x, rz = z - l.z, t = Math.max(-l.len / 2, Math.min(l.len / 2, rx * l.ax + rz * l.az)); if (Math.hypot(rx - l.ax * t, rz - l.az * t) < l.rad + 3) return true; }
+  const h = walkHeight(x, z); return wallTop(x, z, h + 0.3) > h + 2.5;
+}
 function routeAround(pts) {
-  const rad = (o) => (o.climb ? o.climb.stemR(0.5) : o.r); // el tronco de verdad (o.r de los árboles incluye las raíces)
-  const blocked = (x, z) => { const h = walkHeight(x, z); return obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < rad(o) + 4) || wallTop(x, z, h + 0.3) > h + 2.5; };
-  const out = [];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, az] = pts[i], [bx, bz] = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 3));
-    for (let k = 0; k < n; k++) out.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]);
-  }
-  out.push(pts[pts.length - 1]);
-  for (const q of out) if (blocked(q[0], q[1])) { // el punto libre más cercano
-    let best = null;
-    for (let r = 2; r <= 40 && !best; r += 2) for (let a = 0; a < 12; a++) { const x = q[0] + Math.cos((a / 12) * Math.PI * 2) * r, z = q[1] + Math.sin((a / 12) * Math.PI * 2) * r; if (!blocked(x, z)) { best = [x, z]; break; } }
-    if (best) { q[0] = best[0]; q[1] = best[1]; }
-  }
-  for (let pass = 0; pass < 2; pass++) for (let i = 1; i < out.length - 1; i++) { // suavizar sin volver a meterse adentro
-    const x = (out[i - 1][0] + out[i][0] * 2 + out[i + 1][0]) / 4, z = (out[i - 1][1] + out[i][1] * 2 + out[i + 1][1]) / 4;
-    if (!blocked(x, z)) out[i] = [x, z];
-  }
+  const c = GRID.c, nx = Math.ceil((BOUNDS.maxX - BOUNDS.minX) / c), nz = Math.ceil((BOUNDS.maxZ - BOUNDS.minZ) / c);
+  if (!GRID.map) { GRID.map = new Uint8Array(nx * nz); for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) GRID.map[j * nx + i] = gridBlocked(BOUNDS.minX + (i + 0.5) * c, BOUNDS.minZ + (j + 0.5) * c) ? 1 : 0; }
+  const M = GRID.map, cell = ([x, z]) => [Math.max(0, Math.min(nx - 1, Math.floor((x - BOUNDS.minX) / c))), Math.max(0, Math.min(nz - 1, Math.floor((z - BOUNDS.minZ) / c)))];
+  const pos = (k) => [BOUNDS.minX + ((k % nx) + 0.5) * c, BOUNDS.minZ + (Math.floor(k / nx) + 0.5) * c];
+  const free = (k) => { if (!M[k]) return k; const i0 = k % nx, j0 = Math.floor(k / nx); for (let r = 1; r < 40; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && !M[j * nx + i]) return j * nx + i; } return k; };
+  const astar = (a, b) => { // camino de celdas libres, con diagonales
+    const g = new Float32Array(nx * nz).fill(Infinity), from = new Int32Array(nx * nz).fill(-1), done = new Uint8Array(nx * nz), bx = b % nx, bz = Math.floor(b / nx);
+    const hh = (k) => Math.hypot((k % nx) - bx, Math.floor(k / nx) - bz); g[a] = 0;
+    const heap = [[hh(a), a]]; // montículo: siempre se saca la celda más prometedora
+    const push = (e) => { heap.push(e); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    const f = { set: (n, v) => push([v, n]), has: () => true };
+    while (heap.length) {
+      const k = pop()[1]; if (done[k]) continue; done[k] = 1; if (k === b) break;
+      const i = k % nx, j = Math.floor(k / nx);
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue; const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= nz) continue;
+        const n = jj * nx + ii; if (M[n] || (di && dj && (M[j * nx + ii] || M[jj * nx + i]))) continue;
+        const ng = g[k] + (di && dj ? 1.414 : 1); if (ng < g[n]) { g[n] = ng; from[n] = k; f.set(n, ng + hh(n)); }
+      }
+    }
+    const path = []; for (let k = b; k !== -1; k = from[k]) path.unshift(k); return path[0] === a ? path : [a, b];
+  };
+  const clear = (p, q) => { const d = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.ceil(d / 1.5); for (let s = 1; s < n; s++) { const [i, j] = cell([p[0] + ((q[0] - p[0]) * s) / n, p[1] + ((q[1] - p[1]) * s) / n]); if (M[j * nx + i]) return false; } return true; };
+  // de punto a punto (partida → borde del claro → adentro), y después se endereza (solo los quiebres necesarios)
+  let cells = [];
+  for (let s = 0; s < pts.length - 1; s++) { const [ai, aj] = cell(pts[s]), [bi, bj] = cell(pts[s + 1]); const seg = astar(free(aj * nx + ai), free(bj * nx + bi)); cells = cells.concat(s ? seg.slice(1) : seg); }
+  const raw = cells.map(pos), keep = [raw[0]];
+  for (let i = 1; i < raw.length - 1; i++) if (!clear(keep[keep.length - 1], raw[i + 1])) keep.push(raw[i]);
+  keep.push(raw[raw.length - 1]);
+  const out = []; // más puntos, para que la curva no corte las esquinas
+  for (let i = 0; i < keep.length - 1; i++) { const [ax, az] = keep[i], [bx, bz] = keep[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 4)); for (let k = 0; k < n; k++) out.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]); }
+  out.push(keep[keep.length - 1]);
   return out;
 }
 $('#insight-ok').addEventListener('click', () => leaveInsight(false));
@@ -1131,6 +1154,10 @@ function frame() {
   drawTags();
   post.render();
 }
+// El primer hilo de esporas (de la salida al claro del anillo) también rodea los árboles
+trail.removeFromParent(); trail = sporeTrail(scene, routeAround(TRAIL));
+if (params.has('debug')) window.__route = routeAround; // (para probar los caminos)
+
 // Esporas doradas, aros de vuelo, amigos perdidos, telas de araña y sombreritos
 secrets = createSecrets({ tip, floatText, S });
 const adv = createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus, secrets });
