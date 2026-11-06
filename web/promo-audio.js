@@ -4,7 +4,7 @@
 const Tone = window.Tone;
 
 let ready = false, on = false;
-let pad, bell, pluck, glide, glide2, thump, click, noise, noiseFilt, noiseEnv, master;
+let pad, bell, pluck, glide, glide2, thump, click, noise, noiseFilt, noiseEnv, master, voiceBus, limiterOut;
 
 function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
 
@@ -13,8 +13,10 @@ function setup() {
   // Volumen general más bajo + compresor suave + limitador: evita la saturación cuando se juntan muchos sonidos
   master = new Tone.Volume(-12);
   const comp = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.25 });
-  const limiter = new Tone.Limiter(-3);
+  const limiter = new Tone.Limiter(-3); limiterOut = limiter;
   master.chain(comp, limiter, Tone.getDestination());
+  // La voz (promo v2) va aparte, sin reverb, directo al limitador
+  voiceBus = new Tone.Volume(-1).connect(limiter);
   // Reverb más corta: mucho menos trabajo para el procesador de audio
   const reverb = new Tone.Reverb({ decay: 3.5, wet: 0.3 }).connect(master);
   const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.22, wet: 0.15 }).connect(reverb);
@@ -65,13 +67,31 @@ export async function enable() {
   if (!ready) Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.15 }));
   await Tone.start();
   if (!ready) setup();
-  on = true; master.mute = false;
+  on = true; master.mute = false; voiceBus.mute = false;
 }
-export function mute(m) { if (ready) master.mute = m || !on; }
-export function off() { on = false; if (ready) { master.mute = true; pad.releaseAll(); } }
+export function mute(m) { if (ready) { master.mute = m || !on; voiceBus.mute = m || !on; } if (m) stopVoice(); }
+export function off() { on = false; if (ready) { master.mute = true; voiceBus.mute = true; pad.releaseAll(); stopVoice(); } }
 export const isOn = () => on;
 // Salida de audio para grabar el video con sonido
-export function stream() { if (!ready) return null; const d = Tone.getContext().createMediaStreamDestination(); master.connect(d); return d.stream; }
+export function stream() { if (!ready) return null; const d = Tone.getContext().createMediaStreamDestination(); limiterOut.connect(d); return d.stream; }
+
+/* ---------- Voz en off (promo v2): audios pregenerados con Piper ---------- */
+const voiceBuffers = new Map(); let voiceSrc = null;
+export async function loadVoice(url) {
+  if (voiceBuffers.has(url)) return voiceBuffers.get(url);
+  const p = fetch(url).then((r) => r.arrayBuffer()).then((b) => Tone.getContext().rawContext.decodeAudioData(b)).catch(() => null);
+  voiceBuffers.set(url, p); return p;
+}
+export async function voice(url) {
+  if (!ready || !on || master.mute) return;
+  const buf = await loadVoice(url); if (!buf) return;
+  stopVoice();
+  const ctx = Tone.getContext().rawContext, src = ctx.createBufferSource(); src.buffer = buf;
+  Tone.connect(src, voiceBus); src.start(); voiceSrc = src;
+  master.volume.rampTo(-19, 0.25); // la música baja mientras habla
+  src.onended = () => { if (voiceSrc === src) { voiceSrc = null; master.volume.rampTo(-12, 1.2); } };
+}
+export function stopVoice() { if (voiceSrc) { try { voiceSrc.stop(); } catch { /* ya terminó */ } voiceSrc = null; if (ready) master.volume.rampTo(-12, 0.6); } }
 
 const go = () => on && ready && !master.mute;
 const now = () => Tone.now() + 0.02;
@@ -98,6 +118,7 @@ const CHORDS = {
   g1: ['C2', 'G2', 'E3', 'A3', 'D4'],
   tres: ['Bb1', 'F2', 'C3', 'D3', 'A3'],
   cierre: ['D2', 'A2', 'E3', 'F3', 'A3'],
+  noche: ['D2', 'A2', 'C3', 'E3', 'G3'], juego: ['F2', 'C3', 'G3', 'A3', 'D4'], m5: ['C2', 'G2', 'D3', 'E3', 'A3'],
   final: ['F2', 'C3', 'G3', 'A3', 'E4']
 };
 export function chord(name, dur) { if (go()) pad.triggerAttackRelease(CHORDS[name], dur, now()); }

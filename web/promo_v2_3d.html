@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bajo el sombrero · tráiler 3D en vivo</title>
+  <meta name="description" content="Tráiler de la investigación sobre hongos y del juego «Bajo el sombrero»: los mitos, los datos y el bosque a ras del suelo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;1,8..60,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
+  <script type="importmap">{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  } }</script>
+  <style>
+    :root {
+      --ink: #f2ede3; --ink-2: #d2c9b8; --ink-3: #9a917f; --tox: #ff7a3d; --ed: #5aa2ff; --accent: #9fe8c8; --gold: #ffd28a;
+      --serif: "Source Serif 4", Georgia, serif; --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --W: 1920px; --H: 1080px;
+    }
+    html.v { --W: 1080px; --H: 1920px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #000; overflow: hidden; color: var(--ink); font-family: var(--sans); }
+    button { font: inherit; cursor: pointer; }
+    [hidden] { display: none !important; }
+    /* Escenario fijo (1920×1080 o 1080×1920) escalado a la ventana */
+    .stage { width: var(--W); height: var(--H); position: absolute; left: 50%; top: 50%; overflow: hidden; background: #0d0a07;
+      transform: translate(-50%, -50%) scale(var(--s, 1)); }
+    #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .veil { position: absolute; inset: 0; background: #0b0805; opacity: 0; pointer-events: none; }
+    .grain { position: absolute; inset: 0; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    .bars::before, .bars::after { content: ""; position: absolute; left: 0; right: 0; height: 64px; background: #000; z-index: 5; }
+    .bars::before { top: 0; } .bars::after { bottom: 0; }
+    html.v .bars::before, html.v .bars::after { height: 0; }
+    .layer { position: absolute; inset: 0; pointer-events: none; }
+    .sc { position: absolute; inset: 0; visibility: hidden; }
+    .kicker { font: 600 26px var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+    .kicker::before { content: ""; display: inline-block; width: 56px; height: 3px; background: currentColor; vertical-align: middle; margin-right: 18px; }
+    .tox { color: var(--tox); } .ed { color: var(--ed); }
+    .shadowed { text-shadow: 0 4px 30px rgba(0,0,0,.65), 0 1px 3px rgba(0,0,0,.6); }
+
+    /* Subtítulos */
+    .sub { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); max-width: 1500px; text-align: center; z-index: 6;
+      font: 500 40px/1.3 var(--serif); color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.9), 0 0 3px #000; opacity: 0; }
+    html.v .sub { bottom: 150px; max-width: 980px; font-size: 40px; }
+
+    /* 1 · Apertura */
+    #s1 .t { position: absolute; left: 140px; top: 130px; font: 600 26px var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+    html.v #s1 .t { left: 70px; right: 70px; top: 200px; }
+    /* 2 · Título */
+    #s2 { display: grid; place-content: center; text-align: center; }
+    #s2 h1 { font: 700 220px/.92 var(--serif); letter-spacing: -.03em; }
+    #s2 h1 em { font-style: italic; color: var(--gold); }
+    #s2 p { margin-top: 44px; font: 400 50px/1.25 var(--serif); color: var(--ink-2); }
+    html.v #s2 h1 { font-size: 190px; } html.v #s2 p { font-size: 50px; padding: 0 60px; }
+    /* 3 · Datos */
+    #dots { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #s3 .count { position: absolute; top: 120px; width: 100%; text-align: center; font: 700 170px/1 var(--serif); font-variant-numeric: tabular-nums; }
+    #s3 .lab { position: absolute; top: 300px; width: 100%; text-align: center; font: 400 40px var(--serif); color: var(--ink-2); }
+    #s3 .pct { position: absolute; left: 1120px; top: 470px; font: 700 160px/1 var(--serif); }
+    #s3 .pct small { display: block; font: 600 26px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin-top: 12px; }
+    html.v #s3 .count { top: 200px; } html.v #s3 .lab { top: 370px; padding: 0 50px; } html.v #s3 .pct { left: 0; right: 0; top: 450px; text-align: center; font-size: 110px; }
+    /* Mitos */
+    .myth .card { position: absolute; left: 110px; top: 120px; max-width: 900px; }
+    .myth h2 { margin-top: 22px; font: 700 84px/1.04 var(--serif); letter-spacing: -.02em; }
+    .myth .nums { position: absolute; right: 110px; bottom: 270px; display: flex; gap: 26px; }
+    .myth .num { width: 300px; padding: 22px 26px 24px; border-radius: 18px; background: rgba(12,9,6,.62); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.14); }
+    .myth .num b { display: block; font: 700 104px/1 var(--serif); font-variant-numeric: tabular-nums; }
+    .myth .num span { display: block; margin-top: 10px; font: 600 22px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+    .myth .num i { display: block; height: 10px; margin-top: 16px; border-radius: 5px; background: rgba(255,255,255,.12); position: relative; overflow: hidden; }
+    .myth .num i::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); background: var(--tox); }
+    .myth .num i::before { content: ""; position: absolute; left: 55.5%; top: -4px; bottom: -4px; width: 3px; background: #fff; z-index: 1; }
+    .myth .base { position: absolute; right: 110px; bottom: 228px; font: 500 20px var(--mono); color: var(--ink-3); }
+    .stamp { position: absolute; right: 150px; top: 170px; border: 10px solid var(--tox); color: var(--tox); padding: 8px 34px 14px; border-radius: 10px;
+      font: 700 120px/1 var(--serif); letter-spacing: .05em; transform: rotate(-10deg); background: rgba(10,6,4,.35); white-space: nowrap; }
+    .stamp.long { font-size: 84px; }
+    html.v .myth .card { left: 70px; right: 70px; top: 150px; }
+    html.v .myth h2 { font-size: 78px; }
+    html.v .myth .nums { left: 70px; right: 70px; bottom: 560px; justify-content: center; }
+    html.v .myth .num { width: 440px; }
+    html.v .myth .base { left: 70px; right: auto; bottom: 520px; }
+    html.v .stamp { right: 80px; top: auto; bottom: 900px; }
+    html.v .myth.chart .stamp { top: 470px; bottom: auto; }
+    /* Etiquetas sobre los hongos */
+    .pin { position: absolute; transform: translate(-50%, -100%); padding: 10px 18px; border-radius: 99px; font: 600 26px var(--sans); white-space: nowrap;
+      background: rgba(12,9,6,.72); border: 2px solid rgba(255,255,255,.25); opacity: 0; }
+    .pin::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 46px; background: rgba(255,255,255,.45); }
+    /* Gráficos de GeoGebra */
+    .plot { position: absolute; right: 90px; bottom: 230px; width: 720px; height: 430px; padding: 26px 30px; border-radius: 18px;
+      background: rgba(12,9,6,.66); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.14); }
+    .plot svg { width: 100%; height: 100%; overflow: visible; }
+    .plot .ax { stroke: rgba(255,255,255,.35); stroke-width: 2; fill: none; }
+    .plot .curve { stroke: var(--tox); stroke-width: 6; fill: none; stroke-linecap: round; }
+    .plot .curve2 { stroke: var(--ed); stroke-width: 6; fill: none; stroke-linecap: round; }
+    .plot text { font: 500 20px var(--mono); fill: var(--ink-2); }
+    .plot .eq { font: 600 26px var(--mono); fill: #fff; }
+    html.v .plot { left: 70px; right: 70px; width: auto; bottom: 470px; height: 560px; }
+    html.v .myth.chart .nums { display: none; }
+    /* Gemelos */
+    #g .t { position: absolute; left: 0; right: 0; top: 140px; text-align: center; font: 700 96px/1.05 var(--serif); }
+    #g .under { position: absolute; left: 50%; bottom: 220px; transform: translateX(-50%); font: 600 30px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+    html.v #g .t { font-size: 84px; padding: 0 60px; top: 220px; } html.v #g .under { bottom: 420px; }
+    /* Juego */
+    #j .logo { position: absolute; left: 110px; top: 120px; }
+    #j .logo h2 { font: 700 120px/.95 var(--serif); letter-spacing: -.02em; }
+    #j .logo h2 em { color: var(--gold); font-style: italic; }
+    #j .logo p { margin-top: 18px; font: 600 26px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+    #j .feats { position: absolute; right: 110px; top: 140px; display: grid; gap: 14px; text-align: right; }
+    #j .feats span { font: 500 34px var(--serif); padding: 8px 20px; border-radius: 12px; background: rgba(12,9,6,.55); justify-self: end; opacity: 0; }
+    html.v #j .logo { left: 70px; top: 150px; } html.v #j .logo h2 { font-size: 110px; }
+    html.v #j .feats { left: 70px; right: auto; top: auto; bottom: 420px; text-align: left; } html.v #j .feats span { justify-self: start; }
+    /* Cierre */
+    #c9 { display: grid; place-content: center; text-align: center; background: radial-gradient(ellipse at 50% 55%, rgba(20,14,9,.55), rgba(8,6,4,.92)); }
+    #c9 h2 { font: 700 104px/1.05 var(--serif); letter-spacing: -.02em; max-width: 1500px; margin: 0 auto; }
+    #c9 h2 em { color: var(--tox); font-style: italic; }
+    #c9 .qrs { display: flex; gap: 90px; justify-content: center; margin-top: 70px; }
+    #c9 .qr { width: 230px; text-align: center; }
+    #c9 .qr div { background: #f4efe4; padding: 16px; border-radius: 14px; }
+    #c9 .qr svg { display: block; width: 100%; height: auto; }
+    #c9 .qr span { display: block; margin-top: 14px; font: 600 22px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+    #c9 .url { margin-top: 36px; font: 500 24px var(--mono); color: var(--ink-3); }
+    html.v #c9 h2 { font-size: 92px; padding: 0 50px; } html.v #c9 .qrs { flex-direction: row; gap: 60px; }
+
+    /* Controles (no salen en el video) */
+    .ui { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 20;
+      background: rgba(20,16,12,.82); border: 1px solid rgba(255,255,255,.14); border-radius: 99px; padding: 6px 10px; transition: opacity .4s; }
+    .ui button, .ui a { color: var(--ink); background: none; border: 0; padding: 6px 10px; border-radius: 99px; font-size: 13px; text-decoration: none; white-space: nowrap; }
+    .ui button:hover, .ui a:hover { background: rgba(255,255,255,.1); }
+    .ui input[type=range] { width: min(38vw, 420px); accent-color: var(--accent); }
+    .ui .tm { font: 500 12px var(--mono); color: var(--ink-3); min-width: 86px; text-align: center; }
+    body.idle .ui { opacity: 0; } html.rec .ui, html.rec .start { display: none !important; }
+    .start { position: fixed; inset: 0; z-index: 30; display: grid; place-content: center; text-align: center; background: rgba(0,0,0,.6); }
+    .start h1 { font: 700 64px/1 var(--serif); } .start h1 em { color: var(--gold); }
+    .start p { margin: 16px 0 26px; color: var(--ink-2); font-size: 16px; }
+    .start button { justify-self: center; background: var(--gold); color: #1a1208; border: 0; border-radius: 99px; padding: 16px 30px; font-weight: 600; font-size: 18px; }
+    .start button:disabled { opacity: .6; cursor: wait; }
+    .start .bar { width: 320px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin: 18px auto 0; overflow: hidden; }
+    .start .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+    .start .fmt { margin-top: 18px; font-size: 14px; color: var(--ink-3); }
+    .start .fmt a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="stage bars" id="stage">
+    <canvas id="c" aria-label="Bosque en 3D a ras del suelo"></canvas>
+    <div class="veil" id="veil"></div>
+    <div class="layer" id="pins"></div>
+
+    <section class="sc" id="s1"><p class="t shadowed" id="s1t">Una investigación de datos a ras del suelo</p></section>
+
+    <section class="sc" id="s2"><div><h1 class="shadowed">Bajo el<br><em>sombrero</em></h1><p class="shadowed">¿Se puede saber si un hongo es venenoso solo con mirarlo?</p></div></section>
+
+    <section class="sc" id="s3">
+      <canvas id="dots"></canvas>
+      <p class="count" id="count">0</p>
+      <p class="lab">hongos analizados · 173 especies</p>
+      <p class="pct"><span class="tox">55,5 %</span><small>son venenosos</small></p>
+    </section>
+
+    <section class="sc myth" id="m1"></section>
+    <section class="sc myth" id="m2"></section>
+    <section class="sc myth" id="m3"></section>
+    <section class="sc myth chart" id="m4"></section>
+    <section class="sc myth chart" id="m5"></section>
+
+    <section class="sc" id="g"><p class="t shadowed" id="gt">A simple vista, iguales.</p><p class="under shadowed" id="gu">La diferencia: la volva, escondida bajo tierra</p></section>
+
+    <section class="sc" id="j">
+      <div class="logo shadowed"><h2>Bajo el<br><em>sombrero</em></h2><p>El juego · ahora te toca a vos</p></div>
+      <div class="feats" id="feats"><span>Olfateá</span><span>Comé… o envenenate</span><span>Trepá y volá</span><span>Descubrí los seis mitos</span></div>
+    </section>
+
+    <section class="sc" id="c9">
+      <h2>Ningún hongo silvestre es seguro<br><em>por su aspecto.</em></h2>
+      <div class="qrs">
+        <div class="qr"><div id="qr-web"></div><span>La investigación</span></div>
+        <div class="qr"><div id="qr-game"></div><span>El juego</span></div>
+      </div>
+      <p class="url">rodrigomartinvg.github.io/informatica2</p>
+    </section>
+
+    <p class="sub" id="sub"></p>
+    <div class="grain"></div>
+  </div>
+
+  <div class="start" id="start">
+    <div>
+      <h1>Bajo el <em>sombrero</em></h1>
+      <p>Tráiler de la investigación y del juego · con voz y música</p>
+      <button id="go" disabled>Cargando el bosque…</button>
+      <div class="bar"><i id="load"></i></div>
+      <p class="fmt">Formato: <a href="?">horizontal 16:9</a> · <a href="?formato=vertical">vertical 9:16</a></p>
+    </div>
+  </div>
+
+  <div class="ui" id="ui">
+    <button id="b-play">Pausa (espacio)</button>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Ir a un momento del tráiler">
+    <span class="tm" id="tm">0:00 / 0:00</span>
+    <button id="b-snd">Sonido: sí (M)</button>
+    <button id="b-fmt"></button>
+    <button id="b-fs">Pantalla completa (F)</button>
+    <button id="b-rec">Grabar video</button>
+    <a href="promo_v2.html">Versión liviana</a>
+  </div>
+
+  <script src="data.js"></script>
+  <script type="module" src="promo2-3d.js"></script>
+</body>
+</html>

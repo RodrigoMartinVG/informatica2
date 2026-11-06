@@ -32,7 +32,7 @@ export const keyFor = (action) => cfg.keys[action];
 export const actionFor = (code) => Object.keys(cfg.keys).find((k) => cfg.keys[k] === code) || null;
 export const keyName = (code) => ({ Space: 'Espacio', Enter: 'Enter', Tab: 'Tab', Escape: 'Esc', ShiftLeft: 'Shift', ShiftRight: 'Shift', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' }[code] || code.replace(/^Key|^Digit/, ''));
 
-/* ---------- Voz: la misma voz rioplatense de la narración, por la misma cola ---------- */
+/* ---------- Voz: la misma voz de la narración, por la misma cola ---------- */
 const live = () => document.getElementById('sr-live');
 // Decir algo: lo recibe siempre el lector de pantalla; en modo audio (o si force) lo dice la voz.
 // parts: texto o lista de fragmentos pregenerados (ver speechvocab.js). interrupt: es urgente y corta lo que suena.
