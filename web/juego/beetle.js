@@ -453,6 +453,16 @@ export function createBeetle(scene) {
       const th = st.th; st.yaw = Math.atan2(Math.cos(th), Math.sin(th));
       startAir(Math.cos(th) * 4.5, 6, Math.sin(th) * 4.5); st.grabCD = 0.5;
     } else {
+      // Al lado de un bejín (desde el suelo): de un brinco te subís arriba, y ahí ya es un trampolín
+      if (st.mode === 'ground') for (const m of mushrooms) {
+        if (!m.look?.puff || m.rot || Math.abs(st.x - m.x) > 8 || Math.abs(st.z - m.z) > 8) continue;
+        const d = Math.hypot(st.x - m.x, st.z - m.z), rise = m.base + m.top - st.fy + 1.2;
+        if (d < m.Rw + 1.6 && rise > 0 && rise < 12) {
+          const th = Math.atan2(st.z - m.z, st.x - m.x), r = m.Rw * 0.3;
+          startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(th) * r; st.z = m.z + Math.sin(th) * r; st.yaw = Math.atan2(-Math.cos(th), -Math.sin(th)); }, 0.55, rise * 1.3 + 1);
+          return 'brinco';
+        }
+      }
       const s = Math.max(0, st.speed) * 1.05 + (input.fwd > 0 ? 1.2 : 0), puff = st.mode === 'cap' && st.m.look?.puff ? st.m : null;
       startAir(Math.sin(st.yaw) * s, puff ? PUFF : JUMP, Math.cos(st.yaw) * s); st.grabCD = 0.25;
       if (puff) { st.bounceM = puff; st.bounceV = PUFF; st.hold = 0; return 'rebotó'; }

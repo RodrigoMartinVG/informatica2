@@ -20,7 +20,8 @@ export const HATS = {
   conica: { name: 'Sombrero de bruja', how: 'zafar tres veces del pájaro' }
 };
 
-export function createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus }) {
+export function createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus, secrets }) {
+  const secret = (id) => secrets?.hit(id);
   const saved = Object.assign({ hats: [], hat: null, best: null }, load());
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* sin almacenamiento */ } };
   const r = rng(4242);
@@ -157,7 +158,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
   }
   function unlock(id) {
     if (saved.hats.includes(id)) return;
-    saved.hats.push(id); save(); S.record();
+    saved.hats.push(id); save(); S.record(); secret('sombrero');
     setTimeout(() => floatText(`¡Sombrero nuevo: ${HATS[id].name}!`, 'combo'), 600);
     tip('hat-' + id, `Ganaste un sombrero: ${HATS[id].name}, por ${HATS[id].how}. Apretá H para ponértelo o cambiarlo.`, { repeat: true });
   }
@@ -172,11 +173,11 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
     for (let i = 0; i < gold.length; i++) {
       const g = gold[i];
       if (!g.got && play && p.distanceToSquared(g.p) < 2.4) {
-        g.got = true; S.gold(); game.energy = Math.min(100, game.energy + 4); drawStatus();
+        g.got = true; S.gold(); secret('dorada'); game.energy = Math.min(100, game.energy + 4); drawStatus();
         const [n, of] = goldOf(g.area);
         floatText(`✦ ${n}/${of}`, 'combo');
         tip('gold1', 'Una espora dorada. Hay unas cuantas en cada claro, en lugares difíciles: arriba de los hongos más altos, en las repisas de los árboles o en el aire.');
-        if (n === of) { setTimeout(() => floatText(`¡Todas las esporas doradas de ${areaName(g.area)}!`, 'gain'), 700); unlock('muscaria'); }
+        if (n === of) { secret('doradas'); setTimeout(() => floatText(`¡Todas las esporas doradas de ${areaName(g.area)}!`, 'gain'), 700); unlock('muscaria'); }
       }
       ge.set(0, t * 1.6 + g.ph, 0); gq.setFromEuler(ge); gs.setScalar(g.got ? 0 : 1 + Math.sin(t * 4 + g.ph) * 0.12);
       gm.compose(g.p.clone().setY(g.p.y + Math.sin(t * 2 + g.ph) * 0.25), gq, gs); goldMesh.setMatrixAt(i, gm);
@@ -196,7 +197,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
           const best = !saved.best || tt < saved.best; if (best) { saved.best = +tt.toFixed(1); save(); }
           floatText(`${tt.toFixed(1)} s · medalla de ${medal}${best ? ' · ¡récord!' : ''}`, 'combo'); S.medal(medal);
           tip('ringdone' + Math.floor(t), `Circuito completo en ${tt.toFixed(1)} segundos: medalla de ${medal}. ${medal === 'oro' ? '¡Impecable!' : `Para el oro, bajá de ${(pathLen / 12).toFixed(0)} s (con Shift volás más rápido, y en picada más todavía).`}`, { repeat: true });
-          if (medal === 'oro') unlock('cantharellus');
+          secret('aros'); if (medal === 'oro') { secret('oro'); unlock('cantharellus'); }
           beetle.cheer(); race.on = false; race.next = 0;
         }
         paintRings();
@@ -211,11 +212,11 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
         f.g.position.y = f.p.y + Math.abs(Math.sin(t * 3 + f.ph)) * 0.03;
         f.ants.forEach((a, k) => (a.rotation.x = -2.2 + Math.sin(t * 4 + k) * 0.2));
         if (play && p.distanceTo(f.p) < 2.4) {
-          f.found = true; S.cheer(); beetle.cheer();
+          f.found = true; S.cheer(); beetle.cheer(); secret('amigo');
           const n = friends.filter((x) => x.found).length;
           floatText(`¡${f.name}! 🐞 ${n}/${friends.length}`, 'combo');
           tip('friend' + n, n === friends.length ? '¡Encontraste a todos tus amigos! Ahora el bosque es una caravana.' : `Encontraste a ${f.name}, un escarabajo perdido. Te va a seguir. Hay más escondidos debajo de los sombreros, en los bordes de los claros.`, { repeat: true });
-          if (n === friends.length) unlock('procera');
+          if (n === friends.length) { secret('amigos'); unlock('procera'); }
         }
         return;
       }
@@ -240,7 +241,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
       if (!play || !beetle.airborne) continue;
       const rel = p.clone().sub(w.c), along = rel.dot(w.n), lat = rel.addScaledVector(w.n, -along).length();
       if (Math.abs(along) < 0.5 && lat < w.R * 0.92) {
-        beetle.stick(1.6); S.stuck(); w.broken = 61.6; // se suelta en 1,6 s y la tela queda rota un minuto
+        beetle.stick(1.6); S.stuck(); w.broken = 61.6; secret('tela'); // se suelta en 1,6 s y la tela queda rota un minuto
         game.energy = Math.max(0, game.energy - 5); drawStatus(); floatText('¡Atrapado!', 'loss');
         tip('web1', '¡Una tela de araña! Te frena y te cansa. Rodeala, o pasá caminando por abajo.');
       }
@@ -250,7 +251,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
     let area = 'inicio', ad = Math.hypot(p.x - SPAWN.x, p.z - SPAWN.z);
     for (const L of LEVELS) { const d = Math.hypot(p.x - L.at.x, p.z - L.at.z) - L.spread; if (d < ad) { ad = d; area = L.id; } }
     const [gn, gof] = goldOf(area), fn = friends.filter((f) => f.found).length;
-    const text = `<span title="Esporas doradas de ${areaName(area)}">✦ ${gn}/${gof}</span><span title="Amigos encontrados">🐞 ${fn}/${friends.length}</span>${race.on ? `<span title="Carrera de aros">⏱ ${race.t.toFixed(1)} s · aro ${race.next + 1}/${rings.length}</span>` : saved.best ? `<span title="Mejor tiempo en los aros">⏱ ${saved.best} s</span>` : ''}`;
+    const text = `<button class="sec" type="button" title="Secretos del bosque: tocá para una pista">🔍 ${secrets ? secrets.count : 0}/${secrets ? secrets.SECRETS.length : 0}</button><span title="Esporas doradas de ${areaName(area)}">✦ ${gn}/${gof}</span><span title="Amigos encontrados">🐞 ${fn}/${friends.length}</span>${race.on ? `<span title="Carrera de aros">⏱ ${race.t.toFixed(1)} s · aro ${race.next + 1}/${rings.length}</span>` : saved.best ? `<span title="Mejor tiempo en los aros">⏱ ${saved.best} s</span>` : ''}`;
     if (hud && text !== hudText) { hud.innerHTML = text; hudText = text; }
   }
 

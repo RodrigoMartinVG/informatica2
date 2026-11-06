@@ -15,6 +15,7 @@ import * as A from './access.js';
 import * as SV from './speechvocab.js';
 import { SPECIES, photo, credit } from './species.js';
 import { createAdventures } from './aventuras.js';
+import { createSecrets } from './secretos.js';
 
 const $ = (s) => document.querySelector(s);
 const gsap = window.gsap;
@@ -205,7 +206,7 @@ function birdUpdate(dt) {
   if (!bird.checked && bird.t >= bird.cross) {
     bird.checked = true;
     if (state.phase !== 'play') return;
-    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); adv.dodged(); setTimeout(() => { beetle.cheer(); S.cheer(); }, 900); }
+    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); adv.dodged(); secrets.hit('pajaro'); setTimeout(() => { beetle.cheer(); S.cheer(); }, 900); }
     else {
       game.energy = Math.max(0, game.energy - 25); drawStatus(); S.hurt(); floatText('−25 energía', 'loss');
       beetle.knock(bird.dir.x, bird.dir.z); comboEnd(); // el picotazo lo revolea
@@ -225,7 +226,7 @@ function comboHit(m) {
   if (combo.n === 0) { combo.n = 1; combo.last = m; return; } // empieza acá (llegó desde un tronco, una rama…)
   combo.last = m; combo.n++;
   floatText(`Combo ×${combo.n}`, 'combo'); S.combo(combo.n); adv.combo(combo.n);
-  if (combo.n >= 3) { game.energy = Math.min(100, game.energy + 2); drawStatus(); }
+  if (combo.n >= 3) { game.energy = Math.min(100, game.energy + 2); drawStatus(); secrets.hit('combo'); }
   if (combo.n >= 3 && combo.n > combo.best) {
     combo.best = combo.n; try { localStorage.setItem('bajo-el-sombrero:combo', combo.n); } catch { /* nada */ }
     if (!combo.rec) { combo.rec = true; setTimeout(() => { floatText('¡Récord!', 'gain'); S.record(); }, 450); }
@@ -257,6 +258,7 @@ const go = $('#go'); go.disabled = false; go.textContent = 'Entrar al bosque'; g
 window.__load?.done();
 
 /* ---------- Estado del juego ---------- */
+let secrets = null; // los secretos del bosque (se arman al final, con todo lo demás)
 const state = { phase: 'title', near: null, busy: false, slept: new Set(), stepDist: 0, idle: 0, cur: null, entered: new Set(), done: new Set(), awake: new Set(['anillo']), insighting: false, flights: 0 };
 const levelOf = (m) => LEVELS.find((L) => L.id === m.level);
 const game = { lives: 3, energy: 80, poison: 0, starving: 0, faints: 0, eats: [], sniffs: 0, beat: 0 };
@@ -441,7 +443,7 @@ go.addEventListener('click', async () => {
 // Tocar un hongo de la magulladura: se ve si se mancha
 function touchCheck(m) {
   if (!m.level || m.traitKnown || !flora.touch(m)) return;
-  tag(m, m.yes ? 'Se mancha' : 'No se mancha', m.yes ? 'bru' : 'neutral');
+  tag(m, m.yes ? 'Se mancha' : 'No se mancha', m.yes ? 'bru' : 'neutral'); if (m.yes) secrets.hit('mancha');
   S.sniff();
   tip('bru1', m.yes ? 'El tallo se pone azul donde lo tocaste. Se mancha.' : 'Lo tocaste y no pasó nada: este no se mancha.');
   tally(); checkInsight(levelOf(m));
@@ -599,7 +601,7 @@ function onShelf() { return beetle.mode === 'ground' && !beetle.airborne ? shelf
 function shelfAct(kind) {
   state.busy = true;
   const a = { v: 0 }, set = kind === 'sniff' ? (v) => beetle.setSniff(v) : (v) => beetle.setChew(v);
-  if (kind === 'sniff') { S.sniff(); game.energy -= 3; } else S.chew();
+  if (kind === 'sniff') { S.sniff(); game.energy -= 3; } else { S.chew(); secrets.hit('repisaMordida'); }
   drawStatus();
   gsap.timeline({ onUpdate: () => set(a.v), onComplete: () => (state.busy = false) }).to(a, { v: 1, duration: 0.35 }).to(a, { v: 1, duration: kind === 'sniff' ? 0.6 : 0.9 }).to(a, { v: 0, duration: 0.3 });
   const text = kind === 'sniff' ? SV.MISC.shelfSniff : SV.MISC.shelfEat;
@@ -619,6 +621,7 @@ function sniff() {
     .to(anim, { v: 1, duration: 0.35, ease: 'power2.out' })
     .add(() => {
       flora.reveal(m); S.found(m.toxic || !!m.rot); showPhoto(m); A.speak(m.rot && !m.toxic ? SV.MISC.rot : m.toxic ? SV.MISC.tox : SV.MISC.ed); tag(m, m.rot && !m.toxic ? 'Podrido' : m.toxic ? 'Venenoso' : 'Comestible', m.toxic || m.rot ? 'tox' : 'ed');
+      if (m.rot) secrets.hit('podrido');
       if (m.rot) tip('rot0', 'Este hongo ya está pasado: aunque sea de los que se comen, podrido hace mal.'); tally(); checkInsight(levelOf(m));
       if (!tip('s1', `${m.toxic ? 'Venenoso' : 'Comestible'}. Tus antenas no se equivocan… pero olfatear cansa.`) && game.sniffs === 4)
         tip('s4', 'Cada olfateo te gasta energía. No vas a poder olfatearlos todos.');
@@ -810,7 +813,8 @@ function showInsight(L) {
   const r = report(L);
   $('#ins-main').innerHTML = r.main; $('#ins-side').innerHTML = r.side;
   const next = LEVELS[LEVELS.indexOf(L) + 1];
-  $('#insight-ok').textContent = next ? `Ir ${toPlace(next.place)}` : 'Seguir explorando';
+  $('#insight-ok').textContent = next ? `Seguir las esporas ${TRAILS[LEVELS.indexOf(next) % TRAILS.length][1]}` : 'Seguir explorando';
+  $('#insight-fly').hidden = !next; $('#insight-fly').textContent = next ? `Volar directo ${toPlace(next.place)}` : '';
   const el = $('#insight'); el.hidden = false; el.scrollTop = 0;
   gsap.fromTo(el, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8 });
   gsap.fromTo('#ins-main .stamp', { opacity: 0, scale: 2.6, rotate: -6 }, { opacity: 1, scale: 1, rotate: 10, duration: 0.45, ease: 'power4.in', delay: 1.2, onComplete: S.stamp });
@@ -818,7 +822,12 @@ function showInsight(L) {
   A.speak(SV.insightText(L), { interrupt: true });
   setTimeout(() => $('#insight-ok').focus(), 900);
 }
-$('#insight-ok').addEventListener('click', () => {
+// Al terminar un claro aparece un hilo de esporas de otro color hasta el siguiente: lo seguís cuando quieras
+// (mientras tanto podés seguir explorando, buscar secretos…). O, si preferís, volás directo como antes.
+const TRAILS = [['#ffb86b', 'naranjas'], ['#c9a0ff', 'violetas'], ['#7fd8ff', 'celestes'], ['#ff8fb8', 'rosadas'], ['#ffe066', 'amarillas'], ['#a8ff9f', 'verdes']];
+$('#insight-ok').addEventListener('click', () => leaveInsight(false));
+$('#insight-fly').addEventListener('click', () => leaveInsight(true));
+function leaveInsight(direct) {
   const L = state.cur; if (!L || !state.done.has(L.id) || state.phase !== 'insight') return;
   const next = LEVELS[LEVELS.indexOf(L) + 1];
   gsap.to('#insight', { opacity: 0, duration: 0.4, onComplete: () => ($('#insight').hidden = true) });
@@ -829,11 +838,22 @@ $('#insight-ok').addEventListener('click', () => {
     // Se despierta el claro siguiente y aparece un camino de esporas hasta él
     state.awake.add(next.id); world.wake(next.at.name);
     const a = L.at, b = next.at, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
-    trail = sporeTrail(scene, [[a.x, a.z - 4], [mx + (b.z - a.z) * 0.12, mz - (b.x - a.x) * 0.12], [b.x, b.z]]);
+    const lx = b.x, lz = b.z + next.spread + 7, [hex, cname] = TRAILS[LEVELS.indexOf(next) % TRAILS.length];
+    if (!direct) {
+      // un hilo de esporas de color, desde donde estás hasta el borde del claro siguiente (y adentro)
+      const p0 = beetle.pos, q1 = [p0.x + (lx - p0.x) * 0.33 + (lz - p0.z) * 0.12, p0.z + (lz - p0.z) * 0.33 - (lx - p0.x) * 0.12], q2 = [p0.x + (lx - p0.x) * 0.66 - (lz - p0.z) * 0.08, p0.z + (lz - p0.z) * 0.66 + (lx - p0.x) * 0.08];
+      trail = sporeTrail(scene, [[p0.x, p0.z], q1, q2, [lx, lz], [b.x, b.z + next.spread * 0.3]], hex);
+      objective(`Seguí las esporas ${cname} ${toPlace(next.place)}. Sin apuro: mientras tanto podés seguir explorando.`);
+      say('trail' + next.id, `Un hilo de esporas ${cname} se enciende entre los hongos. Llevan ${toPlace(next.place)}: seguilas cuando quieras.`);
+      tip('trail0', 'No hay apuro: podés buscar secretos, esporas doradas o amigos antes de seguir el hilo. Con el botón 🔍 de arriba te doy una pista.');
+      S.found(false);
+      return;
+    }
+    trail = sporeTrail(scene, [[a.x, a.z - 4], [mx + (b.z - a.z) * 0.12, mz - (b.x - a.x) * 0.12], [b.x, b.z]], hex);
     objective(`Volando ${toPlace(next.place)}…`);
     say('next' + next.id, `Abrís las alas y seguís las esporas ${toPlace(next.place)}. Otro claro, otra creencia para poner a prueba.`);
     // Vuelo de viaje: gratis, siguiendo las esporas, y aterriza al borde del claro mirando al centro
-    const lx = b.x, lz = b.z + next.spread + 7, d = Math.hypot(lx - beetle.pos.x, lz - beetle.pos.z);
+    const d = Math.hypot(lx - beetle.pos.x, lz - beetle.pos.z);
     state.phase = 'travel'; S.fly();
     // Durante el vuelo pasa el tiempo: cada claro es un poco más tarde que el anterior
     gsap.to(clock24, { k: next.time, duration: 7, ease: 'sine.inOut', onUpdate: () => world.setTime(clock24.k) });
@@ -843,7 +863,7 @@ $('#insight-ok').addEventListener('click', () => {
     say('end1', 'Seis creencias puestas a prueba. Ninguna alcanza para saber si un hongo es comestible.');
     say('end2', 'Gracias por jugar. Ante la duda, no se come.');
   }
-});
+}
 
 /* ---------- Cuaderno de campo: índice de los claros y, al tocar uno, el mismo informe del resumen ---------- */
 function bars([a, b, la, lb]) {
@@ -874,7 +894,7 @@ function renderBook() {
       const pics = [...new Set(flora.specimens.filter((s) => s.level === L.id).map((s) => s.species))].slice(0, 4).map((id) => `<img src="${photo(id)}" alt="${SPECIES[id].name}">`).join('');
       return `<button class="pg open" data-lv="${L.id}"><span class="st">${L.stamp}</span><span class="n">${i + 1}</span><h3>${L.title}</h3>
         <p class="mini"><b>${nums[0]}</b> ${labels[0]} · <b>${nums[1]}</b> ${labels[1]}</p><div class="pics">${pics}</div><span class="more">Ver el informe →</span></button>`;
-    }).join('');
+    }).join('') + (secrets ? secrets.html() : '');
     for (const b of box.querySelectorAll('[data-lv]')) b.addEventListener('click', () => { bookView = b.dataset.lv; renderBook(); $('.paper').scrollTop = 0; });
   }
   $('#pages').textContent = `${state.done.size}/${LEVELS.length}`;
@@ -940,6 +960,7 @@ function frame() {
   bits.update(dt);
   birdUpdate(dt);
   adv.update(dt, t, state.phase === 'play');
+  secrets.update(dt, state.phase === 'play');
   world.follow(beetle.pos);
   vision.value += ((keys.has(A.keyFor('vision')) ? 1 : 0) - vision.value) * Math.min(1, dt * 8);
 
@@ -982,11 +1003,15 @@ function frame() {
     if (ev === 'sin-fuerzas') tip('flyweak', 'Sin energía no podés volar: comé algo.', { repeat: true });
     if (ev === 'agarró') { S.climb(); tip('grab1', 'Te agarraste. Para soltarte, saltá (Espacio).'); }
     if (ev === 'trepa-tronco') { S.climb(); tip('tree1', 'Un árbol entero para trepar. Las repisas de hongos son escalones: pasá por una y te subís.'); }
-    if (ev === 'repisa') { S.land(); tip('shelf1', 'Un hongo repisa: crece en la madera de los árboles. Desde acá podés saltar a otra.'); }
+    if (ev === 'repisa') { S.land(); secrets.hit('repisa'); tip('shelf1', 'Un hongo repisa: crece en la madera de los árboles. Desde acá podés saltar a otra.'); }
     if (ev === 'aterrizó:ground') S.land();
     // Bejines, rebotes, combos, picada, planeo y las conductas del escarabajo
     if (ev === 'saltó') comboStart(wasOn);
+    if (ev === 'brinco') S.jump();
+    // Cerca de un bejín, la primera vez: cómo se usa
+    if (beetle.mode === 'ground' && !state.puffTip) { const pf = flora.nearest(beetle.pos, null, 4); if (pf?.look?.puff) { state.puffTip = true; tip('puff0', 'Eso es un bejín. Saltá (Espacio) al lado y te subís de un brinco. Arriba, saltá otra vez: es un trampolín.'); } }
     if (ev === 'rebotó') {
+      secrets.hit('rebote');
       const m = beetle.bounced, k = Math.min(1, beetle.bounceV / 20);
       S.boing(k); flora.squash(m, 0.45 + k * 0.55);
       spores.emit({ x: m.x, y: m.base + m.top, z: m.z }, 10 + Math.round(k * 16), 0.6 + k * 0.7);
@@ -998,14 +1023,17 @@ function frame() {
     if (ev === 'cayó:cap') { comboHit(beetle.on); if (combo.n >= 4) { beetle.cheer(); S.cheer(); } }
     if (ev === 'despegó' || ev === 'agarró') comboEnd();
     if (!beetle.airborne && (beetle.mode === 'ground' || beetle.mode === 'stem') && combo.n) comboEnd();
-    if (ev === 'picada') { S.dive(); tip('dive1', '¡En picada! Volando, X + adelante te tira en diagonal, rapidísimo.'); }
+    if (ev === 'picada') { S.dive(); secrets.hit('picada'); tip('dive1', '¡En picada! Volando, X + adelante te tira en diagonal, rapidísimo.'); }
     if (beetle.dive > 0.5) { state.trail = (state.trail || 0) - dt; if (state.trail <= 0) { state.trail = 0.04; spores.emit(beetle.pos, 1, 0.3, 0.3); } }
     if ((ev === 'aterrizó:ground' || ev === 'aterrizó:cap') && beetle.state.landV > 9) { S.crash(); spores.emit(beetle.pos, 12, 0.7); }
+    if (beetle.gliding) secrets.hit('planeo');
+    if (beetle.airborne && beetle.altitude > 24) secrets.hit('altura');
     if (beetle.gliding) tip('glide1', 'Sin energía no podés batir las alas, pero sí planear: mantené Espacio y bajás despacito.');
+    if (ev === 'achís') secrets.hit('estornudo');
     if (ev === 'achís') { S.sneeze(); beetle.heading(H); spores.emit(beetle.pos.clone().addScaledVector(H, 0.9), 6, 0.35, 0.6); }
     if (state.sneezeQ > 0) { state.sneezeQ -= dt; if (state.sneezeQ <= 0 && !beetle.airborne) beetle.sneeze(); else if (state.sneezeQ <= 0) state.sneezeQ = 0.3; }
     if (ev && ev.startsWith('idle:')) {
-      const kind = ev.slice(5);
+      const kind = ev.slice(5); secrets.hit('conducta');
       if (kind === 'antenas' || kind === 'patas' || kind === 'elitros') { S.scrub(kind === 'patas' ? 14 : 10, kind === 'patas' ? 0.1 : 0.14); tip('idle1', 'Los escarabajos se limpian seguido: las antenas son su nariz, y tienen que estar limpias.'); }
       if (kind === 'alas') S.flutter();
     }
@@ -1045,6 +1073,7 @@ function frame() {
       if (!state.awake.has(L.id) || state.done.has(L.id) || state.cur === L) continue;
       if (Math.hypot(beetle.pos.x - L.at.x, beetle.pos.z - L.at.z) < L.spread + 16) {
         state.cur = L; tally(); objective(L.goal);
+        if (clock24.k < L.time - 0.01) gsap.to(clock24, { k: L.time, duration: 6, ease: 'sine.inOut', onUpdate: () => world.setTime(clock24.k) }); // llegaste más tarde: el sol bajó
         if (L.night) S.setMood('dark');
         if (!state.entered.has(L.id)) { state.entered.add(L.id); L.enter.forEach((t, i) => say(`enter${L.id}${i}`, t)); tip('flyhint', 'Si no querés caminar, apretá G (o el botón Volar): vas volando al próximo hongo sin explorar.'); }
       }
@@ -1076,7 +1105,10 @@ function frame() {
   post.render();
 }
 // Esporas doradas, aros de vuelo, amigos perdidos, telas de araña y sombreritos
-const adv = createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus });
+secrets = createSecrets({ tip, floatText, S });
+const adv = createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus, secrets });
+$('#adv').addEventListener('click', (e) => { if (e.target.closest('.sec')) secrets.hint(); });
+renderBook();
 renderer.setAnimationLoop(frame);
 
 addEventListener('resize', () => {

@@ -327,3 +327,15 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .adv span { background: rgba(20,14,8,.5); border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 3px 10px; }
 .adv:empty { display: none; }
 .xl-more { opacity: .9; }
+.adv .sec { font: inherit; color: inherit; background: rgba(20,14,8,.5); border: 1px solid rgba(255,220,140,.35); border-radius: 999px; padding: 3px 10px; cursor: pointer; pointer-events: auto; }
+.adv .sec:hover { background: rgba(60,40,15,.7); }
+.secrets { grid-column: 1 / -1; margin-top: 10px; }
+.secrets h3 { display: flex; gap: 10px; align-items: baseline; }
+.secrets h3 span { font-size: .8em; opacity: .7; }
+.secrets .sec-k { opacity: .75; margin: 2px 0 10px; }
+.secrets ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.secrets li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px dashed rgba(90,60,30,.35); font-size: 13px; }
+.secrets li b { font-size: 13px; letter-spacing: .02em; }
+.secrets li span { opacity: .8; }
+.secrets li.ok { border-style: solid; background: rgba(120,160,90,.12); }
+.ins-foot .go.alt { margin-left: 10px; background: transparent; color: #ffd59a; border: 1px solid rgba(255,213,154,.5); font-size: 15px; padding: 12px 22px; }

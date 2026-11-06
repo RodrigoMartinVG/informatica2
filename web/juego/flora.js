@@ -164,7 +164,7 @@ function garden(scene, list, quality) {
 
 /* ---------- Bejinales: grupitos de bejines (pedos de lobo), que para un escarabajo son trampolines ---------- */
 function puffballs(scene, list, quality) {
-  const r = rng(271), spots = [{ x: SPAWN.x + 11, z: SPAWN.z + 5 }];
+  const r = rng(271), spots = [{ x: SPAWN.x + 6, z: SPAWN.z - 9 }]; // el primero, justo adelante de donde empezás
   // al pie de algunos árboles (rebotando se llega más alto) y sueltos por el bosque
   for (const o of obstacles.filter((o) => o.climb).slice(0, 4)) { const a = r() * 6.28; spots.push({ x: o.x + Math.cos(a) * (o.r + 7), z: o.z + Math.sin(a) * (o.r + 7) }); }
   for (let tries = 0; spots.length < 12 && tries < 200; tries++) {

@@ -325,11 +325,11 @@ function atmosphere(scene, sunDir, motes) {
 }
 
 /* ---------- Camino de esporas que guía al jugador ---------- */
-export function sporeTrail(scene, points = TRAIL) {
+export function sporeTrail(scene, points = TRAIL, hex = '#9fe8c8') {
   const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, height(x, z) + 2.2, z)));
   const n = Math.max(40, Math.round(curve.getLength() / 1.1)), mat = new THREE.MeshBasicNodeMaterial({ transparent: true });
   const id = float(instanceIndex);
-  mat.colorNode = color('#9fe8c8').mul(2.6);
+  mat.colorNode = color(hex).mul(2.6);
   mat.opacityNode = sin(time.mul(2).sub(id.mul(0.35))).mul(0.4).add(0.6);
   mat.positionNode = positionLocal.add(vec3(sin(time.add(id)).mul(0.5), sin(time.mul(1.3).add(id.mul(0.7))).mul(0.6), cos(time.add(id.mul(1.7))).mul(0.5)));
   const mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.11, 1), mat, n);
