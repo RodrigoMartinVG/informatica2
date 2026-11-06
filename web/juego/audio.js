@@ -3,7 +3,7 @@
 // Ambiente: viento muy suave, pájaros y grillos sintetizados. Efectos: pasos, olfateo, descubrimientos.
 const Tone = window.Tone;
 let ready = false, on = false;
-let master, music, musicF, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step;
+let master, music, musicF, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step, puffN, rub, whoosh;
 
 function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
 
@@ -31,6 +31,12 @@ function setup() {
   pluck.maxPolyphony = 10;
   thump = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 3, envelope: { attack: 0.003, decay: 0.6, sustain: 0, release: 0.4 }, volume: -12 }).connect(sfx);
   step = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -34 }).connect(sfx);
+  // Soplidos de ruido: la nube de esporas del bejín, el roce de las patas al limpiarse, el viento de la picada
+  puffN = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.005, decay: 0.35, sustain: 0 }, volume: -20 }).connect(new Tone.Filter(1400, 'lowpass').connect(sfx));
+  rub = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.002, decay: 0.035, sustain: 0 }, volume: -38 }).connect(new Tone.Filter(5200, 'bandpass').connect(sfx));
+  const wf = new Tone.Filter(600, 'bandpass').connect(sfx);
+  whoosh = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.25, decay: 0.6, sustain: 0 }, volume: -18 }).connect(wf);
+  whoosh.filt = wf;
 
   // Pájaros: tonos que suben y bajan rápido
   chirp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.08, sustain: 0.2, release: 0.05 }, portamento: 0.03, volume: -30 }).connect(amb);
@@ -165,3 +171,39 @@ export function bird() {
   chirp.triggerAttack(3200, t); chirp.frequency.exponentialRampToValueAtTime(1400, t + 0.5); chirp.triggerRelease(t + 0.55);
   for (let i = 0; i < 6; i++) step.triggerAttackRelease(70, 0.06, t + 0.6 + i * 0.22, 0.9);
 }
+
+// Bejín: un «¡puf!» de esporas y un boing (más agudo cuanto más fuerte el rebote)
+export function boing(k = 1) {
+  if (!go()) return; const t = now();
+  puffN.triggerAttackRelease(0.3, t, Math.min(1, 0.4 + k * 0.5));
+  thump.triggerAttackRelease(n5(Math.round(k * 3), 2), 0.25, t, 0.6);
+  [0, 2, 4].forEach((i, j) => pluck.triggerAttackRelease(n5(i + Math.round(k * 2), 5), '32n', t + 0.04 + j * 0.05, 0.4));
+}
+// Combo: cada sombrero encadenado suena una nota más arriba en la escala
+export function combo(n) {
+  if (!go()) return; const t = now();
+  bell.triggerAttackRelease(n5(n + 2, 4), '16n', t, 0.5);
+  if (n >= 4) bell.triggerAttackRelease(n5(n + 4, 5), '16n', t + 0.08, 0.35);
+}
+// Récord de combo
+export function record() { if (!go()) return; const t = now(); ['D5', 'F5', 'A5', 'C6', 'D6'].forEach((n, i) => pluck.triggerAttackRelease(n, '16n', t + i * 0.06, 0.55)); }
+// Picada: un silbido de viento que baja
+export function dive() {
+  if (!go()) return; const t = now();
+  whoosh.filt.frequency.cancelScheduledValues(t); whoosh.filt.frequency.setValueAtTime(1800, t); whoosh.filt.frequency.exponentialRampToValueAtTime(380, t + 0.9);
+  whoosh.triggerAttackRelease(0.5, t, 0.8);
+}
+// Golpe al aterrizar de una picada
+export function crash() { if (!go()) return; const t = now(); thump.triggerAttackRelease('D1', 0.35, t, 0.8); puffN.triggerAttackRelease(0.15, t, 0.4); }
+// Patas que se frotan (limpiándose): rasguidos cortitos
+export function scrub(n = 10, gap = 0.13) { if (!go()) return; const t = now(); for (let i = 0; i < n; i++) rub.triggerAttackRelease(0.03, t + i * gap, 0.5 + (i % 2) * 0.3); }
+// Alas que se estiran: un brrr cortito
+export function flutter() { if (!go()) return; const t = now(); for (let i = 0; i < 6; i++) step.triggerAttackRelease(240 + (i % 2) * 30, 0.02, t + 0.5 + i * 0.045, 0.35); }
+// ¡Achís!
+export function sneeze() {
+  if (!go()) return; const t = now();
+  chirp.triggerAttack(900, t); chirp.frequency.linearRampToValueAtTime(1500, t + 0.3); chirp.triggerRelease(t + 0.32);
+  puffN.triggerAttackRelease(0.12, t + 0.4, 0.7);
+}
+// Festejo
+export function cheer() { if (!go()) return; const t = now(); [0, 2, 4, 5].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + i * 0.07, 0.45)); }

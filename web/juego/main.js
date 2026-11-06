@@ -109,6 +109,38 @@ const bits = (() => {
   };
 })();
 
+// Nubes de esporas (el «¡puf!» del bejín, la estela de la picada, el polvo al aterrizar fuerte): esferitas que se inflan y se van
+const spores = (() => {
+  const N = 90, mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: '#cbb78f', roughness: 1, transparent: true, opacity: 0.5, depthWrite: false }), N);
+  mesh.frustumCulled = false; scene.add(mesh);
+  const ps = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), life: 0, max: 1, s: 0.2 }));
+  const mx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+  let i0 = 0, active = 0;
+  mx.makeScale(0, 0, 0); for (let i = 0; i < N; i++) mesh.setMatrixAt(i, mx);
+  return {
+    emit(at, n = 20, k = 1, spread = 1) {
+      for (let j = 0; j < n; j++) {
+        const p = ps[(i0++) % N], a = Math.random() * Math.PI * 2, sp = (0.8 + Math.random() * 2.6) * k * spread;
+        p.p.set(at.x + (Math.random() - 0.5) * 0.4, at.y, at.z + (Math.random() - 0.5) * 0.4);
+        p.v.set(Math.cos(a) * sp, (0.6 + Math.random() * 2.2) * k, Math.sin(a) * sp);
+        p.life = p.max = 0.8 + Math.random() * 0.9; p.s = (0.12 + Math.random() * 0.22) * Math.max(0.4, k);
+      }
+      active = 2;
+    },
+    update(dt) {
+      if (active <= 0) return; active -= dt;
+      for (let i = 0; i < N; i++) {
+        const p = ps[i];
+        if (p.life > 0) { p.life -= dt; p.v.multiplyScalar(Math.max(0, 1 - dt * 2.4)); p.v.y += 0.5 * dt; p.p.addScaledVector(p.v, dt); }
+        const a = 1 - Math.max(0, p.life) / p.max;
+        sc.setScalar(p.life > 0 ? p.s * (0.4 + a * 1.8) * Math.min(1, p.life * 2) : 0);
+        mx.compose(p.p, q, sc); mesh.setMatrixAt(i, mx);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  };
+})();
+
 // El pájaro: una sombra que cruza el bosque. Hay que esconderse debajo de un sombrero.
 const birdShadow = (() => {
   const k = uniform(0), mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
@@ -117,6 +149,25 @@ const birdShadow = (() => {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(46, 30), mat); mesh.rotation.x = -Math.PI / 2; mesh.visible = false; mesh.renderOrder = 5;
   scene.add(mesh);
   return { mesh, k };
+})();
+// y el pájaro mismo, que baja en picada sobre el claro y vuelve a subir (unas pocas piezas, sin texturas)
+const birdBody = (() => {
+  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: '#3a302a', roughness: 0.85 }), belly = new THREE.MeshStandardMaterial({ color: '#8a6a4a', roughness: 0.9 });
+  const sph = new THREE.SphereGeometry(1, 14, 10);
+  const b = new THREE.Mesh(sph, mat); b.scale.set(2.6, 2.4, 7.5); g.add(b);
+  const be = new THREE.Mesh(sph, belly); be.scale.set(2.3, 1.8, 6); be.position.set(0, -0.9, 0.5); g.add(be);
+  const h = new THREE.Mesh(sph, mat); h.scale.setScalar(2.1); h.position.set(0, 1, 6.6); g.add(h);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.4, 8), new THREE.MeshStandardMaterial({ color: '#d8a23a', roughness: 0.5 })); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.7, 9.4); g.add(beak);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.3, 6), mat); tail.position.set(0, 0.4, -9); g.add(tail);
+  const wings = [-1, 1].map((side) => {
+    const piv = new THREE.Group(); piv.position.set(side * 2, 0.8, 1); g.add(piv);
+    const w = new THREE.Mesh(new THREE.BoxGeometry(15, 0.35, 6.5), mat); w.position.x = side * 7.5; piv.add(w);
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(6, 0.3, 4), mat); tip.position.x = side * 17; tip.position.z = -1.2; piv.add(tip);
+    return { piv, side };
+  });
+  g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  g.visible = false; scene.add(g);
+  return { g, wings };
 })();
 const bird = { next: 75, t: -1, dur: 8, cross: 5, from: new THREE.Vector3(), dir: new THREE.Vector3(), checked: false };
 function birdStart() {
@@ -144,17 +195,45 @@ function birdUpdate(dt) {
   birdShadow.mesh.position.set(p.x, walkHeight(p.x, p.z) + 1.2, p.z);
   birdShadow.mesh.rotation.z = -Math.atan2(bird.dir.z, bird.dir.x);
   birdShadow.k.value = Math.min(1, bird.t / 1.2, (bird.dur - bird.t) / 1.2);
+  // el pájaro baja hasta pasar rasante por donde está el escarabajo y vuelve a subir
+  const u = Math.abs(bird.t - bird.cross) / bird.cross, alt = 16 + 50 * u * u;
+  birdBody.g.visible = true; birdBody.g.position.set(p.x, height(p.x, p.z) + alt, p.z);
+  birdBody.g.rotation.set(bird.t < bird.cross ? 0.25 * (1 - u) : -0.3 * (1 - u), Math.atan2(bird.dir.x, bird.dir.z), 0);
+  const flap = u > 0.35 ? Math.sin(bird.t * 11) * 0.7 : 0.15; // cerca, planea con las alas extendidas
+  for (const w of birdBody.wings) w.piv.rotation.z = w.side * flap;
   if (!bird.checked && bird.t >= bird.cross) {
     bird.checked = true;
     if (state.phase !== 'play') return;
-    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); }
+    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); setTimeout(() => { beetle.cheer(); S.cheer(); }, 900); }
     else {
       game.energy = Math.max(0, game.energy - 25); drawStatus(); S.hurt(); floatText('−25 energía', 'loss');
+      beetle.knock(bird.dir.x, bird.dir.z); comboEnd(); // el picotazo lo revolea
       gsap.fromTo(hurtU, { value: 0.8 }, { value: 0, duration: 1 }); A.speak(SV.MISC.hit, { interrupt: true });
       tip('birdhit' + Date.now(), 'El pájaro te picoteó: perdiste energía. Para la próxima, escondete debajo de un sombrero.', { repeat: true });
     }
   }
-  if (bird.t >= bird.dur) { bird.t = -1; birdShadow.mesh.visible = false; }
+  if (bird.t >= bird.dur) { bird.t = -1; birdShadow.mesh.visible = false; birdBody.g.visible = false; }
+}
+
+// Combos: encadenar sombreros saltando (o rebotando) sin tocar el suelo ni abrir las alas
+const combo = { n: 0, last: null, best: 0, rec: false };
+try { combo.best = +localStorage.getItem('bajo-el-sombrero:combo') || 0; } catch { /* sin almacenamiento */ }
+function comboStart(m) { if (m && combo.n === 0) { combo.n = 1; combo.last = m; } }
+function comboHit(m) {
+  if (!m || m === combo.last) return;
+  if (combo.n === 0) { combo.n = 1; combo.last = m; return; } // empieza acá (llegó desde un tronco, una rama…)
+  combo.last = m; combo.n++;
+  floatText(`Combo ×${combo.n}`, 'combo'); S.combo(combo.n);
+  if (combo.n >= 3) { game.energy = Math.min(100, game.energy + 2); drawStatus(); }
+  if (combo.n >= 3 && combo.n > combo.best) {
+    combo.best = combo.n; try { localStorage.setItem('bajo-el-sombrero:combo', combo.n); } catch { /* nada */ }
+    if (!combo.rec) { combo.rec = true; setTimeout(() => { floatText('¡Récord!', 'gain'); S.record(); }, 450); }
+  }
+  tip('combo1', 'Combo: saltá de sombrero en sombrero sin tocar el suelo. Pisar el piso o abrir las alas lo corta.');
+}
+function comboEnd() {
+  if (combo.n >= 3) setTimeout(() => { beetle.cheer(); S.cheer(); }, 200);
+  combo.n = 0; combo.last = null; combo.rec = false;
 }
 
 // Texto flotante (por ejemplo «+35 energía») sobre el escarabajo
@@ -566,6 +645,7 @@ function rotten() {
 function fed() {
   const before = game.energy; game.energy = Math.min(100, game.energy + 35); drawStatus(); S.heal();
   floatText(`+${Math.round(game.energy - before)} energía`, 'gain'); A.speak(SV.MISC.ateEd);
+  setTimeout(() => beetle.cheer(), 300);
   gsap.fromTo(healU, { value: 1 }, { value: 0, duration: 1.4 });
   const bar = $('#energy').parentElement; bar.classList.remove('boost'); void bar.offsetWidth; bar.classList.add('boost');
   if (!tip('e1', 'Rico. Sentís cómo vuelve la energía.') && game.eats.length >= 4) tip('e4', '¿Estás eligiendo por el aspecto? Fijate cuántos te salieron bien.');
@@ -818,7 +898,7 @@ function fly() {
   if (game.energy < FLY_COST) { tip('flytired', 'Estás sin fuerzas para volar. Comé algo primero.', { repeat: true }); return; }
   const target = flyTarget();
   if (!target) { tip('flynone', 'Ya exploraste todos los hongos que hay cerca.', { repeat: true }); return; }
-  game.energy -= FLY_COST; drawStatus(); state.flights++;
+  game.energy -= FLY_COST; drawStatus(); state.flights++; comboEnd();
   beetle.flyTo(target); S.fly();
   tip('fly1', 'Los escarabajos también vuelan: abrís los élitros, desplegás las alas y aterrizás sobre un hongo que todavía no exploraste.');
 }
@@ -839,7 +919,9 @@ function frame() {
   // Red de seguridad: ninguna animación (olfatear, comer) puede dejar al escarabajo trabado más de 4 s
   if (state.busy) { state.busyT = (state.busyT || 0) + dt; if (state.busyT > 4) { state.busy = false; beetle.setSniff(0); beetle.setChew(0); } } else state.busyT = 0;
   const inp = input();
+  const wasOn = beetle.on;
   const ev = beetle.update(dt, inp);
+  spores.update(dt);
   flora.update(dt, t);
   bits.update(dt);
   birdUpdate(dt);
@@ -850,7 +932,8 @@ function frame() {
     const moved = prev.distanceTo(beetle.pos);
     // Hambre: baja de a poco; más rápido si caminás o corrés
     const freeFly = beetle.flying && beetle.state.mode === 'air'; // volar libre cansa (el vuelo automático casi no)
-    game.energy -= dt * (0.35 + (moved > 0.001 && !freeFly ? 0.45 : 0) + (inp.run ? 1 : 0) + (freeFly ? 1.3 : 0));
+    // (planear sin batir las alas cansa menos; subir, más)
+    game.energy -= dt * (0.35 + (moved > 0.001 && !freeFly ? 0.45 : 0) + (inp.run ? 1 : 0) + (freeFly ? (inp.up ? 1.6 : beetle.dive > 0.5 ? 0.4 : 0.7) : 0));
     if (game.energy <= 0) {
       game.energy = 0; game.starving += dt;
       tip('starve', 'Sin energía, cada paso cuesta. Si no comés, no vas a aguantar.');
@@ -881,6 +964,31 @@ function frame() {
     if (ev === 'trepa-tronco') { S.climb(); tip('tree1', 'Un árbol entero para trepar. Las repisas de hongos son escalones: pasá por una y te subís.'); }
     if (ev === 'repisa') { S.land(); tip('shelf1', 'Un hongo repisa: crece en la madera de los árboles. Desde acá podés saltar a otra.'); }
     if (ev === 'aterrizó:ground') S.land();
+    // Bejines, rebotes, combos, picada, planeo y las conductas del escarabajo
+    if (ev === 'saltó') comboStart(wasOn);
+    if (ev === 'rebotó') {
+      const m = beetle.bounced, k = Math.min(1, beetle.bounceV / 20);
+      S.boing(k); flora.squash(m, 0.45 + k * 0.55);
+      spores.emit({ x: m.x, y: m.base + m.top, z: m.z }, 10 + Math.round(k * 16), 0.6 + k * 0.7);
+      if (m === wasOn) comboStart(m); else comboHit(m);
+      tip('puff1', '¡Un bejín! Es un trampolín: si saltás arriba de uno, volás alto. Cada rebote sale un poco más bajo.');
+      if (Math.random() < 0.2) state.sneezeQ = 1.5; // las esporas dan cosquillas
+    }
+    if (ev === 'rebote') { S.land(); flora.squash(beetle.bounced, 0.3); comboHit(beetle.bounced); }
+    if (ev === 'cayó:cap') { comboHit(beetle.on); if (combo.n >= 4) { beetle.cheer(); S.cheer(); } }
+    if (ev === 'despegó' || ev === 'agarró') comboEnd();
+    if (!beetle.airborne && (beetle.mode === 'ground' || beetle.mode === 'stem') && combo.n) comboEnd();
+    if (ev === 'picada') { S.dive(); tip('dive1', '¡En picada! Volando, X + adelante te tira en diagonal, rapidísimo.'); }
+    if (beetle.dive > 0.5) { state.trail = (state.trail || 0) - dt; if (state.trail <= 0) { state.trail = 0.04; spores.emit(beetle.pos, 1, 0.3, 0.3); } }
+    if ((ev === 'aterrizó:ground' || ev === 'aterrizó:cap') && beetle.state.landV > 9) { S.crash(); spores.emit(beetle.pos, 12, 0.7); }
+    if (beetle.gliding) tip('glide1', 'Sin energía no podés batir las alas, pero sí planear: mantené Espacio y bajás despacito.');
+    if (ev === 'achís') { S.sneeze(); beetle.heading(H); spores.emit(beetle.pos.clone().addScaledVector(H, 0.9), 6, 0.35, 0.6); }
+    if (state.sneezeQ > 0) { state.sneezeQ -= dt; if (state.sneezeQ <= 0 && !beetle.airborne) beetle.sneeze(); else if (state.sneezeQ <= 0) state.sneezeQ = 0.3; }
+    if (ev && ev.startsWith('idle:')) {
+      const kind = ev.slice(5);
+      if (kind === 'antenas' || kind === 'patas' || kind === 'elitros') { S.scrub(kind === 'patas' ? 14 : 10, kind === 'patas' ? 0.1 : 0.14); tip('idle1', 'Los escarabajos se limpian seguido: las antenas son su nariz, y tienen que estar limpias.'); }
+      if (kind === 'alas') S.flutter();
+    }
     if (ev === 'aterrizó:cap') { S.jump(); tip('land1', 'Aterrizaste sobre el sombrero. Olfateá o comé desde acá arriba.'); if (beetle.on) A.speak(mushParts(beetle.on)); }
 
     // Magulladura: al tocar un tallo se descubre si se mancha

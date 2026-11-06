@@ -1,7 +1,7 @@
 // Herramientas de prueba del juego. Se cargan solo con ?debug en la dirección.
 // ?auto salta la intro · ?x=..&z=..&yaw=.. ubica al escarabajo · ?pitch=.. inclina la cámara
 // ?sobre=N lo sube al sombrero del hongo N · ?veneno simula veneno · ?noche · ?alas · ?mancha
-// ?hora=0..1 cambia la hora del día · ?ficha=N muestra la ficha del hongo N · ?resumen=id muestra el resumen de un claro · ?libro=id abre el cuaderno en ese claro
+// ?hora=0..1 cambia la hora del día · ?conducta=… · ?bejin · ?ficha=N muestra la ficha del hongo N · ?resumen=id muestra el resumen de un claro · ?libro=id abre el cuaderno en ese claro
 export function run(c) {
   const { params: p, THREE, gsap, $, beetle, flora, world, state, game, cam, LEVELS } = c;
   window.game = c; // acceso desde la consola
@@ -18,6 +18,9 @@ export function run(c) {
   if (p.has('sobre') || p.has('pitch') || p.has('dist')) { for (let i = 0; i < 40; i++) beetle.update(0.02, { fwd: 0, turn: 0, run: false }); c.snapCamera(); }
   if (p.has('mancha')) flora.specimens.filter((s) => s.level === 'magulladura').forEach((s) => { flora.touch(s); s.bruise = 1; if (s.stemMat) s.stemMat.color.lerp(new THREE.Color('#4f6fae'), 0.75); });
   if (p.has('alas')) { Object.assign(beetle.state, { fly: 1, flying: true }); setInterval(() => (beetle.state.flying = true), 30); } // alas abiertas (para mirar el vuelo de cerca)
+  // ?conducta=antenas|patas|elitros|alas|mirar|festejo|estornudo la repite · ?bejin lo pone al lado del bejinal de la salida
+  if (p.has('conducta')) setInterval(() => { if (!beetle.act) beetle.doAct(p.get('conducta')); }, 50);
+  if (p.has('bejin')) { const m = flora.all.find((m) => m.species === 'lycoperdon'); beetle.place(m.x - m.Rw - 2.5, m.z + 1, Math.PI / 2); for (let i = 0; i < 40; i++) beetle.update(0.02, { fwd: 0, turn: 0, run: false }); c.snapCamera(); }
   if (p.has('noche')) world.setNight(1);
   if (p.has('hora')) world.setTime(+p.get('hora'));
   if (p.has('pajaro')) { state.entered.add('anillo'); c.birdNow(); }

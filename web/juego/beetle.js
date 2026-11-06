@@ -13,6 +13,12 @@ const CLEAR = 0.3; // altura del cuerpo sobre la superficie
 const G = 34, JUMP = 10;   // gravedad y salto (cm/s², cm/s): a esta escala, un salto sube ~1 cm y llega a otro sombrero cercano
 const CEIL = 30;            // altura máxima de vuelo sobre el suelo (cm)
 const FLY = { speed: 9, run: 15, up: 7, down: 9, sink: 1.3 };
+const DIVE = { speed: 19, down: 16 };  // picada: X + adelante, volando
+const GLIDE = 2.4;                      // planeo sin energía: manteniendo el salto, cae despacito
+const PUFF = 19;                        // el bejín es un trampolín: salto desde arriba de uno (cm/s)
+// Conductas en reposo (cuando no lo movés un rato): limpiarse, estirarse, mirar alrededor…
+const IDLE = ['antenas', 'patas', 'elitros', 'alas', 'mirar', 'antenas', 'mirar'];
+const IDLE_DUR = { antenas: 3, patas: 2.6, elitros: 2.8, alas: 2.2, mirar: 2.6, festejo: 1.6, estornudo: 1.1 };
 
 function bone(mesh, a, b) {
   tmp.subVectors(b, a); const len = tmp.length();
@@ -126,7 +132,7 @@ export function createBeetle(scene) {
     hip: new THREE.Vector3(l.hip[0] * side, l.hip[1], l.hip[2]), rest: new THREE.Vector3(l.rest[0] * side, l.rest[1], l.rest[2]),
     group: (i + (side > 0 ? 1 : 0)) % 2,
     femur: new THREE.Mesh(femurGeo, legMat), tibia: new THREE.Mesh(tibiaGeo, legMat), tarsus: new THREE.Mesh(tarsGeo, legMat),
-    foot: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1
+    foot: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), base: new THREE.Vector3(), t: 1
   })));
   for (const l of LEGS) { l.femur.castShadow = l.tibia.castShadow = true; scene.add(l.femur, l.tibia, l.tarsus); }
   scene.add(root);
@@ -136,9 +142,68 @@ export function createBeetle(scene) {
   //       'cap' (arriba de un sombrero) · 'air' (saltando, cayendo o volando libre) · 'transit' (un paso armado de un punto a otro)
   const st = {
     mode: 'ground', x: 0, z: 0, fy: 0, yaw: Math.PI, speed: 0, turn: 0, sniff: 0, chew: 0, t: 0, m: null, th: 0, h: 0, push: 0, wall: 0,
-    wobble: 0, touch: null, flying: false, fly: 0, hold: 0, grabCD: 0, shelfCD: 0, v: new THREE.Vector3(), p: new THREE.Vector3()
+    wobble: 0, touch: null, flying: false, fly: 0, hold: 0, grabCD: 0, shelfCD: 0, v: new THREE.Vector3(), p: new THREE.Vector3(),
+    dive: 0, glide: false, glideV: 0, bounceM: null, act: null, idleT: 0, idleNext: 5, achis: false
   };
   let mushrooms = [];
+  // Lo que agrega la conducta del momento (limpiarse, festejar…) a la pose del cuerpo, la cabeza y las patas
+  const pose = { bx: 0, bz: 0, by: 0, hx: 0, hy: 0, hz: 0, hzPos: 0, ant: [0, 0], antZ: [0, 0], wings: 0, beat: 1, mand: 0, legs: new Map() };
+  const LOCAL = new THREE.Vector3();
+  const env = (p) => easeIO(Math.min(1, p * 4, (1 - p) * 4)); // entra y sale suave
+
+  // Elegir y animar una conducta. Las patas que se usan dejan de caminar y van a un punto del cuerpo
+  function startAct(kind) {
+    st.act = { kind, t: 0, dur: IDLE_DUR[kind], side: Math.random() < 0.5 ? -1 : 1 };
+    for (const l of LEGS) l.base.copy(l.foot);
+    st.achis = false;
+  }
+  function actPose(dt) {
+    pose.bx = pose.bz = pose.by = pose.hx = pose.hy = pose.hz = pose.hzPos = pose.mand = pose.wings = 0;
+    pose.ant[0] = pose.ant[1] = pose.antZ[0] = pose.antZ[1] = 0; pose.beat = 1; pose.legs.clear();
+    const a = st.act; if (!a) return null;
+    a.t += dt; const p = Math.min(1, a.t / a.dur), e = env(p), s = a.side, t = st.t;
+    let event = null;
+    const leg = (i, x, y, z) => pose.legs.set(LEGS[i], [x, y, z, e]);
+    // índices de LEGS: 0/1 adelante (izq/der), 2/3 medio, 4/5 atrás
+    const front = s < 0 ? 0 : 1, hind = s < 0 ? 4 : 5;
+    if (a.kind === 'antenas') {
+      // Se pasa la pata de adelante por la antena, de la base a la punta, varias veces (así se limpian los escarabajos)
+      const k = 0.5 + 0.5 * Math.sin(t * 12);
+      leg(front, s * (0.1 + k * 0.1), 0.1 + k * 0.12, 0.84 + k * 0.14);
+      pose.ant[s < 0 ? 0 : 1] = -0.7 * e; pose.antZ[s < 0 ? 0 : 1] = -s * 0.35 * e;
+      pose.hz = s * 0.22 * e; pose.hx = 0.18 * e; pose.bx = 0.06 * e;
+    } else if (a.kind === 'patas') {
+      // Frota las dos patas de atrás una contra otra, por encima de la cola
+      const k = Math.sin(t * 16);
+      leg(4, -0.07 + k * 0.05, 0.02, -0.78 + k * 0.05); leg(5, 0.07 + k * 0.05, 0.02, -0.78 - k * 0.05);
+      pose.bx = 0.1 * e; pose.by = 0.03 * e;
+    } else if (a.kind === 'elitros') {
+      // Barre el costado de los élitros con una pata de atrás
+      const k = 0.5 + 0.5 * Math.sin(t * 9);
+      leg(hind, s * 0.36, 0.1, -0.62 + k * 0.5);
+      pose.bz = -s * 0.12 * e;
+    } else if (a.kind === 'alas') {
+      // Estira las alas: abre los élitros, despliega las alas, un par de aleteos y las vuelve a guardar
+      pose.wings = 0.85 * e; pose.beat = p > 0.3 && p < 0.7 ? 0.6 : 0.05; pose.bx = -0.08 * e;
+    } else if (a.kind === 'mirar') {
+      // Mira a un lado y al otro, con las antenas atentas
+      pose.hy = Math.sin(p * Math.PI * 2) * 0.45 * e; pose.hx = -0.08 * e;
+      pose.ant[0] = pose.ant[1] = -0.25 * e;
+    } else if (a.kind === 'festejo') {
+      // ¡Festejo! saltitos, bamboleo y antenas al aire
+      pose.by = Math.abs(Math.sin(t * 11)) * 0.12 * e; pose.bz = Math.sin(t * 11) * 0.2 * e;
+      pose.ant[0] = pose.ant[1] = (-0.5 + Math.sin(t * 20) * 0.3) * e; pose.mand = Math.sin(t * 24) * 0.4 * e;
+    } else if (a.kind === 'estornudo') {
+      // Aaa… ¡chís! (las esporas del bejín): se echa para atrás y de golpe para adelante
+      const back = p < 0.6 ? easeIO(p / 0.6) : Math.max(0, 1 - (p - 0.6) * 8);
+      const jerk = p >= 0.6 ? Math.max(0, 1 - (p - 0.6) * 4) : 0;
+      pose.bx = -0.25 * back + 0.25 * jerk; pose.hx = -0.3 * back + 0.35 * jerk; pose.hzPos = 0.06 * jerk;
+      pose.ant[0] = pose.ant[1] = -0.4 * back; pose.mand = 0.5 * back;
+      if (p >= 0.6 && !st.achis) { st.achis = true; event = 'achís'; }
+    }
+    if (p >= 1) { st.act = null; st.idleT = 0; st.idleNext = 6 + Math.random() * 8; }
+    return event;
+  }
   const pos = new THREE.Vector3(), N = new THREE.Vector3(0, 1, 0), F = new THREE.Vector3(0, 0, 1);
   const smoothN = new THREE.Vector3(0, 1, 0);
   const basis = new THREE.Matrix4(), world = new THREE.Matrix4();
@@ -218,7 +283,9 @@ export function createBeetle(scene) {
       N.set(0, 1, 0).applyQuaternion(root.quaternion); smoothN.copy(N);
     } else orient(poseOf(st.mode), dt);
     // en vuelo el cuerpo va más erguido (como vuelan los escarabajos de verdad)
-    body.rotation.set(-st.sniff * 0.12 - st.chew * 0.15 - st.fly * 0.42, 0, Math.sin(st.t * 3.1) * 0.12 * st.wobble);
+    // (en picada, la nariz va para abajo)
+    body.rotation.set(-st.sniff * 0.12 - st.chew * 0.15 - st.fly * 0.42 * (1 - st.dive) + st.dive * 0.3 + pose.bx, 0, Math.sin(st.t * 3.1) * 0.12 * st.wobble + pose.bz);
+    body.position.y = pose.by;
     root.updateMatrixWorld(true);
     world.copy(body.matrixWorld);
   }
@@ -232,7 +299,7 @@ export function createBeetle(scene) {
     tr.b.copy(root.position); tr.qb.copy(root.quaternion);
     root.position.copy(tr.a); root.quaternion.copy(tr.qa);
     tr.ctrl.addVectors(tr.a, tr.b).multiplyScalar(0.5).addScaledVector(UP, lift);
-    tr.t = 0; tr.dur = dur; tr.next = toMode; st.mode = 'transit'; st.speed = 0;
+    tr.t = 0; tr.dur = dur; tr.next = toMode; st.mode = 'transit'; st.speed = 0; st.landV = 0;
     tr.fly = st.flying; tr.dir.set(0, 0, 0); tr.bank = 0; // los vuelos miran hacia donde van
   }
 
@@ -282,8 +349,19 @@ export function createBeetle(scene) {
       }
     }
     // Hongos: chocar contra el tallo; si seguís empujando de frente, empezás a trepar
+    let dome = null, dth = 0;
     for (const m of mushrooms) {
       const dx = st.x - m.x, dz = st.z - m.z; if (Math.abs(dx) > 8 || Math.abs(dz) > 8) continue;
+      // Hongos bajitos (los bejines, los achaparrados): el sombrero llega casi al piso y no se pasa por abajo.
+      // Se choca contra él y, si seguís empujando, te subís de un saltito.
+      if (m.base + m.capY(m.Rw) - st.fy < 0.9 && m.base + m.top - st.fy > -0.3) {
+        const d = Math.hypot(dx, dz), min = m.Rw + 0.35;
+        if (d < min && d > 1e-4) {
+          st.x = m.x + (dx / d) * min; st.z = m.z + (dz / d) * min;
+          if (input.fwd > 0.3 && facingTo(dx, dz, d) > 0.5) { dome = m; dth = Math.atan2(dz, dx); }
+        }
+        continue;
+      }
       const h = st.fy - m.base; if (h < -1.5 || h > m.climbTop - 0.5) continue; // por debajo del sombrero
       const d = Math.hypot(dx, dz), min = m.stemR(Math.max(0.4, h)) + 0.5;
       if (d < min + 0.35) st.touch = m; // las antenas llegan a tocar el tallo
@@ -292,9 +370,14 @@ export function createBeetle(scene) {
         if (input.fwd > 0.3 && facingTo(dx, dz, d) > 0.5) { climb = m; th = Math.atan2(dz, dx); hh = Math.max(0.5, h + 0.5); }
       }
     }
-    st.push = climb ? st.push + dt : 0;
+    st.push = climb || dome ? st.push + dt : 0;
     clampB();
     if (climb && st.push > 0.3) { grab(climb, th, hh); st.push = 0; return climb.kind === 'trunk' ? 'trepa-tronco' : 'trepa'; }
+    if (dome && st.push > 0.25) {
+      const m = dome, r = m.Rw * 0.45; st.push = 0;
+      startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(dth) * r; st.z = m.z + Math.sin(dth) * r; }, 0.5, Math.max(0.6, m.base + m.top - st.fy) * 0.6 + 0.5);
+      return 'arriba';
+    }
 
     // Paredes (troncos caídos, piedras grandes): si empujás, te trepás encima
     const wall = wallTop(st.x, st.z, st.fy);
@@ -369,8 +452,9 @@ export function createBeetle(scene) {
       const th = st.th; st.yaw = Math.atan2(Math.cos(th), Math.sin(th));
       startAir(Math.cos(th) * 4.5, 6, Math.sin(th) * 4.5); st.grabCD = 0.5;
     } else {
-      const s = Math.max(0, st.speed) * 1.05 + (input.fwd > 0 ? 1.2 : 0);
-      startAir(Math.sin(st.yaw) * s, JUMP, Math.cos(st.yaw) * s); st.grabCD = 0.25;
+      const s = Math.max(0, st.speed) * 1.05 + (input.fwd > 0 ? 1.2 : 0), puff = st.mode === 'cap' && st.m.look?.puff ? st.m : null;
+      startAir(Math.sin(st.yaw) * s, puff ? PUFF : JUMP, Math.cos(st.yaw) * s); st.grabCD = 0.25;
+      if (puff) { st.bounceM = puff; st.bounceV = PUFF; st.hold = 0; return 'rebotó'; }
     }
     st.hold = 0;
     return 'saltó';
@@ -398,14 +482,25 @@ export function createBeetle(scene) {
       st.hold = input.up ? st.hold + dt : 0;
       if (input.canFly && (input.jump || st.hold > 0.2)) { st.flying = true; event = 'despegó'; }
     } else if (!input.canFly) { st.flying = false; event = 'sin-fuerzas'; }
+    // Picada: volando, X + adelante. Recoge las alas a medias y se tira en diagonal, rapidísimo
+    const diving = st.flying && input.down && input.fwd > 0.3;
+    if (diving && !st.diving) event = event || 'picada';
+    st.diving = diving;
+    st.glide = false;
     if (st.flying) {
-      const sp = input.fwd * (input.run ? FLY.run : FLY.speed);
-      const k = Math.min(1, dt * 2.5);
+      const sp = diving ? DIVE.speed : input.fwd * (input.run ? FLY.run : FLY.speed);
+      const k = Math.min(1, dt * (diving ? 4 : 2.5));
       st.v.x += (f.x * sp - st.v.x) * k; st.v.z += (f.z * sp - st.v.z) * k;
-      const ty = input.up ? FLY.up : input.down ? -FLY.down : -FLY.sink; // sin tocar nada, planea y baja despacio
-      st.v.y += (ty - st.v.y) * Math.min(1, dt * 3);
-      // cerca de una superficie, frena para apoyarse suave (como un insecto que aterriza)
-      if (st.v.y < 0) { const gap = st.p.y - CLEAR - under(st.p.x, st.p.z, st.p.y).y; if (gap < 3) st.v.y = Math.max(st.v.y, -0.8 - gap * 1.6); }
+      const ty = diving ? -DIVE.down : input.up ? FLY.up : input.down ? -FLY.down : -FLY.sink; // sin tocar nada, planea y baja despacio
+      st.v.y += (ty - st.v.y) * Math.min(1, dt * (diving ? 5 : 3));
+      // cerca de una superficie, frena para apoyarse suave (como un insecto que aterriza); en picada o sobre un bejín, no
+      if (st.v.y < 0 && !diving) { const s = under(st.p.x, st.p.z, st.p.y), gap = st.p.y - CLEAR - s.y; if (gap < 3 && !s.m?.look?.puff) st.v.y = Math.max(st.v.y, -0.8 - gap * 1.6); }
+    } else if (!input.canFly && input.up && st.v.y < 0) {
+      // Planeo: sin energía para batir las alas, igual las abre y baja despacito
+      st.glide = true;
+      st.v.y = Math.max(-GLIDE, st.v.y - G * dt);
+      const k = Math.min(1, dt * 2);
+      st.v.x += (f.x * input.fwd * 6 - st.v.x) * k; st.v.z += (f.z * input.fwd * 6 - st.v.z) * k;
     } else {
       st.v.y = Math.max(-22, st.v.y - G * dt);
       st.v.x += f.x * input.fwd * 5 * dt; st.v.z += f.z * input.fwd * 5 * dt; // un poco de control en el aire
@@ -441,8 +536,9 @@ export function createBeetle(scene) {
       if (d < m.Rw + 0.3 && d > 1e-4) {
         const under = m.base + m.climbTop + 0.2, top = m.base + m.capY(Math.min(d, m.Rw));
         if (feet + 0.7 > under && feet < top - 0.15) {
+          // (si venía de arriba del sombrero, es un aterrizaje: no se lo empuja de costado)
           if (prevFeet + 0.7 <= under + 0.08) { st.p.y = under - 0.7 + CLEAR; st.v.y = Math.min(0, st.v.y); }
-          else if (d > m.Rw * 0.85 || feet < top - 0.6) { const min = m.Rw + 0.3; st.p.x = m.x + (dx / d) * min; st.p.z = m.z + (dz / d) * min; st.v.x *= 0.3; st.v.z *= 0.3; }
+          else if (prevFeet < top - 0.2 && (d > m.Rw * 0.85 || feet < top - 0.6)) { const min = m.Rw + 0.3; st.p.x = m.x + (dx / d) * min; st.p.z = m.z + (dz / d) * min; st.v.x *= 0.3; st.v.z *= 0.3; }
         }
       }
     }
@@ -453,7 +549,15 @@ export function createBeetle(scene) {
     if (st.v.y <= 0.5) {
       const s = under(st.p.x, st.p.z, Math.max(prevFeet, nowFeet) + 0.3);
       if (nowFeet <= s.y) {
-        const was = st.flying; st.flying = false; st.hold = 0;
+        // Rebotes: el bejín es un trampolín (cada rebote un poco más bajo); un sombrero grande y firme, si caés fuerte, te devuelve un saltito
+        const m = s.m, impact = -st.v.y;
+        const bounce = !m || m.rot ? 0 : m.look?.puff ? (impact > 6 ? Math.min(22, impact * 0.8) : 0) : m.Rw > 3.5 && impact > 13 ? impact * 0.3 : 0;
+        if (bounce > 3) {
+          st.p.y = s.y + CLEAR + 0.02; st.v.y = bounce; st.v.x *= 0.8; st.v.z *= 0.8;
+          st.flying = false; st.hold = 0; st.dive = 0; st.bounceM = m; st.bounceV = impact; st.grabCD = 0.3;
+          return m.look?.puff ? 'rebotó' : 'rebote';
+        }
+        const was = st.flying; st.flying = false; st.hold = 0; st.landV = impact;
         st.speed = Math.hypot(st.v.x, st.v.z) * 0.4;
         if (s.m) { st.mode = 'cap'; st.m = s.m; } else { st.mode = 'ground'; st.m = null; st.fy = s.y; }
         return (was ? 'aterrizó:' : 'cayó:') + st.mode;
@@ -482,6 +586,16 @@ export function createBeetle(scene) {
       else if (st.mode === 'cap') event = moveCap(dt, input) || null;
       else event = moveAir(dt, input);
     }
+    // Conductas: si lo dejás quieto un rato, hace cosas de escarabajo
+    const still = (st.mode === 'ground' || st.mode === 'cap') && Math.abs(input.fwd) < 0.05 && Math.abs(input.turn) < 0.05 && !input.jump
+      && Math.abs(st.speed) < 0.15 && st.sniff < 0.05 && st.chew < 0.05;
+    if (!still && st.act && st.act.kind !== 'festejo' && st.act.kind !== 'estornudo') st.act = null;
+    if (st.act && st.mode !== 'ground' && st.mode !== 'cap') st.act = null;
+    if (still && !st.act) { st.idleT += dt; if (st.idleT > st.idleNext) { startAct(IDLE[Math.floor(Math.random() * IDLE.length)]); event = event || 'idle:' + st.act.kind; } }
+    else if (!still) st.idleT = 0;
+    const actEv = actPose(dt); event = event || actEv;
+    if (st.mode !== 'air') st.diving = false;
+    st.dive += ((st.diving ? 1 : 0) - st.dive) * Math.min(1, dt * (st.diving ? 6 : 10));
     applyPose(dt);
 
     // Patas: un trípode da el paso mientras el otro sostiene. Si un pie quedó lejos, paso inmediato.
@@ -496,7 +610,11 @@ export function createBeetle(scene) {
       }
       restWorld(l, tmp2);
       const far = l.foot.distanceTo(tmp2);
-      if (l.t < 1) {
+      const over = pose.legs.get(l);
+      if (over && !air) { // esta pata está ocupada (limpiando, frotando): va al punto del cuerpo y vuelve
+        LOCAL.set(over[0], over[1], over[2]).applyMatrix4(world);
+        l.foot.copy(l.base).lerp(LOCAL, over[3]); l.from.copy(l.foot); l.t = 1;
+      } else if (l.t < 1) {
         l.t = Math.min(1, l.t + dt / stepDur);
         l.to.copy(tmp2);
         l.foot.lerpVectors(l.from, l.to, l.t).addScaledVector(N, Math.sin(Math.PI * l.t) * 0.16);
@@ -522,21 +640,26 @@ export function createBeetle(scene) {
 
     for (const a of antennae) {
       const w = Math.sin(st.t * 3 + a.side) * 0.12 + Math.sin(st.t * 38) * 0.1 * st.sniff;
-      a.base.rotation.set(0.9 - st.sniff * 0.55 + w, 0, -a.side * (0.45 + st.sniff * 0.15));
+      const i = a.side < 0 ? 0 : 1;
+      a.base.rotation.set(0.9 - st.sniff * 0.55 + w + pose.ant[i], 0, -a.side * (0.45 + st.sniff * 0.15) + pose.antZ[i]);
       a.mid.rotation.set(-0.7 + st.sniff * 0.5 + w * 0.6, 0, a.side * 0.2);
     }
     st.fly += ((st.flying ? 1 : 0) - st.fly) * Math.min(1, dt * (st.flying ? 10 : 4));
+    st.glideV += ((st.glide ? 0.9 : 0) - st.glideV) * Math.min(1, dt * 8);
+    // en picada, los élitros quedan abiertos pero las alas se recogen a medias
+    const vis = Math.max(st.fly, st.glideV, pose.wings);
     // Élitros: se levantan desde la bisagra de adelante y se abren en V (no se "parten": así vuelan los escarabajos)
-    for (const e of elytra) e.pivot.rotation.set(st.fly * 0.72, -e.side * st.fly * 0.5, e.side * st.fly * 0.25);
-    // Alas: se despliegan desde abajo de los élitros y, ya abiertas, baten en forma de ocho
-    const open = Math.min(1, st.fly * 1.25), beat = Math.max(0, (st.fly - 0.5) * 2);
+    for (const e of elytra) e.pivot.rotation.set(vis * 0.72, -e.side * vis * 0.5 * (1 - st.dive * 0.4), e.side * vis * 0.25);
+    // Alas: se despliegan desde abajo de los élitros y, ya abiertas, baten en forma de ocho (planeando, quietas)
+    const open = Math.min(1, vis * 1.25) * (1 - st.dive * 0.45), beat = Math.max(0, (vis - 0.5) * 2) * (st.glide ? 0.05 : pose.wings > st.fly ? pose.beat : 1);
     for (const w of wings) {
-      w.pivot.visible = st.fly > 0.03; w.pivot.scale.setScalar(Math.max(0.001, 0.35 + 0.65 * open));
+      w.pivot.visible = vis > 0.03; w.pivot.scale.setScalar(Math.max(0.001, 0.35 + 0.65 * open));
       const ph = st.t * 72;
       w.pivot.rotation.set(0.32 * Math.cos(ph) * beat, w.side * ((1 - open) * 1.45 + 0.15), w.side * (0.12 + Math.sin(ph) * 0.8 * beat));
     }
-    const c = Math.sin(st.t * 26) * st.chew * 0.5;
+    const c = Math.sin(st.t * 26) * st.chew * 0.5 + pose.mand;
     mandL.rotation.y = -0.4 - c; mandR.rotation.y = 0.4 + c;
+    head.rotation.set(pose.hx, pose.hy, pose.hz); head.position.z = 0.7 + pose.hzPos;
     return event;
   }
 
@@ -548,6 +671,22 @@ export function createBeetle(scene) {
     heading(out = new THREE.Vector3()) { return yawDir(out); },
     setSniff(v) { st.sniff = v; }, setChew(v) { st.chew = v; }, setWobble(v) { st.wobble = v; },
     setMushrooms(list) { mushrooms = list; },
+    // Conductas que se disparan desde el juego: festejar (combos, comida rica) y estornudar (esporas del bejín)
+    cheer() { if (st.mode === 'ground' || st.mode === 'cap') startAct('festejo'); },
+    sneeze() { if (st.mode === 'ground' || st.mode === 'cap') startAct('estornudo'); },
+    get act() { return st.act?.kind || null; },
+    doAct(kind) { startAct(kind); }, // (para probar una conducta)
+    get dive() { return st.dive; },
+    get gliding() { return st.glide; },
+    get bounced() { return st.bounceM; },
+    get bounceV() { return st.bounceV || 0; },
+    // Un golpe (el pájaro): deja de volar y sale despedido
+    knock(dx, dz) {
+      if (st.mode === 'transit') return;
+      if (st.mode === 'stem') return;
+      st.flying = false; st.act = null;
+      startAir(dx * 7, 6, dz * 7); st.grabCD = 0.4;
+    },
     get touching() { return st.touch; },
     get flying() { return st.flying; },
     // ¿En el aire? (saltando, cayendo o volando)

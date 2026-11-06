@@ -162,9 +162,34 @@ function garden(scene, list, quality) {
   });
 }
 
+/* ---------- Bejinales: grupitos de bejines (pedos de lobo), que para un escarabajo son trampolines ---------- */
+function puffballs(scene, list, quality) {
+  const r = rng(271), spots = [{ x: SPAWN.x + 11, z: SPAWN.z + 5 }];
+  // al pie de algunos árboles (rebotando se llega más alto) y sueltos por el bosque
+  for (const o of obstacles.filter((o) => o.climb).slice(0, 4)) { const a = r() * 6.28; spots.push({ x: o.x + Math.cos(a) * (o.r + 7), z: o.z + Math.sin(a) * (o.r + 7) }); }
+  for (let tries = 0; spots.length < 12 && tries < 200; tries++) {
+    const x = BOUNDS.minX + 20 + r() * 350, z = BOUNDS.minZ + 20 + r() * 400;
+    if (!inClearing(x, z, 1.2) && !spots.some((p) => Math.hypot(p.x - x, p.z - z) < 30)) spots.push({ x, z });
+  }
+  for (const [si, sp] of spots.entries()) {
+    const k = si === 0 ? 3 : 2 + Math.floor(r() * 3), placed = [];
+    for (let i = 0, tries = 0; i < k && tries < 30; tries++) {
+      const x = sp.x + (r() - 0.5) * 9, z = sp.z + (r() - 0.5) * 9;
+      if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 4.5)) continue;
+      if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 3) || list.some((m) => Math.hypot(m.x - x, m.z - z) < m.Rw + 3)) continue;
+      // de las filas del Excel que le quedan a un bejín, la más grande de unas pocas (así se ve y se pisa)
+      let row = pickRow(r, LOOKS.lycoperdon, { tox: false });
+      for (let j = 0; j < 3; j++) { const o = pickRow(r, LOOKS.lycoperdon, { tox: false }); if (o.d > row.d) row = o; }
+      placed.push([x, z]); i++;
+      plant(scene, list, { x, z, species: 'lycoperdon', toxic: false, row, quality });
+    }
+  }
+}
+
 export function buildFlora(scene, { quality = 'baja' } = {}) {
   const all = [];
   scatter(scene, all, quality);
+  puffballs(scene, all, quality);
   try { garden(scene, all, quality); } catch (e) { console.warn('Diseños del taller:', e); }
   LEVELS.forEach((L, i) => levelClearing(scene, all, L, 113 + i * 17, quality));
   dew(scene, all);
@@ -218,8 +243,15 @@ export function buildFlora(scene, { quality = 'baja' } = {}) {
       m.eaten = true; m.known = true; if (m.trait === 'twin') m.traitKnown = true; mark(m);
       m.capMat.color = m.capMat.color.clone().multiplyScalar(0.82); // queda mordido (un poco más oscuro, sin perder sus rasgos)
     },
+    // Un bejín pisado se aplasta y vuelve (k: qué tan fuerte)
+    squash(m, k = 1) { m.squash = Math.min(1, Math.max(m.squash || 0, k)); m.squashT = 0; },
     update(dt, t) {
       for (const m of all) {
+        if (m.squash) {
+          m.squashT += dt; const w = m.squash * Math.exp(-m.squashT * 6) * Math.cos(m.squashT * 22);
+          m.mesh.scale.set(1 + w * 0.22, 1 - w * 0.32, 1 + w * 0.22);
+          if (m.squashT > 1) { m.squash = 0; m.mesh.scale.set(1, 1, 1); }
+        }
         if (m.stemMat && m.bruise < 1) { m.bruise = Math.min(1, m.bruise + dt * 0.8); m.stemMat.color.copy(m.bruiseFrom).lerp(BRUISE, m.bruise * 0.75); }
         if (!m.halo) continue;
         m.glow += (1 - m.glow) * Math.min(1, dt * 2.5);
