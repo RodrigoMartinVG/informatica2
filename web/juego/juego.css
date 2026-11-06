@@ -307,5 +307,18 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 
 .sr-tip.on { color: #fff; background: rgba(159,232,200,.16); border: 1px solid rgba(159,232,200,.5); border-radius: 10px; padding: 10px 14px; font-size: 15px; }
 
-.ficha-x { display: block; margin-top: 6px; font-size: 11px; opacity: .75; }
 .intro-taller { margin-left: 18px; }
+.ficha { pointer-events: auto; }
+.ficha-close { position: absolute; top: 6px; right: 8px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); color: var(--ink-2); font-size: 12px; line-height: 1; }
+.ficha-close:hover { color: var(--ink); border-color: var(--accent); }
+.ficha-e { margin-top: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05); font: 400 12px/1.4 var(--sans); color: var(--ink-2); }
+.ficha-e p + p { margin-top: 4px; }
+.ficha-e b { color: var(--ink); font-weight: 600; }
+.ficha.noimg { grid-template-columns: 1fr; }
+.xl { margin-top: 16px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 10px; }
+.xl summary { cursor: pointer; font: 600 12px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.xl-k { font: 400 12px/1.4 var(--sans); color: var(--ink-3); margin: 6px 0; }
+.xl-w { overflow-x: auto; }
+.xl table { width: 100%; border-collapse: collapse; font: 400 12px/1.3 var(--sans); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.xl th { text-align: left; font-weight: 600; color: var(--ink); padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.2); white-space: nowrap; }
+.xl td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }

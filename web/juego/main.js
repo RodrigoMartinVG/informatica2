@@ -267,6 +267,8 @@ addEventListener('keydown', (e) => {
     if (act === 'autofly') fly();
     if (act === 'describe') describe();
     if (act === 'status') status();
+    if (act === 'info') info();
+    if (e.code === 'Escape' && !$('#ficha').hidden) closeFicha();
   }
   if (state.phase === 'play' || state.phase === 'book') {
     if (act === 'book') toggleBook();
@@ -365,15 +367,40 @@ function touchCheck(m) {
 }
 
 /* ---------- Ficha: la foto real de un hongo parecido ---------- */
-let fichaT = 0;
+let fichaT = 0, fichaM = null;
+// Lo que tiene de particular este hongo: su edad, sus defectos y su fila real del Excel
+const FLAWS = { mordida: 'con una mordida de babosa', 'borde roto': 'con el borde roto', desparejo: 'de sombrero desparejo', torcido: 'un poco torcido' };
+const dec = (v) => String(v).replace('.', ',');
+function specimen(m) {
+  const age = m.age < 0.33 ? 'Joven' : m.age < 0.75 ? 'Maduro' : 'Viejo';
+  const ageNote = m.age < 0.33 ? 'sombrero todavía cerrado' : m.age < 0.75 ? 'sombrero abierto' : 'sombrero aplanado';
+  const extra = [...(m.flaws || []).map((f) => FLAWS[f]), m.eaten ? 'mordido por vos' : ''].filter(Boolean);
+  return `<p><b>Este ejemplar:</b> ${age} (${ageNote})${extra.length ? ', ' + extra.join(', ') : ', sin defectos'}.</p>
+    <p><b>Su fila del Excel:</b> sombrero de ${dec(m.row.d)} cm · tallo de ${dec(m.row.h)} cm de alto y ${dec(m.row.w)} mm de ancho · ${m.row.shape.toLowerCase()} · ${m.row.color.toLowerCase()}.</p>`;
+}
+function closeFicha() {
+  const el = $('#ficha'); fichaM = null; if (el.hidden) return;
+  gsap.to(el, { opacity: 0, duration: 0.35, onComplete: () => { if (!fichaM) el.hidden = true; } });
+}
+$('#ficha-x').addEventListener('click', (e) => { e.stopPropagation(); closeFicha(); });
+// I: volver a ver la ficha del hongo que tenés al lado (si ya lo conocés)
+function info() {
+  if (!$('#ficha').hidden) { closeFicha(); return; }
+  if (onShelf()) { if (state.shelfKnown) showPhoto({ species: 'trametes' }); else tip('info0', 'Todavía no lo conocés: olfatealo (E) para ver su ficha.', { repeat: true }); return; }
+  const m = state.near;
+  if (!m) { tip('info1', 'Acercate a un hongo para ver su ficha.', { repeat: true }); return; }
+  if (!m.known) { tip('info0', 'Todavía no lo conocés: olfatealo (E) o comelo (F) para ver su ficha.', { repeat: true }); return; }
+  showPhoto(m);
+}
 function showPhoto(m) {
   // los hongos del taller no tienen foto: la ficha muestra el nombre que les pusiste
   const sp = SPECIES[m.species] || (m.design && { name: m.design, tag: m.toxic ? 'venenoso' : 'comestible', tox: m.toxic, note: 'Un hongo que diseñaste en el taller.' }); if (!sp) return;
-  $('#ficha-img').hidden = !SPECIES[m.species];
+  $('#ficha-img').hidden = !SPECIES[m.species]; $('#ficha').classList.toggle('noimg', !SPECIES[m.species]);
   if (SPECIES[m.species]) { $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name; $('#ficha-img').dataset.sp = m.species; }
   $('#ficha-n').textContent = sp.name;
   const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : m.species === 'trametes' ? '' : 'ed'}`;
-  $('#ficha-d').innerHTML = sp.note + (m.row ? `<small class="ficha-x">Fila real del Excel: sombrero de ${String(m.row.d).replace('.', ',')} cm · tallo de ${String(m.row.h).replace('.', ',')} cm de alto y ${String(m.row.w).replace('.', ',')} mm de ancho.</small>` : ''); $('#ficha-c').textContent = SPECIES[m.species] ? credit(m.species) : 'Diseño del taller de hongos';
+  $('#ficha-d').textContent = sp.note;
+  const e = $('#ficha-e'); e.hidden = !m.row; if (m.row) e.innerHTML = specimen(m); $('#ficha-c').textContent = SPECIES[m.species] ? credit(m.species) : 'Diseño del taller de hongos';
   // Lo que investiga el nivel, destacado
   const L = m.level ? levelOf(m) : null, r = $('#ficha-r');
   const trait = !L ? '' : {
@@ -385,8 +412,9 @@ function showPhoto(m) {
     twin: m.yes ? 'Era una Amanita' : 'Era un champiñón'
   }[L.trait];
   r.hidden = !trait; r.innerHTML = trait ? `<span>${L.title}</span>${trait} · <b class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</b>` : '';
-  const el = $('#ficha'); el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 });
-  clearTimeout(fichaT); fichaT = setTimeout(() => gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => (el.hidden = true) }), 7000);
+  const el = $('#ficha'); fichaM = m;
+  if (el.hidden) { el.hidden = false; gsap.fromTo(el, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 }); }
+  tip('ficha2', 'La ficha queda abierta mientras estés cerca del hongo. Con I la volvés a abrir; con Esc o la ✕, la cerrás.');
   tip('ficha1', 'Abajo a la izquierda ves cómo es un hongo así en la vida real.');
   A.announce(SV.speciesPhrase(sp));
 }
@@ -398,7 +426,6 @@ function openPhoto(id) {
   const t = $('#lb-tag'); t.textContent = sp.tag; t.className = sp.tox ? 'tox' : 'ed';
   $('#lb-name').textContent = sp.name; $('#lb-note').textContent = sp.note; $('#lb-credit').textContent = credit(id);
   const lb = $('#lightbox'); lb.hidden = false; gsap.fromTo(lb, { opacity: 0 }, { opacity: 1, duration: 0.25 });
-  clearTimeout(fichaT); // mientras mirás la foto, la ficha no se va
 }
 const closePhoto = () => { const lb = $('#lightbox'); if (!lb.hidden) gsap.to(lb, { opacity: 0, duration: 0.2, onComplete: () => (lb.hidden = true) }); };
 document.addEventListener('click', (e) => { const img = e.target.closest?.('img[data-sp]'); if (img) { e.stopPropagation(); openPhoto(img.dataset.sp); } }, true);
@@ -484,7 +511,7 @@ function shelfAct(kind) {
   gsap.timeline({ onUpdate: () => set(a.v), onComplete: () => (state.busy = false) }).to(a, { v: 1, duration: 0.35 }).to(a, { v: 1, duration: kind === 'sniff' ? 0.6 : 0.9 }).to(a, { v: 0, duration: 0.3 });
   const text = kind === 'sniff' ? SV.MISC.shelfSniff : SV.MISC.shelfEat;
   tip('shelf-' + kind + Date.now(), text, { repeat: true }); A.speak(text);
-  if (kind === 'sniff') showPhoto({ species: 'trametes' });
+  if (kind === 'sniff') { state.shelfKnown = true; showPhoto({ species: 'trametes', shelf: true }); }
 }
 
 function sniff() {
@@ -649,6 +676,16 @@ function gallery(L) {
   return col(true) + col(false);
 }
 // Informe de un nivel: lo mismo en el resumen al terminar el claro y en el cuaderno
+// Los hongos del claro, cada uno con su fila real del Excel (como una pequeña hoja de cálculo)
+function excelTable(L) {
+  const list = flora.specimens.filter((s) => s.level === L.id).sort((a, b) => (b.yes - a.yes) || (b.toxic - a.toxic) || (a.row.d - b.row.d));
+  const age = (m) => (m.age < 0.33 ? 'joven' : m.age < 0.75 ? 'maduro' : 'viejo');
+  const rows = list.map((m) => `<tr><td><i>${SPECIES[m.species]?.name || m.species}</i></td><td>${cap1(m.yes ? L.yes : L.no)}</td>
+    <td>${dec(m.row.d)} cm</td><td>${dec(m.row.h)} cm</td><td>${dec(m.row.w)} mm</td><td>${age(m)}</td><td class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</td></tr>`).join('');
+  return `<details class="xl"><summary>Las ${list.length} filas del Excel de este claro</summary>
+    <p class="xl-k">Cada hongo del claro es una fila real de la hoja Data: estas son sus medidas.</p>
+    <div class="xl-w"><table><thead><tr><th>Especie parecida</th><th>Grupo</th><th>Sombrero</th><th>Alto del tallo</th><th>Ancho del tallo</th><th>Edad</th><th>Clase</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
 function report(L) {
   const pct = (v) => `${Math.round(v * 100)} %`;
   const nums = L.nums || [[pct(L.research[0]), `venenosos<br>${L.yes}`], [pct(L.research[1]), `venenosos<br>${L.no}`]];
@@ -661,7 +698,7 @@ function report(L) {
       ${L.nums ? '' : `<div class="rep-chart">${bars([...L.research, cap1(L.yes), cap1(L.no)])}</div>`}
       <p class="small">${L.small}</p>
       ${me ? `<div class="mine"><p class="eyebrow">Tu partida</p>${me}</div>` : ''}`,
-    side: `<p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p><div class="gallery">${gallery(L)}</div>`
+    side: `<p class="eyebrow">Así se ven en la vida real · tocá una foto para verla grande</p><div class="gallery">${gallery(L)}</div>${excelTable(L)}`
   };
 }
 function showInsight(L) {
@@ -843,7 +880,7 @@ function frame() {
       const L = m.level ? levelOf(m) : null;
       const what = !L ? '' : L.trait === 'ring' ? (m.yes ? ' · tiene anillo' : ' · sin anillo')
         : !m.traitKnown ? ' · empujalo para ver si se mancha' : (m.yes ? ' · se mancha' : ' · no se mancha');
-      const sn = m.known ? (m.toxic ? '<span class="tox">venenoso</span>' : '<span class="ed">comestible</span>') : '<kbd>E</kbd> Olfatear';
+      const sn = m.known ? (m.toxic ? '<span class="tox">venenoso</span>' : '<span class="ed">comestible</span>') + ' · <kbd>I</kbd> Ficha' : '<kbd>E</kbd> Olfatear';
       pr.innerHTML = `${sn} · ${m.eaten ? 'ya comido' : '<kbd>F</kbd> Comer'}${what}`;
       pr.hidden = false;
       if (beetle.mode === 'ground') tip('near1', 'Un hongo. Podés olfatearlo para saber si es venenoso, o comerlo y arriesgarte. Si empujás contra el tallo, lo trepás.');
@@ -875,6 +912,12 @@ function frame() {
   }
   if (state.phase === 'travel' && ev === 'aterrizó:ground') { state.phase = 'play'; S.jump(); if (state.cur) objective(state.cur.goal); A.speak(SV.MISC.arrived); }
   $('#b-fly').hidden = state.phase !== 'play' || coarse;
+
+  // La ficha queda abierta mientras estés cerca de ese hongo (o sobre la repisa)
+  if (fichaM && state.phase === 'play') {
+    const far = fichaM.shelf ? !onShelf() : Math.hypot(beetle.pos.x - fichaM.x, beetle.pos.z - fichaM.z) > fichaM.Rw + 9 && beetle.on !== fichaM;
+    if (far) closeFicha();
+  }
 
   // El veneno se va pasando
   if (game.poison > 0) { game.poison = Math.max(0, game.poison - dt / 9); if (game.poison === 0) S.poison(false); }

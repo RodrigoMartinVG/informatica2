@@ -69,7 +69,7 @@
         <li><kbd>Espacio</kbd> Saltar · mantenelo para volar y subir · <kbd>X</kbd> bajar</li>
         <li><kbd>G</kbd> Volar solo hasta un hongo sin explorar</li>
         <li>Empujá contra un tallo, un árbol o un tronco caído para treparlo</li>
-        <li><kbd>V</kbd> visión de antenas · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</li>
+        <li><kbd>I</kbd> ficha del hongo · <kbd>V</kbd> visión de antenas · <kbd>C</kbd> cuaderno · <kbd>M</kbd> sonido</li>
       </ul>
     </div>
   </section>
@@ -93,6 +93,7 @@
       </div>
     </div>
     <aside class="ficha" id="ficha" hidden aria-live="polite">
+      <button class="ficha-close" id="ficha-x" type="button" aria-label="Cerrar la ficha (Esc)">✕</button>
       <img id="ficha-img" alt="">
       <div>
         <p class="ficha-k">Así se ve en la vida real</p>
@@ -100,6 +101,7 @@
         <p class="ficha-n" id="ficha-n"></p>
         <span class="ficha-t" id="ficha-t"></span>
         <p class="ficha-d" id="ficha-d"></p>
+        <div class="ficha-e" id="ficha-e" hidden></div>
         <p class="ficha-c" id="ficha-c"></p>
       </div>
     </aside>

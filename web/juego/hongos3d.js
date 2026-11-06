@@ -219,7 +219,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   if (look.funnel) shape = 'hundida';
   if (look.puff) shape = 'esferica';
   if (id === 'conica' && shape !== 'conica') shape = 'campana';
-  const r = rng(seed);
+  const r = rng((seed * 2654435761) % 2147483629 + 1); r(); r(); // semilla mezclada: con semillas chicas, los primeros números salen casi en cero
   const age = forceAge ?? (look.puff ? 0.5 : r());
   const colorName = look.colors.includes(row.color) ? row.color : look.colors[0];
   // Medidas reales (acotadas para que el juego siga siendo jugable)
@@ -319,11 +319,13 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   }
 
   // Imperfecciones: sombrero un poco desparejo, a veces una mordida (de babosa) y, de viejo, el borde roto
+  const flaws = []; // lo que se le nota a este ejemplar (se muestra en la ficha)
   if (!perfect) {
     const R0 = maxR, a1 = 0.03 + r() * 0.05, a2 = r() * 0.04, p1 = r() * 6, p2 = r() * 6;
     const bites = [];
-    if (r() < 0.3) bites.push({ at: r() * Math.PI * 2, w: 0.3 + r() * 0.3, d: 0.15 + r() * 0.15 });
-    if (age > 0.8) for (let i = 0; i < 3; i++) bites.push({ at: r() * Math.PI * 2, w: 0.08 + r() * 0.08, d: 0.06 + r() * 0.05 });
+    if (r() < 0.3) { bites.push({ at: r() * Math.PI * 2, w: 0.3 + r() * 0.3, d: 0.15 + r() * 0.15 }); flaws.push('mordida'); }
+    if (age > 0.8) { for (let i = 0; i < 3; i++) bites.push({ at: r() * Math.PI * 2, w: 0.08 + r() * 0.08, d: 0.06 + r() * 0.05 }); flaws.push('borde roto'); }
+    if (a1 + a2 > 0.08) flaws.push('desparejo');
     const sr0 = lerpTable(stemR, H * 0.9) * 1.1;
     for (const o of g.children.slice(1)) {
       if (o.position.y !== 0) continue; // el anillo no
@@ -339,12 +341,13 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
       pos.needsUpdate = true; o.geometry.computeVertexNormals();
     }
     g.rotation.z = (r() - 0.5) * (look.tilt || 0.08); g.rotation.x = (r() - 0.5) * (look.tilt ? look.tilt * 0.5 : 0.06);
+    if (!look.tilt && Math.hypot(g.rotation.x, g.rotation.z) > 0.03) flaws.push('torcido');
   }
 
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const under0 = p.capUnder[p.capUnder.length - 1][1] * k;
   return {
-    group: g, colorName, shape, D, H, W: Wmm, age,
+    group: g, colorName, shape, D, H, W: Wmm, age, flaws,
     climb: {
       stemR: (h) => lerpTable(stemR, h), capY: (rr) => lerpTable(top, rr), Rw: maxR,
       climbTop: Math.min(under0, H) - 0.2, top: Math.max(...top.map((t) => t[1]))

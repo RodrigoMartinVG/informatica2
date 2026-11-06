@@ -12,6 +12,7 @@ export const ACTIONS = {
   sniff: { label: 'Olfatear', def: 'KeyE' }, eat: { label: 'Comer', def: 'KeyF' },
   jump: { label: 'Saltar · mantener para volar y subir', def: 'Space' }, down: { label: 'Bajar volando', def: 'KeyX' },
   autofly: { label: 'Volar al próximo hongo sin explorar', def: 'KeyG' },
+  info: { label: 'Ficha del hongo (abrir o cerrar)', def: 'KeyI' },
   describe: { label: 'Describir alrededor', def: 'KeyQ' }, status: { label: 'Decir vidas y energía', def: 'KeyR' },
   book: { label: 'Cuaderno', def: 'KeyC' }, vision: { label: 'Visión de antenas (mantener)', def: 'KeyV' }, sound: { label: 'Sonido', def: 'KeyM' }
 };

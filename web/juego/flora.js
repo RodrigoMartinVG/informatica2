@@ -23,7 +23,7 @@ function plant(scene, list, { x, z, species, look = species, row, toxic, base = 
   scene.add(mesh);
   const m = {
     mesh, x, z, base, toxic, species, row, colorName: b.colorName, look: typeof look === 'string' ? LOOKS[look] : look,
-    level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
+    age: b.age, flaws: b.flaws, level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
     ...b.climb
   };
   list.push(m);
