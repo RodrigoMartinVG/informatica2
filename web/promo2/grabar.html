@@ -179,13 +179,18 @@
     async function save(id) {
       const t = takes[id]; if (!t) return;
       const el = lineEl(id); $('.st', el).textContent = 'guardando…';
+      const blob = wav(t.pcm, t.rate);
       try {
-        const r = await fetch(`/guardar?id=${id}`, { method: 'POST', body: wav(t.pcm, t.rate) }).then((x) => x.json());
+        const r = await fetch(`/guardar?id=${id}`, { method: 'POST', body: blob }).then((x) => x.json());
         if (!r.ok) throw new Error(r.error);
         estado[id] = r.dur; el.classList.add('done'); $('.use', el).disabled = true;
         $('.st', el).className = 'st ok'; $('.st', el).textContent = `guardada en el tráiler · ${r.dur} s`;
         delete takes[id]; count(); setTimeout(() => select(cur + 1), 500);
-      } catch (e) { $('.st', el).innerHTML = `<span class="err">No se guardó: ¿está corriendo grabar_server.py? (${e.message})</span>`; }
+      } catch (e) {
+        // Sin el servidor local (por ejemplo, en la web publicada): la toma se descarga como archivo
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${id}.wav`; a.click();
+        $('.st', el).className = 'st ok'; $('.st', el).textContent = `descargada como ${id}.wav (para integrarla al tráiler, usá grabar_server.py)`;
+      }
     }
     function wav(pcm, rate) {
       const buf = new ArrayBuffer(44 + pcm.length * 2), v = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
