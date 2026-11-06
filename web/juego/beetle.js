@@ -142,7 +142,8 @@ export function createBeetle(scene) {
   const pos = new THREE.Vector3(), N = new THREE.Vector3(0, 1, 0), F = new THREE.Vector3(0, 0, 1);
   const smoothN = new THREE.Vector3(0, 1, 0);
   const basis = new THREE.Matrix4(), world = new THREE.Matrix4();
-  const tr = { a: new THREE.Vector3(), b: new THREE.Vector3(), ctrl: new THREE.Vector3(), t: 1, dur: 0.7, qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), next: 'ground' };
+  const qFly = new THREE.Quaternion();
+  const tr = { dir: new THREE.Vector3(), bank: 0, fly: false, a: new THREE.Vector3(), b: new THREE.Vector3(), ctrl: new THREE.Vector3(), t: 1, dur: 0.7, qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), next: 'ground' };
 
   const yawDir = (out) => out.set(Math.sin(st.yaw), 0, Math.cos(st.yaw));
   const radial = (m, x, z, out) => { out.set(x - m.x, 0, z - m.z); const d = out.length(); if (d < 1e-4) out.set(1, 0, 0); else out.divideScalar(d); return d; };
@@ -200,7 +201,20 @@ export function createBeetle(scene) {
     if (st.mode === 'transit') {
       const k = easeIO(tr.t);
       pos.set(0, 0, 0).addScaledVector(tr.a, (1 - k) ** 2).addScaledVector(tr.ctrl, 2 * (1 - k) * k).addScaledVector(tr.b, k * k);
-      root.position.copy(pos); root.quaternion.slerpQuaternions(tr.qa, tr.qb, k);
+      root.position.copy(pos);
+      if (tr.fly) {
+        // En vuelo mira hacia donde va (la tangente de la curva, en horizontal), con una leve inclinación en las curvas;
+        // solo al despegar y al aterrizar se acomoda a la orientación de partida y de llegada
+        tmp.set(0, 0, 0).addScaledVector(tr.a, -2 * (1 - k)).addScaledVector(tr.ctrl, 2 - 4 * k).addScaledVector(tr.b, 2 * k);
+        tmp.y = 0;
+        if (tmp.lengthSq() > 1e-4) { tmp.normalize(); if (tr.dir.lengthSq() > 0) { const turn = tr.dir.x * tmp.z - tr.dir.z * tmp.x; tr.bank += (Math.max(-0.5, Math.min(0.5, turn * 40)) - tr.bank) * 0.1; } tr.dir.copy(tmp); }
+        tmp2.copy(UP).addScaledVector(tmp3.crossVectors(UP, tr.dir), -tr.bank).normalize();          // N con la inclinación
+        tmp3.copy(tr.dir).addScaledVector(tmp2, -tr.dir.dot(tmp2)).normalize();                       // F perpendicular a N
+        basis.makeBasis(tmp.crossVectors(tmp2, tmp3).normalize(), tmp2, tmp3);
+        qFly.setFromRotationMatrix(basis);
+        const a = easeIO(Math.min(1, tr.t / 0.18)), b = easeIO(Math.max(0, (tr.t - 0.8) / 0.2));
+        root.quaternion.slerpQuaternions(tr.qa, qFly, a).slerp(tr.qb, b);
+      } else root.quaternion.slerpQuaternions(tr.qa, tr.qb, k);
       N.set(0, 1, 0).applyQuaternion(root.quaternion); smoothN.copy(N);
     } else orient(poseOf(st.mode), dt);
     // en vuelo el cuerpo va más erguido (como vuelan los escarabajos de verdad)
@@ -219,6 +233,7 @@ export function createBeetle(scene) {
     root.position.copy(tr.a); root.quaternion.copy(tr.qa);
     tr.ctrl.addVectors(tr.a, tr.b).multiplyScalar(0.5).addScaledVector(UP, lift);
     tr.t = 0; tr.dur = dur; tr.next = toMode; st.mode = 'transit'; st.speed = 0;
+    tr.fly = st.flying; tr.dir.set(0, 0, 0); tr.bank = 0; // los vuelos miran hacia donde van
   }
 
   // Pasar al aire (salto o caída) con una velocidad inicial
