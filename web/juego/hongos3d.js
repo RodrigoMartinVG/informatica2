@@ -49,6 +49,27 @@ export const LOOKS = {
   gibba: { shapes: ['Hundida', 'Plana'], colors: ['Crema', 'Marrón', 'Blanco'], d: [3, 8],
     cap: { Crema: ['#c09a6a', '#e4caa0'], Marrón: ['#a07a50', '#d4b488'], Blanco: ['#cdb894', '#efe2c6'] }, style: 'silky', gloss: 0.7, funnel: true,
     under: 'gills', gill: '#f2ebdc', stem: '#ece2cc', stemStyle: 'smooth', decurrent: true, taper: 0.85 },
+  russula: { shapes: ['Convexa', 'Plana'], colors: ['Rojo', 'Rosa'], d: [3, 10],
+    cap: { Rojo: ['#a3121a', '#de2f36'], Rosa: ['#b8303e', '#e86a74'] }, style: 'smooth', gloss: 0.22,
+    under: 'gills', gill: '#f7f4ec', stem: '#f6f4ee', stemStyle: 'smooth', wmin: 1.8 },
+  suillus: { shapes: ['Convexa'], colors: ['Marrón', 'Amarillo', 'Naranja'], d: [4, 12], thick: 1.25,
+    cap: { Marrón: ['#4e2c14', '#86552a'], Amarillo: ['#6a4418', '#a2742e'], Naranja: ['#5e3214', '#9a5e2a'] }, style: 'smooth', gloss: 0.12,
+    under: 'pores', gill: '#d9c449', stem: '#e8d494', stemStyle: 'red-dots', ring: 'skirt', ringColor: '#6b4c62', ringAt: 0.72, wmin: 2.2 },
+  coprinus: { shapes: ['Campana', 'Cónica'], colors: ['Blanco', 'Crema'], d: [2.5, 6], stretch: 2.3, hr: 2,
+    cap: { Blanco: ['#b89a7a', '#f4f0e8'], Crema: ['#a88a6a', '#ece2d2'] }, style: 'shaggy', gloss: 0.8,
+    under: 'gills', gill: '#4a3c3c', stem: '#f6f3ec', stemStyle: 'smooth', ring: 'thin', ringAt: 0.3, wr: 1.6 },
+  lactarius: { shapes: ['Hundida', 'Plana'], colors: ['Naranja', 'Amarillo', 'Rosa'], d: [4, 12], funnel: true,
+    cap: { Naranja: ['#c8642a', '#eba05e'], Amarillo: ['#cc7a30', '#eeb06a'], Rosa: ['#c06a4a', '#eaa47c'] }, style: 'zoned', gloss: 0.5,
+    under: 'gills', gill: '#e8904a', stem: '#e9a468', stemStyle: 'smooth', wmin: 1.8, hmax: 0.6 },
+  lycoperdon: { shapes: ['Esférica'], colors: ['Blanco', 'Crema', 'Marrón'], d: [2, 6], puff: true, warts: '#fbf8f0', wartSize: 0.45,
+    cap: { Blanco: ['#efe8da', '#e2d8c4'], Crema: ['#e6d8bc', '#d6c6a6'], Marrón: ['#cdb894', '#bca582'] }, style: 'spiny', gloss: 0.9,
+    under: 'none', gill: '#e2d8c4', stem: '#e2d6c0', stemStyle: 'smooth', wmin: 5, hmax: 0.55, bulb: 1.15 },
+  hypholoma: { shapes: ['Convexa', 'Campana'], colors: ['Amarillo', 'Naranja'], d: [2, 6],
+    cap: { Amarillo: ['#c8761e', '#ecd452'], Naranja: ['#c0601a', '#e8c048'] }, style: 'smooth', gloss: 0.45,
+    under: 'gills', gill: '#9fa858', stem: '#e2cc6a', stemStyle: 'fibrous-dark', wood: true, wr: 1.3, hr: 1.6 },
+  pleurotus: { shapes: ['Plana', 'Convexa', 'Hundida'], colors: ['Gris', 'Marrón', 'Blanco', 'Crema'], d: [5, 15], tilt: 0.35,
+    cap: { Gris: ['#5e5852', '#a29c94'], Marrón: ['#6a5a4a', '#ad9c88'], Blanco: ['#a8a29a', '#e4e0d8'], Crema: ['#9c9080', '#dcd2c2'] }, style: 'silky', gloss: 0.5,
+    under: 'gills', gill: '#efe9de', stem: '#ece6da', stemStyle: 'smooth', decurrent: true, taper: 0.7, hmax: 0.3, wood: true },
   // Los gemelos: a simple vista iguales (blancos, con anillo, del mismo tamaño). La diferencia no se ve.
   gemelo: { shapes: ['Convexa', 'Plana'], colors: ['Blanco', 'Crema'], d: [6, 10],
     cap: { Blanco: ['#e9e4d6', '#f6f2ea'], Crema: ['#e4dccb', '#f4efe4'] }, style: 'silky', gloss: 0.5,
@@ -120,9 +141,16 @@ function capTexture(look, id, colorName) {
         g.beginPath(); g.ellipse(x, y, s * 1.5, s * 0.8, 0, 0, Math.PI * 2); g.fill();
       }
     }
+    if (look.style === 'shaggy') { // barbuda: escamas que se levantan y el borde que se vuelve tinta
+      for (let i = 0; i < 900; i++) { const y = h * (0.1 + Math.pow(r(), 0.8) * 0.8), x = r() * w, s = 3 + r() * 4; g.fillStyle = `rgba(${150 + r() * 40},${120 + r() * 30},${90},${0.35 + r() * 0.35})`; g.beginPath(); g.ellipse(x, y, s * 0.7, s * 1.6, 0, 0, Math.PI * 2); g.fill(); }
+      const gr = g.createLinearGradient(0, h * 0.82, 0, h); gr.addColorStop(0, 'rgba(40,30,30,0)'); gr.addColorStop(1, 'rgba(40,30,30,0.85)'); g.fillStyle = gr; g.fillRect(0, h * 0.82, w, h * 0.18);
+    }
+    if (look.style === 'zoned') for (let y = h * 0.15; y < h; y += 14 + r() * 10) { g.fillStyle = `rgba(150,60,20,${0.18 + r() * 0.2})`; g.fillRect(0, y, w, 5 + r() * 6); }
+    if (look.style === 'spiny') for (let i = 0; i < 2200; i++) { g.fillStyle = `rgba(${r() < 0.6 ? '120,100,70' : '255,255,250'},${0.25 + r() * 0.35})`; g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 2.2, 0, 7); g.fill(); }
     if (look.style === 'bun') { const gr = g.createLinearGradient(0, h * 0.85, 0, h); gr.addColorStop(0, 'rgba(255,240,210,0)'); gr.addColorStop(1, 'rgba(255,240,210,0.45)'); g.fillStyle = gr; g.fillRect(0, h * 0.85, w, h * 0.15); }
   });
 }
+function hashStr(t) { let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h.toString(36); }
 function mixHex(a, b, k) { return '#' + new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString(); }
 // Abajo del sombrero: láminas, poros (esponja) o pliegues
 function underTexture(look, id) {
@@ -152,6 +180,11 @@ function stemTexture(look, id) {
 
 /* ---------- Materiales (compartidos por especie y color) ---------- */
 const matCache = new Map();
+// Olvidar texturas y materiales guardados (el taller lo usa al cambiar un diseño)
+export function resetCache() {
+  for (const t of texCache.values()) t.dispose(); texCache.clear();
+  for (const m of matCache.values()) for (const x of Object.values(m)) x.dispose?.(); matCache.clear();
+}
 function materials(look, id, colorName) {
   const key = `${id}|${colorName}`;
   if (matCache.has(key)) return matCache.get(key);
@@ -177,19 +210,26 @@ function lerpTable(tab, x) {
 
 // Construye un hongo. Devuelve { group, climb } con todo en cm, con la base en (0, 0, 0).
 // group.children: [tallo, sombrero, abajo del sombrero, …detalles]
-export function buildMushroom(id, row, seed, { segs = 40 } = {}) {
-  const look = LOOKS[id];
+// what: el nombre de una especie (LOOKS) o un aspecto armado en el taller (mismos campos)
+// Cada hongo además tiene su propia edad (joven, maduro o viejo) e imperfecciones: no hay dos iguales.
+export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null, perfect = false } = {}) {
+  const look = typeof what === 'string' ? LOOKS[what] : what;
+  const id = typeof what === 'string' ? what : 'u' + hashStr(JSON.stringify(what));
   let shape = look.shapes.includes(row.shape) ? SHAPE_ID[row.shape] : SHAPE_ID[look.shapes[0]];
   if (look.funnel) shape = 'hundida';
+  if (look.puff) shape = 'esferica';
   if (id === 'conica' && shape !== 'conica') shape = 'campana';
+  const r = rng(seed);
+  const age = forceAge ?? (look.puff ? 0.5 : r());
   const colorName = look.colors.includes(row.color) ? row.color : look.colors[0];
   // Medidas reales (acotadas para que el juego siga siendo jugable)
   // (algunas especies tienen proporciones propias: la parasol es alta y de tallo fino; la mycena, un hilo)
-  const D = Math.min(18, Math.max(1.4, row.d)), H = Math.min(19, Math.max(1.5, row.h, look.hr ? D * look.hr : 0));
+  const D = Math.min(18, Math.max(1.4, row.d));
+  const H = Math.min(19, look.hmax ? Math.max(1, D * look.hmax) : Infinity, Math.max(1.5, row.h, look.hr ? D * look.hr : 0)) * (perfect ? 1 : 0.88 + age * 0.2);
   const Wmm = Math.min(D * 10 * 0.5, look.wr ? D * look.wr : Infinity, Math.max(2, row.w, look.wmin ? D * look.wmin : 0));
   const p = profile({ id: shape, cap: D, alto: H, grosor: Wmm, ring: false }); // en mm
   const mats = materials(look, id, colorName);
-  const r = rng(seed), k = 0.1;
+  const k = 0.1;
   const g = new THREE.Group();
 
   // Tallo: el perfil del Excel, con la forma de la especie (bulbo, maza, se afina abajo…)
@@ -205,7 +245,11 @@ export function buildMushroom(id, row, seed, { segs = 40 } = {}) {
 
   // Sombrero: arriba y abajo, con el centro hacia arriba en la textura
   const capBase = p.capUnder[p.capUnder.length - 1][1];
-  const topPts = p.capTop.map(([cr, cy]) => [cr * k, (look.thick ? capBase + (cy - capBase) * look.thick : cy) * k]);
+  // de joven, el sombrero es más cerrado y alto; de viejo, más plano y con el borde levantado
+  const ageK = perfect || look.funnel || shape === 'conica' ? 1 : 1.25 - 0.5 * age;
+  const hk = (look.thick || 1) * (look.stretch || 1) * ageK;
+  const topPts = p.capTop.map(([cr, cy]) => [cr * k, (capBase + (cy - capBase) * hk) * k]);
+  if (!perfect && age > 0.75 && !look.funnel) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, q[0] / R0 - 0.75) * (age - 0.75) * R0 * 0.5; }
   if (look.umbo) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, 1 - q[0] / (R0 * 0.22)) * R0 * 0.07; }
   const underPts = p.capUnder.map(([cr, cy]) => [cr * k, cy * k]);
   const capGeo = new THREE.LatheGeometry(topPts.map(V2), segs);
@@ -216,10 +260,10 @@ export function buildMushroom(id, row, seed, { segs = 40 } = {}) {
     geo.computeVertexNormals();
   }
   const cap = new THREE.Mesh(capGeo, mats.cap); g.add(cap);
-  const under = new THREE.Mesh(underGeo, mats.under); g.add(under);
+  const under = new THREE.Mesh(underGeo, look.puff ? mats.cap : mats.under); g.add(under);
 
   // Láminas o pliegues (placas radiales que siguen la cara de abajo; las decurrentes bajan por el tallo)
-  if (look.under !== 'pores') {
+  if (look.under === 'gills' || look.under === 'ridges') {
     const und = [...underPts].sort((a, b) => a[0] - b[0]);
     const r0 = und[0][0] * 1.05, r1 = und[und.length - 1][0] * 0.97, n = look.under === 'ridges' ? 26 : Math.min(48, Math.round(18 + D * 3)), plates = [];
     if (r1 - r0 > 0.15) for (let i = 0; i < n; i++) {
@@ -266,18 +310,41 @@ export function buildMushroom(id, row, seed, { segs = 40 } = {}) {
   const top = []; let maxR = -1;
   for (const [cr, cy] of topPts) { if (cr <= maxR) break; maxR = cr; top.push([cr, cy]); }
   if (look.warts) {
-    const bumps = [], count = Math.round(20 + D * 4);
+    const bumps = [], count = Math.round((20 + D * 4) * (look.puff ? 3 : 1));
     for (let i = 0; i < count; i++) {
-      const rr = Math.sqrt(r()) * maxR * 0.9, th = r() * Math.PI * 2, sz = (0.08 + r() * 0.1) * Math.max(1, D / 8);
+      const rr = Math.sqrt(r()) * maxR * 0.9, th = r() * Math.PI * 2, sz = (0.08 + r() * 0.1) * Math.max(1, D / 8) * (look.wartSize || 1);
       const b = new THREE.IcosahedronGeometry(sz, 0); b.scale(1, 0.5, 1); b.translate(Math.cos(th) * rr, lerpTable(top, rr) + sz * 0.2, Math.sin(th) * rr); bumps.push(b);
     }
     const w = new THREE.Mesh(mergeGeometries(bumps), mats.white); g.add(w);
   }
 
+  // Imperfecciones: sombrero un poco desparejo, a veces una mordida (de babosa) y, de viejo, el borde roto
+  if (!perfect) {
+    const R0 = maxR, a1 = 0.03 + r() * 0.05, a2 = r() * 0.04, p1 = r() * 6, p2 = r() * 6;
+    const bites = [];
+    if (r() < 0.3) bites.push({ at: r() * Math.PI * 2, w: 0.3 + r() * 0.3, d: 0.15 + r() * 0.15 });
+    if (age > 0.8) for (let i = 0; i < 3; i++) bites.push({ at: r() * Math.PI * 2, w: 0.08 + r() * 0.08, d: 0.06 + r() * 0.05 });
+    const sr0 = lerpTable(stemR, H * 0.9) * 1.1;
+    for (const o of g.children.slice(1)) {
+      if (o.position.y !== 0) continue; // el anillo no
+      const pos = o.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i), rr = Math.hypot(x, z); if (rr <= sr0) continue;
+        const ph = Math.atan2(z, x); let f = 1 + (a1 * Math.sin(2 * ph + p1) + a2 * Math.sin(3 * ph + p2)) * Math.min(1, (rr - sr0) / (R0 * 0.5));
+        let lim = Infinity;
+        for (const b of bites) { const dp = Math.atan2(Math.sin(ph - b.at), Math.cos(ph - b.at)); if (Math.abs(dp) < b.w) lim = Math.min(lim, R0 * (1 - b.d * (1 - (dp / b.w) ** 2))); }
+        const nr = Math.max(sr0, Math.min(rr * f, rr * f > lim ? lim + (rr * f - lim) * 0.15 : Infinity));
+        pos.setX(i, (x / rr) * nr); pos.setZ(i, (z / rr) * nr);
+      }
+      pos.needsUpdate = true; o.geometry.computeVertexNormals();
+    }
+    g.rotation.z = (r() - 0.5) * (look.tilt || 0.08); g.rotation.x = (r() - 0.5) * (look.tilt ? look.tilt * 0.5 : 0.06);
+  }
+
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const under0 = p.capUnder[p.capUnder.length - 1][1] * k;
   return {
-    group: g, colorName, shape, D, H, W: Wmm,
+    group: g, colorName, shape, D, H, W: Wmm, age,
     climb: {
       stemR: (h) => lerpTable(stemR, h), capY: (rr) => lerpTable(top, rr), Rw: maxR,
       climbTop: Math.min(under0, H) - 0.2, top: Math.max(...top.map((t) => t[1]))

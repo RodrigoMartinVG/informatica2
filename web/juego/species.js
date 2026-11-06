@@ -11,7 +11,15 @@ export const SPECIES = {
   cantharellus: { name: 'Cantharellus cibarius', tag: 'comestible', tox: false, note: 'Amarillo anaranjado y llamativo, sin anillo.' },
   edulis: { name: 'Boletus edulis', tag: 'comestible', tox: false, note: 'Grande, de tallo grueso. Uno de los más buscados.' },
   pulverulentus: { name: 'Boletus pulverulentus', tag: 'comestible', tox: false, note: 'Se pone azul oscuro apenas lo tocás.' },
-  gibba: { name: 'Infundibulicybe gibba', tag: 'comestible', tox: false, note: 'Sombrero hundido como un embudo, sin anillo.' }
+  gibba: { name: 'Infundibulicybe gibba', tag: 'comestible', tox: false, note: 'Sombrero hundido como un embudo, sin anillo.' },
+  russula: { name: 'Russula emetica', tag: 'venenoso', tox: true, note: 'Rojo brillante y tallo blanquísimo. Su nombre lo dice: provoca vómitos.' },
+  hypholoma: { name: 'Hypholoma fasciculare', tag: 'venenoso', tox: true, note: 'Amarillo azufre, en racimos sobre la madera. Láminas verdosas.' },
+  suillus: { name: 'Suillus luteus', tag: 'comestible', tox: false, note: 'El hongo de pino, el más recolectado en Argentina. Sombrero pegajoso y poros.' },
+  coprinus: { name: 'Coprinus comatus', tag: 'comestible de joven', tox: false, note: 'La barbuda: alta y escamosa. De vieja se deshace en una tinta negra.' },
+  lactarius: { name: 'Lactarius deliciosus', tag: 'comestible', tox: false, note: 'El níscalo: naranja con anillos, suelta un jugo naranja y se mancha de verde.' },
+  lycoperdon: { name: 'Lycoperdon perlatum', tag: 'comestible de joven', tox: false, note: 'Un pedo de lobo: una bola sin láminas que suelta una nube de esporas.' },
+  pleurotus: { name: 'Pleurotus ostreatus', tag: 'comestible', tox: false, note: 'La gírgola: crece como repisas sobre troncos. Se cultiva y se come.' },
+  trametes: { name: 'Trametes versicolor', tag: 'no se come', tox: false, note: 'La cola de pavo: crece en la madera de los árboles. No es venenosa, pero es dura como un cuero.' }
 };
 
 let credits = {};

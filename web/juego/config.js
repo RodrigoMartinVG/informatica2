@@ -60,7 +60,7 @@ export const LEVELS = [
   {
     id: 'anillo', time: 0, at: RING, spread: 22, trait: 'ring', title: 'El anillo', place: 'el claro del anillo', stamp: 'MITO',
     yes: 'con anillo', no: 'sin anillo', nYes: 13, toxYes: 8, nNo: 13, toxNo: 7, research: [0.605, 0.538],
-    photos: { yes: { tox: ['phalloides', 'galerina', 'muscaria'], ed: ['campestris', 'procera'] }, no: { tox: ['conica', 'mycena'], ed: ['cantharellus', 'edulis', 'gibba'] } },
+    photos: { yes: { tox: ['phalloides', 'galerina', 'muscaria'], ed: ['campestris', 'procera', 'suillus', 'coprinus'] }, no: { tox: ['conica', 'mycena', 'russula', 'hypholoma'], ed: ['cantharellus', 'edulis', 'gibba', 'lactarius'] } },
     enter: ['El claro del anillo. Los hongos con anillo y sin anillo crecen mezclados.', 'Dicen que el anillo sirve para saber cuáles son venenosos. ¿Será cierto? Comé… y averigualo.'],
     goal: 'El claro del anillo: comé para sobrevivir y averiguá si el anillo sirve para elegir.',
     h2: 'Con anillo o sin anillo,<br><em>el bosque se parece demasiado.</em>',
@@ -71,7 +71,7 @@ export const LEVELS = [
   {
     id: 'magulladura', time: 0.15, at: SLEEPING[0], spread: 17, trait: 'bruise', title: 'La magulladura', place: 'el claro de la magulladura', stamp: 'MITO',
     yes: 'se mancha', no: 'no se mancha', nYes: 13, toxYes: 7, nNo: 9, toxNo: 5, research: [0.533, 0.559],
-    photos: { yes: { tox: ['conica'], ed: ['pulverulentus'] }, no: { tox: ['phalloides', 'mycena'], ed: ['campestris', 'cantharellus', 'gibba'] } },
+    photos: { yes: { tox: ['conica'], ed: ['pulverulentus', 'lactarius'] }, no: { tox: ['phalloides', 'mycena', 'russula'], ed: ['campestris', 'cantharellus', 'gibba', 'suillus'] } },
     enter: ['El claro de la magulladura. Dicen que si un hongo se mancha al tocarlo, es venenoso.', 'Empujá contra los tallos: algunos se manchan de azul. ¿Eso avisa algo?'],
     goal: 'El claro de la magulladura: empujá los tallos para ver cuáles se manchan, y averiguá si eso avisa algo.',
     h2: 'Se manche o no se manche,<br><em>el riesgo es casi el mismo.</em>',
@@ -82,7 +82,7 @@ export const LEVELS = [
   {
     id: 'colores', time: 0.3, at: SLEEPING[1], spread: 18, trait: 'color', title: 'Los colores', place: 'el claro de los colores', stamp: 'A MEDIAS',
     yes: 'de color llamativo', no: 'de color común', nYes: 13, toxYes: 9, nNo: 13, toxNo: 6, research: [0.683, 0.482],
-    photos: { yes: { tox: ['muscaria', 'conica'], ed: ['cantharellus'] }, no: { tox: ['phalloides', 'galerina'], ed: ['campestris', 'edulis', 'gibba'] } },
+    photos: { yes: { tox: ['muscaria', 'conica', 'russula'], ed: ['cantharellus', 'lactarius'] }, no: { tox: ['phalloides', 'galerina'], ed: ['campestris', 'edulis', 'gibba', 'coprinus', 'lycoperdon'] } },
     enter: ['El claro de los colores. Rojos, naranjas y verdes entre blancos y marrones.', 'Dicen que los colores llamativos avisan del peligro. ¿Y los colores comunes? ¿Son seguros?'],
     goal: 'El claro de los colores: averiguá si los colores llamativos avisan… y si los comunes son seguros.',
     h2: 'Los llamativos son más riesgosos,<br><em>pero los comunes no son seguros.</em>',
@@ -93,7 +93,7 @@ export const LEVELS = [
   {
     id: 'tamano', time: 0.45, at: SLEEPING[2], spread: 20, trait: 'size', title: 'El tamaño', place: 'el claro del tamaño', stamp: 'TENDENCIA',
     yes: 'chico', no: 'grande', nYes: 13, toxYes: 9, nNo: 12, toxNo: 5, research: [0.696, 0.431],
-    photos: { yes: { tox: ['galerina', 'mycena', 'conica'], ed: ['gibba', 'cantharellus'] }, no: { tox: ['muscaria', 'phalloides'], ed: ['procera', 'edulis'] } },
+    photos: { yes: { tox: ['galerina', 'mycena', 'conica', 'hypholoma'], ed: ['gibba', 'cantharellus', 'lycoperdon'] }, no: { tox: ['muscaria', 'phalloides'], ed: ['procera', 'edulis', 'suillus'] } },
     enter: ['El claro del tamaño. Hongos diminutos al lado de gigantes.', 'Dicen que los chicos son los peligrosos. ¿Los grandes se pueden comer tranquilo?'],
     goal: 'El claro del tamaño: compará los hongos chicos con los grandes.',
     h2: 'Más chico, más riesgo.<br><em>Pero ningún tamaño es seguro.</em>',
@@ -104,7 +104,7 @@ export const LEVELS = [
   {
     id: 'proporciones', time: 0.6, at: SLEEPING[3], spread: 18, trait: 'stem', title: 'Las proporciones', place: 'el claro de las proporciones', stamp: 'PISTA DÉBIL',
     yes: 'de tallo grueso', no: 'de tallo fino', nYes: 12, toxYes: 6, nNo: 13, toxNo: 8, research: [0.49, 0.605],
-    photos: { yes: { tox: ['muscaria', 'phalloides'], ed: ['edulis', 'pulverulentus'] }, no: { tox: ['mycena', 'galerina', 'conica'], ed: ['procera', 'gibba'] } },
+    photos: { yes: { tox: ['muscaria', 'phalloides', 'russula'], ed: ['edulis', 'pulverulentus'] }, no: { tox: ['mycena', 'galerina', 'conica', 'hypholoma'], ed: ['procera', 'gibba', 'coprinus'] } },
     enter: ['El claro de las proporciones. Tallos gruesos como troncos y tallos finos como hilos.', '¿La forma del hongo delata a los venenosos? Trepalos y comparalos.'],
     goal: 'El claro de las proporciones: compará los hongos de tallo grueso con los de tallo fino.',
     h2: 'Gruesos o finos,<br><em>las proporciones casi no los separan.</em>',

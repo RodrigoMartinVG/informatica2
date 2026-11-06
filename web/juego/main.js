@@ -367,18 +367,20 @@ function touchCheck(m) {
 /* ---------- Ficha: la foto real de un hongo parecido ---------- */
 let fichaT = 0;
 function showPhoto(m) {
-  const sp = SPECIES[m.species]; if (!sp) return;
-  $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name; $('#ficha-img').dataset.sp = m.species;
+  // los hongos del taller no tienen foto: la ficha muestra el nombre que les pusiste
+  const sp = SPECIES[m.species] || (m.design && { name: m.design, tag: m.toxic ? 'venenoso' : 'comestible', tox: m.toxic, note: 'Un hongo que diseñaste en el taller.' }); if (!sp) return;
+  $('#ficha-img').hidden = !SPECIES[m.species];
+  if (SPECIES[m.species]) { $('#ficha-img').src = photo(m.species); $('#ficha-img').alt = sp.name; $('#ficha-img').dataset.sp = m.species; }
   $('#ficha-n').textContent = sp.name;
-  const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : 'ed'}`;
-  $('#ficha-d').textContent = sp.note; $('#ficha-c').textContent = credit(m.species);
+  const t = $('#ficha-t'); t.textContent = sp.tag; t.className = `ficha-t ${sp.tox ? 'tox' : m.species === 'trametes' ? '' : 'ed'}`;
+  $('#ficha-d').innerHTML = sp.note + (m.row ? `<small class="ficha-x">Fila real del Excel: sombrero de ${String(m.row.d).replace('.', ',')} cm · tallo de ${String(m.row.h).replace('.', ',')} cm de alto y ${String(m.row.w).replace('.', ',')} mm de ancho.</small>` : ''); $('#ficha-c').textContent = SPECIES[m.species] ? credit(m.species) : 'Diseño del taller de hongos';
   // Lo que investiga el nivel, destacado
   const L = m.level ? levelOf(m) : null, r = $('#ficha-r');
   const trait = !L ? '' : {
     ring: m.yes ? 'Tiene anillo' : 'No tiene anillo',
     bruise: !m.traitKnown ? '' : m.yes ? 'Se mancha al tocarlo' : 'No se mancha al tocarlo',
     color: m.yes ? 'Color llamativo' : 'Color común',
-    size: m.yes ? 'Chico: unos 3 cm de sombrero' : 'Grande: más de 10 cm de sombrero',
+    size: m.yes ? 'Chico: hasta 4 cm de sombrero' : 'Grande: 10 cm o más de sombrero',
     stem: m.yes ? 'Tallo grueso para su sombrero' : 'Tallo fino para su sombrero',
     twin: m.yes ? 'Era una Amanita' : 'Era un champiñón'
   }[L.trait];
@@ -482,6 +484,7 @@ function shelfAct(kind) {
   gsap.timeline({ onUpdate: () => set(a.v), onComplete: () => (state.busy = false) }).to(a, { v: 1, duration: 0.35 }).to(a, { v: 1, duration: kind === 'sniff' ? 0.6 : 0.9 }).to(a, { v: 0, duration: 0.3 });
   const text = kind === 'sniff' ? SV.MISC.shelfSniff : SV.MISC.shelfEat;
   tip('shelf-' + kind + Date.now(), text, { repeat: true }); A.speak(text);
+  if (kind === 'sniff') showPhoto({ species: 'trametes' });
 }
 
 function sniff() {

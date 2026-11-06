@@ -306,3 +306,6 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .top-r button, .top-r a { white-space: nowrap; }
 
 .sr-tip.on { color: #fff; background: rgba(159,232,200,.16); border: 1px solid rgba(159,232,200,.5); border-radius: 10px; padding: 10px 14px; font-size: 15px; }
+
+.ficha-x { display: block; margin-top: 6px; font-size: 11px; opacity: .75; }
+.intro-taller { margin-left: 18px; }

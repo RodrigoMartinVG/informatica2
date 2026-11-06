@@ -3,9 +3,10 @@
 // Cada hongo sabe su propia forma: el escarabajo puede trepar el tallo y caminar sobre el sombrero.
 import * as THREE from 'three/webgpu';
 import { color, uniform } from 'three/tsl';
-import { height, inClearing, rng, BOUNDS, LEVELS } from './config.js';
+import { height, inClearing, rng, BOUNDS, LEVELS, SPAWN } from './config.js';
 import { obstacles, logs } from './world.js';
 import { buildMushroom, pickRow, LOOKS } from './hongos3d.js';
+import { planted } from './disenos.js';
 
 const R = window.RESEARCH;
 
@@ -21,7 +22,7 @@ function plant(scene, list, { x, z, species, look = species, row, toxic, base = 
   mesh.position.set(x, base, z); mesh.rotation.y = yawSeed() * 6;
   scene.add(mesh);
   const m = {
-    mesh, x, z, base, toxic, species, row, colorName: b.colorName, look: LOOKS[look],
+    mesh, x, z, base, toxic, species, row, colorName: b.colorName, look: typeof look === 'string' ? LOOKS[look] : look,
     level: null, yes: false, traitKnown: false, known: false, eaten: false, glow: 0, bruise: 0,
     ...b.climb
   };
@@ -30,7 +31,7 @@ function plant(scene, list, { x, z, species, look = species, row, toxic, base = 
 }
 
 // Especies reales para los hongos sueltos del bosque
-const DECOR = { tox: ['phalloides', 'galerina', 'muscaria', 'conica', 'mycena'], ed: ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba'] };
+const DECOR = { tox: ['phalloides', 'muscaria', 'conica', 'russula'], ed: ['campestris', 'procera', 'cantharellus', 'edulis', 'gibba', 'suillus', 'coprinus', 'lactarius', 'lycoperdon'] };
 const pickDecor = (toxic, r = Math.random) => { const p = DECOR[toxic ? 'tox' : 'ed']; return p[Math.floor(r() * p.length)]; };
 
 /* ---------- Hongos dispersos por el bosque (también se pueden comer) ---------- */
@@ -57,17 +58,18 @@ function scatter(scene, list, quality) {
     }
     n++;
   }
-  // Sobre los troncos caídos crecen los de la madera: Galerina (mortal) y Mycena, en racimos
+  // Sobre los troncos caídos crecen los de la madera, en racimos: la gírgola (se come) y, de los que no,
+  // Galerina (mortal), Mycena e Hypholoma. En cada tronco, un racimo de cada tipo.
+  const WOOD = { tox: ['galerina', 'mycena', 'hypholoma'], ed: ['pleurotus'] };
   for (const [li, l] of logs.entries()) {
-    if (li % 2) continue; // en la mitad de los troncos (son todos de los que no se comen)
     const groups = 1 + Math.floor(r() * 2);
     for (let gi = 0; gi < groups; gi++) {
-      const species = (gi + Math.floor(r() * 2)) % 2 ? 'galerina' : 'mycena', t0 = (gi ? 0.25 : -0.25) * l.len + (r() - 0.5) * l.len * 0.3, k = 2 + Math.floor(r() * 3);
+      const toxic = (gi + li) % 2 === 0, pool = WOOD[toxic ? 'tox' : 'ed'], species = pool[Math.floor(r() * pool.length)], t0 = (gi ? 0.25 : -0.25) * l.len + (r() - 0.5) * l.len * 0.3, k = 2 + Math.floor(r() * 3);
       for (let i = 0; i < k; i++) {
         const t = t0 + (r() - 0.5) * 6, side = (r() - 0.5) * 1.2; // cerca de la línea de arriba del tronco
         const x = l.x + l.ax * t - l.az * side, z = l.z + l.az * t + l.ax * side;
         const base = l.cy + Math.sqrt(Math.max(0, l.rad * l.rad - side * side)) - 0.1;
-        const m = plant(scene, list, { x, z, base, species, toxic: true, row: pickRow(r, LOOKS[species], { tox: true }), quality });
+        const m = plant(scene, list, { x, z, base, species, toxic, row: pickRow(r, LOOKS[species], { tox: toxic }), quality });
         m.wood = true;
       }
     }
@@ -134,9 +136,26 @@ function dew(scene, all) {
   scene.add(mesh);
 }
 
+/* ---------- El jardín del taller: los hongos diseñados en taller.html, cerca del punto de partida ---------- */
+function garden(scene, list, quality) {
+  const designs = planted(); if (!designs.length) return;
+  const r = rng(401), n = designs.length;
+  designs.forEach((d, i) => {
+    // repartidos alrededor del inicio, sin tapar el camino de esporas (que sale hacia −z)
+    const a = -Math.PI / 2 + 0.8 + ((i + 0.25) / n) * (Math.PI * 2 - 1.6), rad = 18 + (i % 2) * 6;
+    const cx = SPAWN.x + Math.cos(a) * rad, cz = SPAWN.z + Math.sin(a) * rad;
+    for (let k = 0; k < 3; k++) {
+      const x = cx + (r() - 0.5) * 8, z = cz + (r() - 0.5) * 8;
+      const m = plant(scene, list, { x, z, species: 'taller', look: d.look, toxic: !!d.tox, row: pickRow(r, d.look, { tox: !!d.tox }), quality });
+      m.design = d.name;
+    }
+  });
+}
+
 export function buildFlora(scene, { quality = 'baja' } = {}) {
   const all = [];
   scatter(scene, all, quality);
+  try { garden(scene, all, quality); } catch (e) { console.warn('Diseños del taller:', e); }
   LEVELS.forEach((L, i) => levelClearing(scene, all, L, 113 + i * 17, quality));
   dew(scene, all);
 
