@@ -201,6 +201,9 @@ export function createBeetle(scene) {
 
   /* ---------- Movimiento por modo ---------- */
   function moveGround(dt, input) {
+    // Si quedó metido dentro de algo sólido (un tronco caído, una piedra), se sube encima en vez de quedar trabado
+    const inside = wallTop(st.x, st.z, st.fy);
+    if (inside > -Infinity) st.fy = inside;
     const ox = st.x, oz = st.z;
     st.yaw -= st.turn * dt * (0.4 + Math.min(1, Math.abs(st.speed) / 4) * 0.6);
     st.x += Math.sin(st.yaw) * st.speed * dt; st.z += Math.cos(st.yaw) * st.speed * dt;
@@ -405,7 +408,7 @@ export function createBeetle(scene) {
     const slow = Math.max(0, 1 - st.sniff * 0.9 - st.chew * 0.95);
     const wob = st.wobble ? Math.sin(st.t * 2.3) * 0.7 * st.wobble : 0;
     if (st.mode === 'transit') {
-      tr.t = Math.min(1, tr.t + dt / tr.dur);
+      tr.t = Math.min(1, tr.t + dt / tr.dur); if (!(tr.t >= 0)) tr.t = 1; // nunca quedar a mitad de un paso
       if (tr.t >= 1) { st.mode = tr.next; smoothN.copy(poseOf(st.mode).N); event = (st.flying ? 'aterrizó:' : 'llegó:') + st.mode; st.flying = false; }
     } else {
       const target = input.fwd * (input.run ? 10 : 4.6) * slow;

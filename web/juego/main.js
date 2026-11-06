@@ -579,6 +579,9 @@ function faint() {
     const back = state.cur ? { x: state.cur.at.x, z: state.cur.at.z + state.cur.spread + 10 } : { x: SPAWN.x, z: SPAWN.z };
     beetle.place(back.x, back.z, Math.PI);
     Object.assign(game, { lives: 3, energy: 60, poison: 0, starving: 0 }); S.poison(false); drawStatus();
+    // despertar "limpio": nada quedó a medias (animaciones, cámara fija, cuaderno, teclas apretadas)
+    state.busy = false; beetle.setSniff(0); beetle.setChew(0); keys.clear(); state.jumpQ = false;
+    cam.mode = 'follow'; if (!$('#book').hidden) { $('#book').hidden = true; bookView = null; }
     cam.arm = cam.dist; followTarget(); camPos.copy(want); camLook.copy(wantLook);
     gsap.to('#fade', { opacity: 0, duration: 1.4, delay: 0.4, onComplete: () => { state.phase = 'play'; S.wake(); A.speak(SV.MISC.wake); } });
     tip('w', game.faints === 1 ? 'Despertaste al borde del claro. Lo aprendiste por las malas.' : 'Otra vez en pie. El bosque no perdona.', { repeat: true });
@@ -775,10 +778,16 @@ function renderBook() {
   $('#pages').textContent = `${state.done.size}/${LEVELS.length}`;
 }
 renderBook();
+// El cuaderno se puede abrir solo mientras jugás; al cerrarlo se vuelve exactamente a lo que estabas haciendo
+// (antes, abrirlo durante el resumen de un claro o un viaje dejaba la cámara congelada y el juego trabado)
+let bookFrom = 'play';
 function toggleBook() {
   const b = $('#book');
-  if (b.hidden) { renderBook(); b.hidden = false; state.phase = 'book'; S.page(); gsap.fromTo('.paper', { y: 30, opacity: 0, rotate: -1 }, { y: 0, opacity: 1, rotate: 0, duration: 0.45, ease: 'power3.out' }); }
-  else { gsap.to('.paper', { y: 20, opacity: 0, duration: 0.25, onComplete: () => { b.hidden = true; state.phase = 'play'; bookView = null; } }); }
+  if (b.hidden) {
+    if (state.phase !== 'play') return;
+    bookFrom = state.phase; renderBook(); b.hidden = false; state.phase = 'book'; S.page();
+    gsap.fromTo('.paper', { y: 30, opacity: 0, rotate: -1 }, { y: 0, opacity: 1, rotate: 0, duration: 0.45, ease: 'power3.out' });
+  } else { gsap.to('.paper', { y: 20, opacity: 0, duration: 0.25, onComplete: () => { b.hidden = true; if (state.phase === 'book') state.phase = bookFrom; bookView = null; } }); }
 }
 $('#b-book').addEventListener('click', toggleBook);
 $('#book-close').addEventListener('click', toggleBook);
@@ -819,6 +828,8 @@ const prev = new THREE.Vector3();
 function frame() {
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
   prev.copy(beetle.pos);
+  // Red de seguridad: ninguna animación (olfatear, comer) puede dejar al escarabajo trabado más de 4 s
+  if (state.busy) { state.busyT = (state.busyT || 0) + dt; if (state.busyT > 4) { state.busy = false; beetle.setSniff(0); beetle.setChew(0); } } else state.busyT = 0;
   const inp = input();
   const ev = beetle.update(dt, inp);
   flora.update(dt, t);
