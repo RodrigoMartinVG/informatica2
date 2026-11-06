@@ -233,7 +233,15 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
       const k = 7 + friends.filter((x) => x.found).indexOf(f) * 6, q = trail[Math.min(trail.length - 1, k)];
       if (!q) return;
       // si ya aterrizaste, los amigos también bajan: van a la superficie que hay debajo de su punto del camino
-      const tq = beetle.airborne || !q.air ? q : q.clone().setY(walkHeight(q.x, q.z, q.y + 0.5) + 0.18);
+      let tq = beetle.airborne || !q.air ? q : q.clone().setY(walkHeight(q.x, q.z, q.y + 0.5) + 0.18);
+      // si estás arriba de un hongo (o trepando un tallo o un árbol), te esperan al pie, alrededor, mirándote
+      const host = !beetle.airborne && beetle.state.mode !== 'ground' ? beetle.state.m : null, idx = friends.filter((x) => x.found).indexOf(f);
+      if (host) {
+        const hx = host.x, hz = host.z, a0 = Math.atan2(f.g.position.z - hz, f.g.position.x - hx) + (idx % 2 ? 0.35 : -0.35) * Math.ceil(idx / 2) * 0.3;
+        const r = host.stemR(0.3) + 1.6 + (idx % 3) * 0.7, x = hx + Math.cos(a0) * r, z = hz + Math.sin(a0) * r;
+        tq = new THREE.Vector3(x, walkHeight(x, z, host.base + 1) + 0.18, z);
+        f.wait = Math.atan2(hx - f.g.position.x, hz - f.g.position.z);
+      } else f.wait = null;
       const prev = f.g.position.clone(); f.g.position.lerp(tq, Math.min(1, dt * (beetle.airborne ? 6 : 4)));
       // y nunca más cerca que 2 cm de vos ni 1,5 cm de otro amigo
       const keep = (o, min) => { const dx = f.g.position.x - o.x, dz = f.g.position.z - o.z, d = Math.hypot(dx, dz); if (d < min && d > 1e-4) { f.g.position.x = o.x + (dx / d) * min; f.g.position.z = o.z + (dz / d) * min; } };
@@ -241,7 +249,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
       for (const o of friends) if (o !== f && o.found) keep(o.g.position, 1.5);
       f.g.position.y = Math.max(f.g.position.y, walkHeight(f.g.position.x, f.g.position.z, f.g.position.y + 1) + 0.18);
       const mv = f.g.position.clone().sub(prev); mv.y = 0;
-      if (mv.lengthSq() > 1e-6) f.yaw = Math.atan2(mv.x, mv.z);
+      if (mv.lengthSq() > 1e-4) f.yaw = Math.atan2(mv.x, mv.z); else if (f.wait != null) f.yaw = f.wait;
       f.g.rotation.y += (Math.atan2(Math.sin(f.yaw - f.g.rotation.y), Math.cos(f.yaw - f.g.rotation.y))) * Math.min(1, dt * 8);
       const speed = mv.length() / Math.max(dt, 1e-3);
       // ¿Vuela? Si por ese tramo del camino ibas volando (o quedó lejos del piso): abre los élitros y bate las alas
