@@ -186,7 +186,7 @@ function hidden() {
   if (beetle.mode === 'stem') return true;
   if (beetle.mode !== 'ground') return false;
   const p = beetle.pos;
-  return flora.all.some((m) => Math.hypot(p.x - m.x, p.z - m.z) < m.Rw * 0.9 && m.climbTop > 1.2);
+  return flora.all.some((m) => Math.hypot(p.x - (m.cx ?? m.x), p.z - (m.cz ?? m.z)) < m.Rw * 0.9 && m.climbTop > 1.2);
 }
 function birdUpdate(dt) {
   if (bird.t < 0) {

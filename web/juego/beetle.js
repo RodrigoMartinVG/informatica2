@@ -212,7 +212,12 @@ export function createBeetle(scene) {
   const tr = { dir: new THREE.Vector3(), bank: 0, fly: false, a: new THREE.Vector3(), b: new THREE.Vector3(), ctrl: new THREE.Vector3(), t: 1, dur: 0.7, qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), next: 'ground' };
 
   const yawDir = (out) => out.set(Math.sin(st.yaw), 0, Math.cos(st.yaw));
-  const radial = (m, x, z, out) => { out.set(x - m.x, 0, z - m.z); const d = out.length(); if (d < 1e-4) out.set(1, 0, 0); else out.divideScalar(d); return d; };
+  // Hongos torcidos: el tallo se inclina (tx, tz = cuánto se corre el centro por cada cm de altura) y el sombrero queda corrido.
+  // SX/SZ: centro del tallo a la altura h · CX/CZ: centro del sombrero
+  const SX = (m, h) => m.x + (m.tx || 0) * h, SZ = (m, h) => m.z + (m.tz || 0) * h;
+  const CX = (m) => m.cx ?? m.x, CZ = (m) => m.cz ?? m.z;
+  // dirección horizontal desde el centro (del sombrero o, si se da h, del tallo a esa altura)
+  const radial = (m, x, z, out, h) => { out.set(x - (h == null ? CX(m) : SX(m, h)), 0, z - (h == null ? CZ(m) : SZ(m, h))); const d = out.length(); if (d < 1e-4) out.set(1, 0, 0); else out.divideScalar(d); return d; };
   const clampB = () => { st.x = Math.max(BOUNDS.minX + 5, Math.min(BOUNDS.maxX - 5, st.x)); st.z = Math.max(BOUNDS.minZ + 5, Math.min(BOUNDS.maxZ - 5, st.z)); };
 
   // Pose (posición, normal y frente) según el modo
@@ -235,8 +240,8 @@ export function createBeetle(scene) {
       out.pos.copy(st.p);
     } else {
       const m = st.m; tmp3.set(Math.cos(st.th), 0, Math.sin(st.th));
-      out.N.copy(tmp3); out.pos.set(m.x, m.base + st.h, m.z).addScaledVector(tmp3, m.stemR(st.h) + CLEAR);
-      out.F.copy(UP);
+      out.N.copy(tmp3); out.pos.set(SX(m, st.h), m.base + st.h, SZ(m, st.h)).addScaledVector(tmp3, m.stemR(st.h) + CLEAR);
+      out.F.set(m.tx || 0, 1, m.tz || 0).normalize(); // sube a lo largo del tallo, aunque esté torcido
     }
     return out;
   }
@@ -246,9 +251,9 @@ export function createBeetle(scene) {
     if (mode === 'air') { p.y = walkHeight(p.x, p.z); return p; }
     if (mode === 'ground' || !st.m) { p.y = walkHeight(p.x, p.z, st.fy + STEP); return p; }
     const m = st.m;
-    if (mode === 'cap') { const d = radial(m, p.x, p.z, tmp3), r = Math.min(d, m.Rw); p.set(m.x + tmp3.x * r, m.base + m.capY(r), m.z + tmp3.z * r); return p; }
-    const h = Math.max(0, Math.min(m.climbTop, p.y - m.base)); radial(m, p.x, p.z, tmp3);
-    const r = m.stemR(h); p.set(m.x + tmp3.x * r, m.base + h, m.z + tmp3.z * r); return p;
+    if (mode === 'cap') { const d = radial(m, p.x, p.z, tmp3), r = Math.min(d, m.Rw); p.set(CX(m) + tmp3.x * r, m.base + m.capY(r), CZ(m) + tmp3.z * r); return p; }
+    const h = Math.max(0, Math.min(m.climbTop, p.y - m.base)); radial(m, p.x, p.z, tmp3, h);
+    const r = m.stemR(h); p.set(SX(m, h) + tmp3.x * r, m.base + h, SZ(m, h) + tmp3.z * r); return p;
   }
 
   function orient(pose, dt) {
@@ -364,11 +369,12 @@ export function createBeetle(scene) {
         continue;
       }
       const h = st.fy - m.base; if (h < -1.5 || h > m.climbTop - 0.5) continue; // por debajo del sombrero
-      const d = Math.hypot(dx, dz), min = m.stemR(Math.max(0.4, h)) + 0.5;
+      const sx = SX(m, Math.max(0, h + 0.3)), sz = SZ(m, Math.max(0, h + 0.3)), ex = st.x - sx, ez = st.z - sz; // (el tallo a la altura del cuerpo)
+      const d = Math.hypot(ex, ez), min = m.stemR(Math.max(0.4, h)) + 0.5;
       if (d < min + 0.35) st.touch = m; // las antenas llegan a tocar el tallo
       if (d < min && d > 1e-4) {
-        st.x = m.x + (dx / d) * min; st.z = m.z + (dz / d) * min; st.touch = m;
-        if (input.fwd > 0.3 && facingTo(dx, dz, d) > 0.5) { climb = m; th = Math.atan2(dz, dx); hh = Math.max(0.5, h + 0.5); }
+        st.x = sx + (ex / d) * min; st.z = sz + (ez / d) * min; st.touch = m;
+        if (input.fwd > 0.3 && facingTo(ex, ez, d) > 0.5) { climb = m; th = Math.atan2(ez, ex); hh = Math.max(0.5, h + 0.5); }
       }
     }
     st.push = climb || dome ? st.push + dt : 0;
@@ -376,7 +382,7 @@ export function createBeetle(scene) {
     if (climb && st.push > 0.3) { grab(climb, th, hh); st.push = 0; return climb.kind === 'trunk' ? 'trepa-tronco' : 'trepa'; }
     if (dome && st.push > 0.25) {
       const m = dome, r = m.Rw * 0.45; st.push = 0;
-      startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(dth) * r; st.z = m.z + Math.sin(dth) * r; }, 0.5, Math.max(0.6, m.base + m.top - st.fy) * 0.6 + 0.5);
+      startTransit('cap', () => { st.m = m; st.x = CX(m) + Math.cos(dth) * r; st.z = CZ(m) + Math.sin(dth) * r; }, 0.5, Math.max(0.6, m.base + m.top - st.fy) * 0.6 + 0.5);
       return 'arriba';
     }
 
@@ -407,7 +413,7 @@ export function createBeetle(scene) {
     st.th -= input.turn * dt * 2.2 / Math.max(0.6, m.stemR(st.h) + CLEAR);
     st.speed = input.fwd * 3;
     if (st.h <= 0.25 && input.fwd < 0) { // bajar al suelo
-      const th = st.th, r = m.stemR(0.3) + 0.9, x = m.x + Math.cos(th) * r, z = m.z + Math.sin(th) * r;
+      const th = st.th, r = m.stemR(0.3) + 0.9, x = SX(m, 0.3) + Math.cos(th) * r, z = SZ(m, 0.3) + Math.sin(th) * r;
       startTransit('ground', () => { st.m = null; st.x = x; st.z = z; st.fy = walkHeight(x, z, m.base + 1.5); st.yaw = Math.atan2(Math.cos(th), Math.sin(th)); }, 0.45, 0.2);
       return 'bajó';
     }
@@ -425,7 +431,7 @@ export function createBeetle(scene) {
       }
     } else if (st.h >= m.climbTop) { // pasar por el borde del sombrero y salir arriba
       const th = st.th, r = m.Rw * 0.72;
-      startTransit('cap', () => { st.x = m.x + Math.cos(th) * r; st.z = m.z + Math.sin(th) * r; st.yaw = Math.atan2(-Math.cos(th), -Math.sin(th)); }, 0.9, Math.max(0.6, m.capY(m.Rw) - m.climbTop + 1.2));
+      startTransit('cap', () => { st.x = CX(m) + Math.cos(th) * r; st.z = CZ(m) + Math.sin(th) * r; st.yaw = Math.atan2(-Math.cos(th), -Math.sin(th)); }, 0.9, Math.max(0.6, m.capY(m.Rw) - m.climbTop + 1.2));
       return 'arriba';
     }
     st.h = Math.max(0.25, st.h);
@@ -443,7 +449,7 @@ export function createBeetle(scene) {
         startAir(Math.sin(st.yaw) * s, 1.5, Math.cos(st.yaw) * s);
         return 'cae';
       }
-      st.x = m.x + tmp3.x * m.Rw * 0.97; st.z = m.z + tmp3.z * m.Rw * 0.97;
+      st.x = CX(m) + tmp3.x * m.Rw * 0.97; st.z = CZ(m) + tmp3.z * m.Rw * 0.97;
     }
   }
 
@@ -459,7 +465,7 @@ export function createBeetle(scene) {
         const d = Math.hypot(st.x - m.x, st.z - m.z), rise = m.base + m.top - st.fy + 1.2;
         if (d < m.Rw + 1.6 && rise > 0 && rise < 12) {
           const th = Math.atan2(st.z - m.z, st.x - m.x), r = m.Rw * 0.3;
-          startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(th) * r; st.z = m.z + Math.sin(th) * r; st.yaw = Math.atan2(-Math.cos(th), -Math.sin(th)); }, 0.55, rise * 1.3 + 1);
+          startTransit('cap', () => { st.m = m; st.x = CX(m) + Math.cos(th) * r; st.z = CZ(m) + Math.sin(th) * r; st.yaw = Math.atan2(-Math.cos(th), -Math.sin(th)); }, 0.55, rise * 1.3 + 1);
           return 'brinco';
         }
       }
@@ -477,7 +483,7 @@ export function createBeetle(scene) {
     below.y = walkHeight(x, z, maxY); below.m = null;
     for (const m of mushrooms) {
       if (Math.abs(x - m.x) > 12 || Math.abs(z - m.z) > 12) continue;
-      const r = Math.hypot(x - m.x, z - m.z); if (r >= m.Rw * 0.97) continue;
+      const r = Math.hypot(x - CX(m), z - CZ(m)); if (r >= m.Rw * 0.97) continue;
       const y = m.base + m.capY(r); if (y <= maxY && y > below.y) { below.y = y; below.m = m; }
     }
     return below;
@@ -539,18 +545,19 @@ export function createBeetle(scene) {
     }
     // Hongos: el tallo se agarra; el sombrero frena desde abajo y empuja de costado
     for (const m of mushrooms) {
-      const dx = st.p.x - m.x, dz = st.p.z - m.z; if (Math.abs(dx) > 12 || Math.abs(dz) > 12) continue;
-      const d = Math.hypot(dx, dz), h = feet - m.base;
-      if (h > 0.2 && h < m.climbTop - 0.3 && d < m.stemR(h) + 0.5 && d > 1e-4) {
-        if (st.grabCD <= 0) { grab(m, Math.atan2(dz, dx), h, 0.3); return 'agarró'; }
-        const min = m.stemR(h) + 0.5; st.p.x = m.x + (dx / d) * min; st.p.z = m.z + (dz / d) * min;
+      if (Math.abs(st.p.x - m.x) > 14 || Math.abs(st.p.z - m.z) > 14) continue;
+      const h = feet - m.base, sx = SX(m, Math.max(0, h)), sz = SZ(m, Math.max(0, h)), ex = st.p.x - sx, ez = st.p.z - sz, e = Math.hypot(ex, ez);
+      if (h > 0.2 && h < m.climbTop - 0.3 && e < m.stemR(h) + 0.5 && e > 1e-4) {
+        if (st.grabCD <= 0) { grab(m, Math.atan2(ez, ex), h, 0.3); return 'agarró'; }
+        const min = m.stemR(h) + 0.5; st.p.x = sx + (ex / e) * min; st.p.z = sz + (ez / e) * min;
       }
+      const dx = st.p.x - CX(m), dz = st.p.z - CZ(m), d = Math.hypot(dx, dz);
       if (d < m.Rw + 0.3 && d > 1e-4) {
         const under = m.base + m.climbTop + 0.2, top = m.base + m.capY(Math.min(d, m.Rw));
         if (feet + 0.7 > under && feet < top - 0.15) {
           // (si venía de arriba del sombrero, es un aterrizaje: no se lo empuja de costado)
           if (prevFeet + 0.7 <= under + 0.08) { st.p.y = under - 0.7 + CLEAR; st.v.y = Math.min(0, st.v.y); }
-          else if (prevFeet < top - 0.2 && (d > m.Rw * 0.85 || feet < top - 0.6)) { const min = m.Rw + 0.3; st.p.x = m.x + (dx / d) * min; st.p.z = m.z + (dz / d) * min; st.v.x *= 0.3; st.v.z *= 0.3; }
+          else if (prevFeet < top - 0.2 && (d > m.Rw * 0.85 || feet < top - 0.6)) { const min = m.Rw + 0.3; st.p.x = CX(m) + (dx / d) * min; st.p.z = CZ(m) + (dz / d) * min; st.v.x *= 0.3; st.v.z *= 0.3; }
         }
       }
     }
@@ -719,10 +726,10 @@ export function createBeetle(scene) {
     // Volar hasta arriba del sombrero de un hongo
     flyTo(m) {
       if (st.mode === 'transit') return false;
-      const from = root.position, d = Math.hypot(m.x - from.x, m.z - from.z);
-      const a = Math.atan2(from.z - m.z, from.x - m.x), r = m.Rw * 0.35;
+      const from = root.position, d = Math.hypot(CX(m) - from.x, CZ(m) - from.z);
+      const a = Math.atan2(from.z - CZ(m), from.x - CX(m)), r = m.Rw * 0.35;
       st.flying = true;
-      startTransit('cap', () => { st.m = m; st.x = m.x + Math.cos(a) * r; st.z = m.z + Math.sin(a) * r; st.yaw = Math.atan2(-Math.cos(a), -Math.sin(a)); },
+      startTransit('cap', () => { st.m = m; st.x = CX(m) + Math.cos(a) * r; st.z = CZ(m) + Math.sin(a) * r; st.yaw = Math.atan2(-Math.cos(a), -Math.sin(a)); },
         Math.min(2.6, 0.9 + d / 22), Math.max(4, d * 0.35) + Math.max(0, m.base + m.top - from.y));
       return true;
     },
