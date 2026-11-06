@@ -7,7 +7,15 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { profile } from '../profiles.js';
 import { translucent } from './look.js';
 import { rng } from './config.js';
-import { FILAS, FORMAS, COLORES } from './filas.js';
+import { FILAS, FORMAS, COLORES, SUPERFICIES, ESPACIADOS, ANILLOS, BASES, TEMPORADAS } from './filas.js';
+
+// Colores con nombre del Excel (para teñir láminas y tallo según la fila)
+const NAMED = { Blanco: '#f2eee4', Crema: '#e8dcc0', Marrón: '#8a6a48', Gris: '#9a9690', Negro: '#3a3430', Amarillo: '#e2c45a', Naranja: '#e08a40',
+  Rojo: '#c0503a', Rosa: '#e8b0a8', Verde: '#9aaa6a', Púrpura: '#8a6a8a', Azul: '#7a8aa8' };
+// Los dos colores con nombre más parecidos a un color (para elegir filas que le queden a la especie)
+const nearNames = (hex) => { const c = new THREE.Color(hex); return Object.entries(NAMED).map(([n, h]) => [n, c.clone().sub(new THREE.Color(h)).toArray().reduce((a, v) => a + v * v, 0)]).sort((a, b) => a[1] - b[1]).slice(0, 2).map((x) => x[0]); };
+// La superficie del sombrero del Excel, agrupada en lo que se ve: brillo, escamas, fibras, surcos o mate
+const SURF = { Pegajosa: 'brillo', Brillante: 'brillo', Escamosa: 'escamas', Fibrosa: 'fibras', Sedosa: 'fibras', 'Con surcos': 'surcos', Arrugada: 'surcos', Coriácea: 'mate', Carnosa: 'mate', Lisa: null };
 
 const SHAPE_ID = { 'Convexa': 'convexa', 'Plana': 'plana', 'Campana': 'campana', 'Cónica': 'conica', 'Esférica': 'esferica', 'Hundida': 'hundida', 'Otras': 'convexa' };
 const VIVID = new Set(['Amarillo', 'Naranja', 'Rojo', 'Rosa', 'Verde', 'Púrpura', 'Azul']);
@@ -78,7 +86,9 @@ export const LOOKS = {
 
 /* ---------- Elegir una fila real del Excel ---------- */
 // need: { tox, trait, yes } · look: la especie. Prueba filtros de más estricto a menos estricto.
-const rowObj = (f) => ({ tox: f[0], d: f[1], h: f[2], w: f[3], shape: FORMAS[f[4]], color: COLORES[f[5]], ring: f[6], bruise: f[7], hab: f[8] });
+const pick = (list, i) => (i >= 0 && i != null ? list[i] : null);
+const rowObj = (f) => ({ tox: f[0], d: f[1], h: f[2], w: f[3], shape: FORMAS[f[4]], color: COLORES[f[5]], ring: f[6], bruise: f[7], hab: f[8],
+  sup: pick(SUPERFICIES, f[9]), lam: pick(COLORES, f[10]), tal: pick(COLORES, f[11]), esp: pick(ESPACIADOS, f[12]), ani: pick(ANILLOS, f[13]), base: pick(BASES, f[14]), temp: pick(TEMPORADAS, f[15]) });
 const ROWS = FILAS.map(rowObj);
 function traitOk(row, trait, yes) {
   switch (trait) {
@@ -93,7 +103,11 @@ function traitOk(row, trait, yes) {
 }
 export function pickRow(r, look, { tox, trait = null, yes = false }) {
   const inD = (row) => row.d >= look.d[0] && row.d <= look.d[1];
+  // primero, filas cuyas láminas y tallo (en el Excel) tengan colores parecidos a los de la especie
+  const gillOk = look.gill ? nearNames(look.gill) : null, stemOk = look.stem ? nearNames(look.stem) : null;
+  const colorsOk = (row) => (!row.lam || !gillOk || look.under !== 'gills' || gillOk.includes(row.lam)) && (!row.tal || !stemOk || stemOk.includes(row.tal));
   const tries = [
+    (row) => traitOk(row, trait, yes) && look.shapes.includes(row.shape) && look.colors.includes(row.color) && inD(row) && colorsOk(row),
     (row) => traitOk(row, trait, yes) && look.shapes.includes(row.shape) && look.colors.includes(row.color) && inD(row),
     (row) => traitOk(row, trait, yes) && look.colors.includes(row.color) && inD(row),
     (row) => traitOk(row, trait, yes) && inD(row),
@@ -178,6 +192,22 @@ function stemTexture(look, id) {
   });
 }
 
+// Relieve del sombrero según su superficie en el Excel (uno por tipo, en grises, compartido por todos los hongos)
+const surfCache = new Map();
+function surfTex(kind) {
+  if (surfCache.has(kind)) return surfCache.get(kind);
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d'), r = rng(kind.length * 17), w = 512, h = 256;
+  g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+  if (kind === 'escamas') for (let i = 0; i < 900; i++) { const y = h * (0.12 + r() * 0.85), x = r() * w, sz = 3 + r() * 5; g.fillStyle = `rgba(${r() < 0.5 ? '40,40,40' : '210,210,210'},0.7)`; g.beginPath(); g.ellipse(x, y, sz * 1.3, sz * 0.7, 0, 0, 7); g.fill(); }
+  if (kind === 'fibras') for (let i = 0; i < 700; i++) { const x = r() * w; g.strokeStyle = `rgba(${r() < 0.5 ? '50,50,50' : '200,200,200'},0.55)`; g.lineWidth = 1 + r() * 1.5; g.beginPath(); g.moveTo(x, r() * h * 0.4); g.lineTo(x + (r() - 0.5) * 6, h); g.stroke(); }
+  if (kind === 'surcos') {
+    for (let i = 0; i < 70; i++) { const x = (i / 70) * w; g.strokeStyle = 'rgba(30,30,30,0.8)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, h * 0.45); g.lineTo(x, h); g.stroke(); }
+    for (let i = 0; i < 160; i++) { const x = r() * w, y = r() * h * 0.6; g.strokeStyle = 'rgba(40,40,40,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 10, y + 6, x + 20, y + (r() - 0.5) * 8); g.stroke(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
+  surfCache.set(kind, t); return t;
+}
+
 /* ---------- Materiales (compartidos por especie y color) ---------- */
 const matCache = new Map();
 // Olvidar texturas y materiales guardados (el taller lo usa al cambiar un diseño)
@@ -197,16 +227,23 @@ function rotTex(base, rot, key) {
     for (let i = 0; i < (rot === 1 ? 300 : 1400); i++) { const x = r() * w, y = r() * h; g.fillStyle = `rgba(240,238,228,${0.25 + r() * 0.45})`; g.beginPath(); g.arc(x, y, (0.6 + r() * 1.8) * (w / 512), 0, 7); g.fill(); } // moho
   });
 }
-function materials(look, id, colorName, rot = 0) {
-  const key = `${id}|${colorName}|${rot}`;
+// xl: lo que agrega la fila del Excel (relieve del sombrero, color de las láminas y del tallo)
+function materials(look, id, colorName, rot = 0, xl = {}) {
+  const key = `${id}|${colorName}|${rot}|${xl.surf || ''}|${xl.lam || ''}|${xl.tal || ''}`;
   if (matCache.has(key)) return matCache.get(key);
   const R = (t, k) => (rot ? rotTex(t, rot, k) : t);
-  const capBase = new THREE.MeshStandardMaterial({ map: R(capTexture(look, id, colorName), `cap|${id}|${colorName}`), roughness: rot ? 0.95 : look.gloss, side: THREE.DoubleSide });
+  const rough = rot ? 0.95 : xl.surf === 'brillo' ? look.gloss * 0.35 : xl.surf === 'mate' ? Math.min(1, look.gloss + 0.25) : look.gloss;
+  const capBase = new THREE.MeshStandardMaterial({ map: R(capTexture(look, id, colorName), `cap|${id}|${colorName}`), roughness: rough, side: THREE.DoubleSide });
+  if (xl.surf && xl.surf !== 'brillo' && xl.surf !== 'mate') { capBase.bumpMap = surfTex(xl.surf); capBase.bumpScale = xl.surf === 'surcos' ? 2.2 : 1.4; }
+  const tint = (name, k) => new THREE.Color('#ffffff').lerp(new THREE.Color(NAMED[name]).multiplyScalar(1.15), k);
   const underBase = new THREE.MeshStandardMaterial({ map: R(underTexture(look, id), `under|${id}`), roughness: 0.95, side: THREE.DoubleSide });
+  if (xl.lam) underBase.color = tint(xl.lam, 0.4);
   const stem = new THREE.MeshStandardMaterial({ map: R(stemTexture(look, id), `stem|${id}`), roughness: 0.92 });
+  if (xl.tal) stem.color = tint(xl.tal, 0.35);
+  const gillHex = xl.lam ? mixHex(look.gill, NAMED[xl.lam], 0.45) : look.gill;
   const out = {
     cap: translucent(capBase, '#ffb470', 1.1), under: translucent(underBase, '#ffc58a', 0.9), stem,
-    plate: translucent(new THREE.MeshStandardMaterial({ color: new THREE.Color(look.gill).lerp(new THREE.Color('#3a2c20'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide }), '#ffc58a', 0.9),
+    plate: translucent(new THREE.MeshStandardMaterial({ color: new THREE.Color(gillHex).lerp(new THREE.Color('#3a2c20'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide }), '#ffc58a', 0.9),
     mold: new THREE.MeshStandardMaterial({ color: '#f1efe6', roughness: 1, flatShading: true }),
     white: new THREE.MeshStandardMaterial({ color: new THREE.Color(look.warts || '#f2ede2').lerp(new THREE.Color('#6a5a48'), rot * 0.3), roughness: 0.9, flatShading: true }),
     volva: new THREE.MeshStandardMaterial({ color: new THREE.Color('#efeadb').lerp(new THREE.Color('#5a4a3a'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide })
@@ -243,7 +280,13 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const H = Math.min(19, look.hmax ? Math.max(1, D * look.hmax) : Infinity, Math.max(1.5, row.h, look.hr ? D * look.hr : 0)) * (perfect ? 1 : 0.88 + age * 0.2);
   const Wmm = Math.min(D * 10 * 0.5, look.wr ? D * look.wr : Infinity, Math.max(2, row.w, look.wmin ? D * look.wmin : 0));
   const p = profile({ id: shape, cap: D, alto: H, grosor: Wmm, ring: false }); // en mm
-  const mats = materials(look, id, colorName, rot);
+  // La fila del Excel también decide el relieve del sombrero (si la especie no tiene uno propio), el tono de láminas y tallo,
+  // cuán apretadas van las láminas, el tipo de anillo y la base del tallo
+  const ownSurf = look.puff || look.warts || ['scales', 'shaggy', 'spiny'].includes(look.style);
+  const xl = { surf: ownSurf ? null : SURF[row.sup] || null, lam: look.under === 'gills' ? row.lam : null, tal: row.tal };
+  const mats = materials(look, id, colorName, rot, xl);
+  const bulbK = look.bulb || (look.base === 'volva' ? 0 : row.base === 'Bulbosa' ? 1.32 : row.base === 'Hinchada' ? 1.16 : row.base === 'En maza' ? 1.22 : 0);
+  const clubK = look.club || (!look.bulb && row.base === 'En maza');
   const k = 0.1;
   const g = new THREE.Group();
 
@@ -251,7 +294,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const stemPts = p.stem.map(([sr, sy], i, arr) => {
     const u = sy / (H * 10);
     let f = 1;
-    if (look.bulb) f *= 1 + (look.bulb - 1) * Math.exp(-(((u - 0.06) / (look.club ? 0.32 : 0.12)) ** 2));
+    if (bulbK) f *= 1 + (bulbK - 1) * Math.exp(-(((u - 0.06) / (clubK ? 0.32 : 0.12)) ** 2));
     if (look.taper) f *= look.taper + (1 - look.taper) * u;
     if (rot) f *= 1 - 0.18 * rot * Math.sin(Math.PI * u); // marchito: más fino en el medio
     return [sr * f * k, sy * k];
@@ -285,7 +328,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   // Láminas o pliegues (placas radiales que siguen la cara de abajo; las decurrentes bajan por el tallo)
   if (look.under === 'gills' || look.under === 'ridges') {
     const und = [...underPts].sort((a, b) => a[0] - b[0]);
-    const r0 = und[0][0] * 1.05, r1 = und[und.length - 1][0] * 0.97, n = look.under === 'ridges' ? 26 : Math.min(48, Math.round(18 + D * 3)), plates = [];
+    const r0 = und[0][0] * 1.05, r1 = und[und.length - 1][0] * 0.97, n = look.under === 'ridges' ? 26 : Math.min(64, Math.round((18 + D * 3) * (row.esp === 'Apretadas' ? 1.35 : row.esp === 'Separadas' ? 0.6 : 1))), plates = [];
     if (r1 - r0 > 0.15) for (let i = 0; i < n; i++) {
       const th = (i / n) * Math.PI * 2, c = Math.cos(th), s = Math.sin(th), steps = 6, pos = [], idx = [];
       const start = look.under === 'gills' && i % 2 ? r0 + (r1 - r0) * 0.45 : r0;
@@ -309,9 +352,12 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   // Anillo: falda colgante (amanitas), collar grueso (parasol) o anillo fino
   if (look.ring) {
     const y = H * look.ringAt, sr = lerpTable(stemR, y);
-    const pts = look.ring === 'skirt' ? [[sr * 0.98, 0.15], [sr * 1.5, 0.02], [sr * 2.0, -0.35], [sr * 2.15, -0.75], [sr * 2.05, -0.85]]
+    let pts = look.ring === 'skirt' ? [[sr * 0.98, 0.15], [sr * 1.5, 0.02], [sr * 2.0, -0.35], [sr * 2.15, -0.75], [sr * 2.05, -0.85]]
       : look.ring === 'collar' ? [[sr * 0.98, 0.25], [sr * 1.9, 0.2], [sr * 2.0, 0], [sr * 1.9, -0.2], [sr * 0.98, -0.25]]
         : [[sr * 0.98, 0.06], [sr * 1.35, -0.02], [sr * 1.45, -0.14]];
+    // el tipo de anillo de la fila: grande o colgante (más falda), evanescente (apenas un resto), acampanado (se abre hacia arriba)
+    const rk = row.ani === 'Grande' || row.ani === 'Colgante' ? 1.2 : row.ani === 'Evanescente' ? 0.6 : 1;
+    pts = pts.map(([x, yy]) => [sr * 0.98 + (x - sr * 0.98) * rk, row.ani === 'Acampanado' ? -yy * 0.8 : yy * (row.ani === 'Evanescente' ? 0.5 : rk)]);
     const ringMat = look.ringColor ? new THREE.MeshStandardMaterial({ color: new THREE.Color(look.ringColor).lerp(new THREE.Color('#3a2c20'), rot * 0.3), roughness: 0.9, side: THREE.DoubleSide }) : look.ring === 'collar' ? mats.under : mats.volva;
     const ring = new THREE.Mesh(new THREE.LatheGeometry(pts.map(V2), segs), ringMat);
     ring.position.y = y; g.add(ring);

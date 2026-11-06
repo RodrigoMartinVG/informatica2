@@ -207,3 +207,14 @@ export function sneeze() {
 }
 // Festejo
 export function cheer() { if (!go()) return; const t = now(); [0, 2, 4, 5].forEach((k, i) => pluck.triggerAttackRelease(n5(k, 5), '32n', t + i * 0.07, 0.45)); }
+// Espora dorada: un destello que sube
+export function gold() { if (!go()) return; const t = now(); ['A5', 'D6', 'F6', 'A6'].forEach((n, i) => bell.triggerAttackRelease(n, '16n', t + i * 0.045, 0.35)); }
+// Aro: una nota más alta en cada aro
+export function ring(i) { if (!go()) return; const t = now(); bell.triggerAttackRelease(n5(i + 3, 4), '8n', t, 0.55); pluck.triggerAttackRelease(n5(i + 5, 5), '16n', t + 0.05, 0.4); }
+// Medalla
+export function medal(kind) {
+  if (!go()) return; const t = now(), notes = kind === 'oro' ? ['D5', 'F5', 'A5', 'D6', 'F6'] : kind === 'plata' ? ['D5', 'F5', 'A5', 'D6'] : ['D5', 'F5', 'A5'];
+  notes.forEach((n, i) => bell.triggerAttackRelease(n, '8n', t + i * 0.1, 0.5)); thump.triggerAttackRelease('D2', 0.4, t, 0.5);
+}
+// Atrapado en una tela: un temblor de cuerdas
+export function stuck() { if (!go()) return; const t = now(); for (let i = 0; i < 8; i++) pluck.triggerAttackRelease(i % 2 ? 'E3' : 'F3', '32n', t + i * 0.06, 0.35); }

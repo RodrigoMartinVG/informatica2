@@ -14,6 +14,7 @@ import * as V from './narrator.js';
 import * as A from './access.js';
 import * as SV from './speechvocab.js';
 import { SPECIES, photo, credit } from './species.js';
+import { createAdventures } from './aventuras.js';
 
 const $ = (s) => document.querySelector(s);
 const gsap = window.gsap;
@@ -204,7 +205,7 @@ function birdUpdate(dt) {
   if (!bird.checked && bird.t >= bird.cross) {
     bird.checked = true;
     if (state.phase !== 'play') return;
-    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); setTimeout(() => { beetle.cheer(); S.cheer(); }, 900); }
+    if (hidden()) { tip('birdok' + Date.now(), '¡A salvo bajo el sombrero!', { repeat: true }); S.heal(); A.speak(SV.MISC.safe, { interrupt: true }); adv.dodged(); setTimeout(() => { beetle.cheer(); S.cheer(); }, 900); }
     else {
       game.energy = Math.max(0, game.energy - 25); drawStatus(); S.hurt(); floatText('−25 energía', 'loss');
       beetle.knock(bird.dir.x, bird.dir.z); comboEnd(); // el picotazo lo revolea
@@ -223,7 +224,7 @@ function comboHit(m) {
   if (!m || m === combo.last) return;
   if (combo.n === 0) { combo.n = 1; combo.last = m; return; } // empieza acá (llegó desde un tronco, una rama…)
   combo.last = m; combo.n++;
-  floatText(`Combo ×${combo.n}`, 'combo'); S.combo(combo.n);
+  floatText(`Combo ×${combo.n}`, 'combo'); S.combo(combo.n); adv.combo(combo.n);
   if (combo.n >= 3) { game.energy = Math.min(100, game.energy + 2); drawStatus(); }
   if (combo.n >= 3 && combo.n > combo.best) {
     combo.best = combo.n; try { localStorage.setItem('bajo-el-sombrero:combo', combo.n); } catch { /* nada */ }
@@ -347,6 +348,7 @@ addEventListener('keydown', (e) => {
     if (act === 'describe') describe();
     if (act === 'status') status();
     if (act === 'info') info();
+    if (act === 'hat') adv.nextHat();
     if (e.code === 'Escape' && !$('#ficha').hidden) closeFicha();
   }
   if (state.phase === 'play' || state.phase === 'book') {
@@ -455,7 +457,19 @@ function specimen(m) {
   const ageNote = m.rot === 2 ? 'podrido, con moho: no se come' : m.rot === 1 ? 'se está pudriendo: no se come' : m.age < 0.33 ? 'sombrero todavía cerrado' : m.age < 0.75 ? 'sombrero abierto' : 'sombrero aplanado';
   const extra = [...(m.flaws || []).map((f) => FLAWS[f]), m.eaten ? 'mordido por vos' : ''].filter(Boolean);
   return `<p><b>Este ejemplar:</b> <span class="${m.rot ? 'tox' : ''}">${age} (${ageNote})</span>${m.rot ? '' : extra.length ? ', ' + extra.join(', ') : ', sin defectos'}.</p>
-    <p><b>Su fila del Excel:</b> sombrero de ${dec(m.row.d)} cm · tallo de ${dec(m.row.h)} cm de alto y ${dec(m.row.w)} mm de ancho · ${m.row.shape.toLowerCase()} · ${m.row.color.toLowerCase()}.</p>`;
+    <p><b>Su fila del Excel:</b> sombrero de ${dec(m.row.d)} cm · tallo de ${dec(m.row.h)} cm de alto y ${dec(m.row.w)} mm de ancho · ${m.row.shape.toLowerCase()} · ${m.row.color.toLowerCase()}.</p>
+    ${xlMore(m.row) ? `<p class="xl-more"><b>Y además:</b> ${xlMore(m.row)}.</p>` : ''}`;
+}
+// Las otras columnas de la fila (las que también se ven en el hongo 3D)
+const COLF = { Blanco: 'blancas', Crema: 'crema', Marrón: 'marrones', Gris: 'grises', Negro: 'negras', Amarillo: 'amarillas', Naranja: 'naranjas', Rojo: 'rojas', Rosa: 'rosadas', Verde: 'verdes', Púrpura: 'púrpuras', Azul: 'azules' };
+function xlMore(r) {
+  const out = [];
+  if (r.sup) out.push(`sombrero ${r.sup.toLowerCase()}`);
+  if (r.lam || r.esp) out.push(r.esp === 'Sin láminas' ? 'sin láminas' : `láminas${r.lam ? ' ' + COLF[r.lam] : ''}${r.esp ? (r.lam ? ' y ' : ' ') + r.esp.toLowerCase() : ''}`);
+  if (r.tal) out.push(`tallo ${r.tal.toLowerCase()}${r.base ? ', con base ' + r.base.toLowerCase() : ''}`);
+  if (r.ring && r.ani) out.push(`anillo ${r.ani.toLowerCase()}`);
+  if (r.temp) out.push(`sale en ${r.temp.toLowerCase()}`);
+  return out.join(' · ');
 }
 function closeFicha() {
   const el = $('#ficha'); fichaM = null; if (el.hidden) return;
@@ -772,10 +786,10 @@ function excelTable(L) {
   const list = flora.specimens.filter((s) => s.level === L.id).sort((a, b) => (b.yes - a.yes) || (b.toxic - a.toxic) || (a.row.d - b.row.d));
   const age = (m) => (m.age < 0.33 ? 'joven' : m.age < 0.75 ? 'maduro' : 'viejo');
   const rows = list.map((m) => `<tr><td><i>${SPECIES[m.species]?.name || m.species}</i></td><td>${cap1(m.yes ? L.yes : L.no)}</td>
-    <td>${dec(m.row.d)} cm</td><td>${dec(m.row.h)} cm</td><td>${dec(m.row.w)} mm</td><td>${age(m)}</td><td class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</td></tr>`).join('');
+    <td>${dec(m.row.d)} cm</td><td>${dec(m.row.h)} cm</td><td>${dec(m.row.w)} mm</td><td>${m.row.sup ? m.row.sup.toLowerCase() : '—'}</td><td>${m.row.temp ? m.row.temp.toLowerCase() : '—'}</td><td>${age(m)}</td><td class="${m.toxic ? 'tox' : 'ed'}">${m.toxic ? 'venenoso' : 'comestible'}</td></tr>`).join('');
   return `<details class="xl"><summary>Las ${list.length} filas del Excel de este claro</summary>
     <p class="xl-k">Cada hongo del claro es una fila real de la hoja Data: estas son sus medidas.</p>
-    <div class="xl-w"><table><thead><tr><th>Especie parecida</th><th>Grupo</th><th>Sombrero</th><th>Alto del tallo</th><th>Ancho del tallo</th><th>Edad</th><th>Clase</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+    <div class="xl-w"><table><thead><tr><th>Especie parecida</th><th>Grupo</th><th>Sombrero</th><th>Alto del tallo</th><th>Ancho del tallo</th><th>Superficie</th><th>Temporada</th><th>Edad</th><th>Clase</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 function report(L) {
   const pct = (v) => `${Math.round(v * 100)} %`;
@@ -925,6 +939,7 @@ function frame() {
   flora.update(dt, t);
   bits.update(dt);
   birdUpdate(dt);
+  adv.update(dt, t, state.phase === 'play');
   world.follow(beetle.pos);
   vision.value += ((keys.has(A.keyFor('vision')) ? 1 : 0) - vision.value) * Math.min(1, dt * 8);
 
@@ -942,6 +957,11 @@ function frame() {
     if (game.energy < 50) tip('hungry', 'El hambre aprieta. Los hongos son comida… pero no todos.');
     if (game.energy < 22) { game.beat -= dt; if (game.beat <= 0) { game.beat = 1.4; S.heartbeat(); } }
     lowU.value += ((game.energy < 22 ? 1 : 0) - lowU.value) * Math.min(1, dt * 2);
+    // Atardecer: mientras jugás en un claro, el sol baja despacito hacia la hora del claro siguiente
+    if (state.cur) {
+      const nx = LEVELS[LEVELS.indexOf(state.cur) + 1], to = nx && !nx.night ? state.cur.time + (nx.time - state.cur.time) * 0.7 : null;
+      if (to !== null && clock24.k < to) { clock24.k = Math.min(to, clock24.k + dt / 1800); state.dusk = (state.dusk || 0) + dt; if (state.dusk > 0.5) { state.dusk = 0; world.setTime(clock24.k); } }
+    }
     drawStatus();
 
     // Pasos
@@ -1055,6 +1075,8 @@ function frame() {
   drawTags();
   post.render();
 }
+// Esporas doradas, aros de vuelo, amigos perdidos, telas de araña y sombreritos
+const adv = createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus });
 renderer.setAnimationLoop(frame);
 
 addEventListener('resize', () => {
@@ -1065,7 +1087,7 @@ addEventListener('resize', () => {
 if (params.has('debug')) {
   import('./debug.js').then((d) => d.run({
     params, THREE, gsap, $, beetle, flora, world, state, game, cam, LEVELS, renderer, backend, camera, keys, frame, sniff, eat, fly, quality,
-    objective, showPhoto, showInsight, toggleBook, birdNow: () => (bird.next = 0.5), setBookView: (id) => (bookView = id),
+    objective, showPhoto, showInsight, toggleBook, adv, birdNow: () => (bird.next = 0.5), setBookView: (id) => (bookView = id),
     snapCamera: () => { cam.arm = cam.dist; followTarget(); camPos.copy(want); camLook.copy(wantLook); }
   }));
 }

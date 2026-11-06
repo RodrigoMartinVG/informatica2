@@ -21,6 +21,9 @@ export function run(c) {
   // ?conducta=antenas|patas|elitros|alas|mirar|festejo|estornudo la repite · ?bejin lo pone al lado del bejinal de la salida
   if (p.has('conducta')) setInterval(() => { if (!beetle.act) beetle.doAct(p.get('conducta')); }, 50);
   if (p.has('bejin')) { const m = flora.all.find((m) => m.species === 'lycoperdon'); beetle.place(m.x - m.Rw - 2.5, m.z + 1, Math.PI / 2); for (let i = 0; i < 40; i++) beetle.update(0.02, { fwd: 0, turn: 0, run: false }); c.snapCamera(); }
+  if (p.has('sombrero')) c.adv.debug.wear(p.get('sombrero'));
+  if (p.has('red')) { const w = c.adv.debug.webs[+p.get('red') || 0]; beetle.place(w.c.x + w.n.x * 6, w.c.z + w.n.z * 6, Math.atan2(-w.n.x, -w.n.z)); c.snapCamera(); }
+  if (p.has('amigo')) { const f = c.adv.debug.friends[+p.get('amigo') || 0]; beetle.place(f.p.x + 3, f.p.z + 2, -2); c.snapCamera(); }
   if (p.has('noche')) world.setNight(1);
   if (p.has('hora')) world.setTime(+p.get('hora'));
   if (p.has('pajaro')) { state.entered.add('anillo'); c.birdNow(); }

@@ -160,6 +160,7 @@ export function createBeetle(scene) {
   function actPose(dt) {
     pose.bx = pose.bz = pose.by = pose.hx = pose.hy = pose.hz = pose.hzPos = pose.mand = pose.wings = 0;
     pose.ant[0] = pose.ant[1] = pose.antZ[0] = pose.antZ[1] = 0; pose.beat = 1; pose.legs.clear();
+    if (st.stuck > 0) { pose.bz = Math.sin(st.t * 32) * 0.22; pose.bx = Math.sin(st.t * 21) * 0.12; pose.ant[0] = pose.ant[1] = Math.sin(st.t * 25) * 0.5; } // forcejea
     const a = st.act; if (!a) return null;
     a.t += dt; const p = Math.min(1, a.t / a.dur), e = env(p), s = a.side, t = st.t;
     let event = null;
@@ -474,6 +475,7 @@ export function createBeetle(scene) {
 
   function moveAir(dt, input) {
     let event = null;
+    if (st.stuck > 0) { st.stuck -= dt; st.v.set(0, 0, 0); st.flying = false; return st.stuck <= 0 ? 'suelto' : null; }
     const f = yawDir(tmp);
     st.grabCD -= dt;
     st.yaw -= st.turn * dt * 0.8;
@@ -676,6 +678,10 @@ export function createBeetle(scene) {
     sneeze() { if (st.mode === 'ground' || st.mode === 'cap') startAct('estornudo'); },
     get act() { return st.act?.kind || null; },
     doAct(kind) { startAct(kind); }, // (para probar una conducta)
+    // Un sombrerito en la cabeza
+    wear(obj) { head.add(obj); obj.traverse((o) => { if (o.isMesh) o.castShadow = true; }); },
+    // Pegado en una tela de araña: queda colgado, forcejeando, y después cae
+    stick(dur) { if (st.mode !== 'air') return; st.stuck = dur; st.flying = false; st.dive = 0; st.diving = false; },
     get dive() { return st.dive; },
     get gliding() { return st.glide; },
     get bounced() { return st.bounceM; },

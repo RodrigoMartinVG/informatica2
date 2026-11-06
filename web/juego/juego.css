@@ -323,3 +323,7 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .xl th { text-align: left; font-weight: 600; color: var(--ink); padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.2); white-space: nowrap; }
 .xl td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
 .float.combo { color: #ffe08a; font-size: 24px; }
+.adv { display: flex; gap: 10px; margin-top: 6px; font: 600 13px var(--sans, system-ui); color: #f4ead6; }
+.adv span { background: rgba(20,14,8,.5); border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 3px 10px; }
+.adv:empty { display: none; }
+.xl-more { opacity: .9; }

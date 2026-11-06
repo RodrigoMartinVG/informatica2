@@ -84,7 +84,8 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/index.html`, `juego/juego.css` | Pantalla de inicio, interfaz, cuaderno de campo |
 | `juego/main.js` | Render (WebGPU con respaldo WebGL 2), postprocesado (profundidad de campo + bloom), cámara, controles y la lógica del mito |
 | `juego/world.js` | Terreno, pasto con viento (shader TSL), hojas, musgo, árboles trepables con hongos repisa, troncos caídos, rayos de sol, polvo, esporas guía |
-| `juego/beetle.js` | Escarabajo procedural: marcha en trípode, cinemática inversa de las patas, gravedad, salto, caídas, vuelo libre y trepar tallos y troncos |
+| `juego/beetle.js` | Escarabajo procedural: marcha en trípode, cinemática inversa de las patas, gravedad, salto, caídas, vuelo libre, picada y planeo, rebotes en los bejines, trepar tallos y troncos, y conductas en reposo (se limpia las antenas y las patas, estira las alas, mira alrededor, festeja, estornuda) |
+| `juego/aventuras.js` | Lo que se suma para jugar: esporas doradas escondidas en cada claro, un circuito de aros de vuelo con cronómetro y medallas, cinco escarabajos amigos perdidos que te siguen, telas de araña que frenan y sombreritos para el escarabajo (tecla H) |
 | `juego/flora.js` | Dónde crece cada hongo: claros de los niveles, grupos sueltos y racimos sobre los troncos caídos |
 | `juego/hongos3d.js` | Hongos 3D por especie (verrugas, volva, escamas, poros, pliegues…) con las medidas de una fila real del Excel |
 | `juego/filas.js` | Muestra de 2.431 filas reales del Excel (generada con `tools/filas_juego.py`) |

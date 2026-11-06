@@ -14,7 +14,7 @@ export const ACTIONS = {
   autofly: { label: 'Volar al próximo hongo sin explorar', def: 'KeyG' },
   info: { label: 'Ficha del hongo (abrir o cerrar)', def: 'KeyI' },
   describe: { label: 'Describir alrededor', def: 'KeyQ' }, status: { label: 'Decir vidas y energía', def: 'KeyR' },
-  book: { label: 'Cuaderno', def: 'KeyC' }, vision: { label: 'Visión de antenas (mantener)', def: 'KeyV' }, sound: { label: 'Sonido', def: 'KeyM' }
+  book: { label: 'Cuaderno', def: 'KeyC' }, hat: { label: 'Cambiar de sombrero', def: 'KeyH' }, vision: { label: 'Visión de antenas (mantener)', def: 'KeyV' }, sound: { label: 'Sonido', def: 'KeyM' }
 };
 
 const cfg = { audio: false, big: false, rate: 1, keys: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, a.def])) };
