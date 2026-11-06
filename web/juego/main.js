@@ -7,7 +7,7 @@ import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { buildWorld, sporeTrail, environment, obstacles } from './world.js';
 import { createBeetle } from './beetle.js';
 import { buildFlora, vision } from './flora.js';
-import { walkHeight, shelfAt } from './surfaces.js';
+import { walkHeight, shelfAt, wallTop } from './surfaces.js';
 import { height, SPAWN, RING, SLEEPING, LEVELS, TRAIL } from './config.js';
 import * as S from './audio.js';
 import * as V from './narrator.js';
@@ -16,6 +16,7 @@ import * as SV from './speechvocab.js';
 import { SPECIES, photo, credit } from './species.js';
 import { createAdventures } from './aventuras.js';
 import { createSecrets } from './secretos.js';
+import { TRAILS, PH } from './aventuras-datos.js';
 
 const $ = (s) => document.querySelector(s);
 const gsap = window.gsap;
@@ -824,9 +825,30 @@ function showInsight(L) {
 }
 // Al terminar un claro aparece un hilo de esporas de otro color hasta el siguiente: lo seguís cuando quieras
 // (mientras tanto podés seguir explorando, buscar secretos…). O, si preferís, volás directo como antes.
-const TRAILS = [['#ffb86b', 'naranjas'], ['#c9a0ff', 'violetas'], ['#7fd8ff', 'celestes'], ['#ff8fb8', 'rosadas'], ['#ffe066', 'amarillas'], ['#a8ff9f', 'verdes']];
+// El camino del hilo esquiva los árboles y las paredes altas (troncos caídos grandes, piedras): se lo puede seguir caminando
+function routeAround(pts) {
+  const rad = (o) => (o.climb ? o.climb.stemR(0.5) : o.r); // el tronco de verdad (o.r de los árboles incluye las raíces)
+  const blocked = (x, z) => { const h = walkHeight(x, z); return obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < rad(o) + 4) || wallTop(x, z, h + 0.3) > h + 2.5; };
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 3));
+    for (let k = 0; k < n; k++) out.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]);
+  }
+  out.push(pts[pts.length - 1]);
+  for (const q of out) if (blocked(q[0], q[1])) { // el punto libre más cercano
+    let best = null;
+    for (let r = 2; r <= 40 && !best; r += 2) for (let a = 0; a < 12; a++) { const x = q[0] + Math.cos((a / 12) * Math.PI * 2) * r, z = q[1] + Math.sin((a / 12) * Math.PI * 2) * r; if (!blocked(x, z)) { best = [x, z]; break; } }
+    if (best) { q[0] = best[0]; q[1] = best[1]; }
+  }
+  for (let pass = 0; pass < 2; pass++) for (let i = 1; i < out.length - 1; i++) { // suavizar sin volver a meterse adentro
+    const x = (out[i - 1][0] + out[i][0] * 2 + out[i + 1][0]) / 4, z = (out[i - 1][1] + out[i][1] * 2 + out[i + 1][1]) / 4;
+    if (!blocked(x, z)) out[i] = [x, z];
+  }
+  return out;
+}
 $('#insight-ok').addEventListener('click', () => leaveInsight(false));
 $('#insight-fly').addEventListener('click', () => leaveInsight(true));
+
 function leaveInsight(direct) {
   const L = state.cur; if (!L || !state.done.has(L.id) || state.phase !== 'insight') return;
   const next = LEVELS[LEVELS.indexOf(L) + 1];
@@ -842,14 +864,14 @@ function leaveInsight(direct) {
     if (!direct) {
       // un hilo de esporas de color, desde donde estás hasta el borde del claro siguiente (y adentro)
       const p0 = beetle.pos, q1 = [p0.x + (lx - p0.x) * 0.33 + (lz - p0.z) * 0.12, p0.z + (lz - p0.z) * 0.33 - (lx - p0.x) * 0.12], q2 = [p0.x + (lx - p0.x) * 0.66 - (lz - p0.z) * 0.08, p0.z + (lz - p0.z) * 0.66 + (lx - p0.x) * 0.08];
-      trail = sporeTrail(scene, [[p0.x, p0.z], q1, q2, [lx, lz], [b.x, b.z + next.spread * 0.3]], hex);
+      trail = sporeTrail(scene, routeAround([[p0.x, p0.z], q1, q2, [lx, lz], [b.x, b.z + next.spread * 0.3]]), hex);
       objective(`Seguí las esporas ${cname} ${toPlace(next.place)}. Sin apuro: mientras tanto podés seguir explorando.`);
-      say('trail' + next.id, `Un hilo de esporas ${cname} se enciende entre los hongos. Llevan ${toPlace(next.place)}: seguilas cuando quieras.`);
-      tip('trail0', 'No hay apuro: podés buscar secretos, esporas doradas o amigos antes de seguir el hilo. Con el botón 🔍 de arriba te doy una pista.');
+      say('trail' + next.id, PH.trail(cname, next.place));
+      tip('trail0', 'No hay apuro: podés buscar secretos, esporas doradas o amigos antes de seguir el hilo. Si tocás la lupa de arriba, te doy una pista.');
       S.found(false);
       return;
     }
-    trail = sporeTrail(scene, [[a.x, a.z - 4], [mx + (b.z - a.z) * 0.12, mz - (b.x - a.x) * 0.12], [b.x, b.z]], hex);
+    trail = sporeTrail(scene, routeAround([[a.x, a.z - 4], [mx + (b.z - a.z) * 0.12, mz - (b.x - a.x) * 0.12], [b.x, b.z]]), hex);
     objective(`Volando ${toPlace(next.place)}…`);
     say('next' + next.id, `Abrís las alas y seguís las esporas ${toPlace(next.place)}. Otro claro, otra creencia para poner a prueba.`);
     // Vuelo de viaje: gratis, siguiendo las esporas, y aterriza al borde del claro mirando al centro

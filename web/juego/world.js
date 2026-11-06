@@ -3,7 +3,7 @@
 import * as THREE from 'three/webgpu';
 import { positionLocal, positionWorld, cameraPosition, screenCoordinate, smoothstep, time, sin, vec3, uv, mix, color, float, hash, instanceIndex, cos } from 'three/tsl';
 import { height, inClearing, nearPath, rng, BOUNDS, RING, SLEEPING, TRAIL } from './config.js';
-import { addTwig, addPebble, addLeaf, addLog, addShelf } from './surfaces.js';
+import { addTwig, addPebble, addLeaf, addLog, addShelf, walkHeight } from './surfaces.js';
 import { SUN, backlight, sky, groundFog, nightU, duskU, sunDir as sunU } from './look.js';
 
 const W = BOUNDS.maxX - BOUNDS.minX + 140, D = BOUNDS.maxZ - BOUNDS.minZ + 140;
@@ -326,7 +326,7 @@ function atmosphere(scene, sunDir, motes) {
 
 /* ---------- Camino de esporas que guía al jugador ---------- */
 export function sporeTrail(scene, points = TRAIL, hex = '#9fe8c8') {
-  const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, height(x, z) + 2.2, z)));
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, Math.max(height(x, z), walkHeight(x, z)) + 2.2, z)));
   const n = Math.max(40, Math.round(curve.getLength() / 1.1)), mat = new THREE.MeshBasicNodeMaterial({ transparent: true });
   const id = float(instanceIndex);
   mat.colorNode = color(hex).mul(2.6);

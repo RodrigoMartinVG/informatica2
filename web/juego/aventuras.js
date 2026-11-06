@@ -7,18 +7,12 @@ import { walkHeight } from './surfaces.js';
 import { height, LEVELS, SPAWN, rng } from './config.js';
 import { obstacles, logs } from './world.js';
 import { buildMushroom, pickRow, LOOKS } from './hongos3d.js';
+import { HATS, FRIENDS, PH } from './aventuras-datos.js';
 
 const KEY = 'bajo-el-sombrero:aventuras';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
 
-// Los sombreros que se ganan (y cómo)
-export const HATS = {
-  lycoperdon: { name: 'Bejín', how: 'un combo de 4 sombreros' },
-  muscaria: { name: 'Matamoscas', how: 'todas las esporas doradas de un claro' },
-  cantharellus: { name: 'Cantarela dorada', how: 'la medalla de oro en los aros' },
-  procera: { name: 'Parasol', how: 'encontrar a todos los amigos' },
-  conica: { name: 'Sombrero de bruja', how: 'zafar tres veces del pájaro' }
-};
+export { HATS };
 
 export function createAdventures({ scene, beetle, flora, S, tip, floatText, game, drawStatus, secrets }) {
   const secret = (id) => secrets?.hit(id);
@@ -88,20 +82,34 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
   paintRings();
 
   /* ---------- Escarabajos amigos perdidos ---------- */
-  const FRIENDS = [['Rubí', '#b8342a'], ['Celeste', '#2f6fc8'], ['Oro', '#d4a020'], ['Ciruela', '#7a3a9a'], ['Mandarina', '#e07a1a']];
   const legGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.42, 5); legGeo.translate(0, -0.21, 0);
   const sph = new THREE.SphereGeometry(1, 16, 12), darkMat = new THREE.MeshStandardMaterial({ color: '#17130e', roughness: 0.4, metalness: 0.3 });
+  const elyGeoR = new THREE.SphereGeometry(1, 16, 10, Math.PI / 2, Math.PI, 0, Math.PI / 2), elyGeoL = new THREE.SphereGeometry(1, 16, 10, -Math.PI / 2, Math.PI, 0, Math.PI / 2);
+  const wingShape = new THREE.Shape(); wingShape.moveTo(0, 0.05); wingShape.bezierCurveTo(0.3, 0.14, 0.75, 0.16, 1, 0.03); wingShape.bezierCurveTo(1.05, -0.08, 0.6, -0.2, 0, -0.04);
+  const wingGeo = new THREE.ShapeGeometry(wingShape, 10); wingGeo.rotateX(-Math.PI / 2);
+  const wingMat = new THREE.MeshStandardMaterial({ color: '#dfe8ee', roughness: 0.3, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
   function friendModel(hex) {
     const g = new THREE.Group(), shell = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.25, metalness: 0.55 });
     const add = (geo, mat, p, s) => { const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...s); m.castShadow = true; g.add(m); return m; };
-    add(sph, shell, [0, 0.12, -0.12], [0.4, 0.28, 0.56]);
+    add(sph, darkMat, [0, 0.08, -0.12], [0.34, 0.18, 0.5]);   // el abdomen (se ve al abrir los élitros)
     add(sph, shell, [0, 0.1, 0.42], [0.3, 0.16, 0.2]);
+    // élitros: dos cáscaras con bisagra adelante que se abren en V para volar, y abajo las alas membranosas
+    const elytra = [-1, 1].map((side) => {
+      const piv = new THREE.Group(); piv.position.set(side * 0.012, 0.1, 0.36); piv.rotation.order = 'YXZ'; g.add(piv);
+      const m = new THREE.Mesh(side > 0 ? elyGeoR : elyGeoL, shell); m.position.set(0, 0, -0.48); m.scale.set(0.4, 0.28, 0.56); m.castShadow = true; piv.add(m);
+      return { piv, side };
+    });
+    const wings = [-1, 1].map((side) => {
+      const piv = new THREE.Group(); piv.position.set(side * 0.08, 0.16, 0.2); piv.rotation.order = 'YXZ'; g.add(piv);
+      const w = new THREE.Mesh(wingGeo, wingMat); w.scale.set(side, 1, 1); piv.add(w); piv.visible = false;
+      return { piv, side };
+    });
     add(sph, darkMat, [0, 0.08, 0.64], [0.15, 0.1, 0.12]);
     const legs = [];
     for (const z of [0.36, 0.08, -0.22]) for (const s of [-1, 1]) { const l = add(legGeo, darkMat, [s * 0.2, 0.06, z], [1, 1, 1]); l.rotation.z = s * 1.0; legs.push(l); }
     const ants = [-1, 1].map((s) => { const a = add(legGeo, darkMat, [s * 0.07, 0.14, 0.72], [0.7, 0.9, 0.7]); a.rotation.set(-2.2, 0, s * 0.4); return a; });
-    g.scale.setScalar(0.8); scene.add(g);
-    return { g, legs, ants };
+    g.scale.setScalar(0.8); g.rotation.order = 'YXZ'; scene.add(g);
+    return { g, legs, ants, elytra, wings, fly: 0 };
   }
   const friends = [];
   LEVELS.slice(0, FRIENDS.length).forEach((L, i) => {
@@ -160,7 +168,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
     if (saved.hats.includes(id)) return;
     saved.hats.push(id); save(); S.record(); secret('sombrero');
     setTimeout(() => floatText(`¡Sombrero nuevo: ${HATS[id].name}!`, 'combo'), 600);
-    tip('hat-' + id, `Ganaste un sombrero: ${HATS[id].name}, por ${HATS[id].how}. Apretá H para ponértelo o cambiarlo.`, { repeat: true });
+    tip('hat-' + id, PH.hat(id), { repeat: true });
   }
   if (saved.hat && saved.hats.includes(saved.hat)) wear(saved.hat);
   let dodges = 0;
@@ -196,7 +204,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
           const tt = race.t, medal = tt <= pathLen / 12 ? 'oro' : tt <= pathLen / 9 ? 'plata' : 'bronce';
           const best = !saved.best || tt < saved.best; if (best) { saved.best = +tt.toFixed(1); save(); }
           floatText(`${tt.toFixed(1)} s · medalla de ${medal}${best ? ' · ¡récord!' : ''}`, 'combo'); S.medal(medal);
-          tip('ringdone' + Math.floor(t), `Circuito completo en ${tt.toFixed(1)} segundos: medalla de ${medal}. ${medal === 'oro' ? '¡Impecable!' : `Para el oro, bajá de ${(pathLen / 12).toFixed(0)} s (con Shift volás más rápido, y en picada más todavía).`}`, { repeat: true });
+          tip('ringdone' + Math.floor(t), PH.ring(medal), { repeat: true });
           secret('aros'); if (medal === 'oro') { secret('oro'); unlock('cantharellus'); }
           beetle.cheer(); race.on = false; race.next = 0;
         }
@@ -206,7 +214,8 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
     }
 
     // amigos
-    trailT += dt; if (trailT > 0.05) { trailT = 0; trail.unshift(p.clone()); if (trail.length > 80) trail.pop(); }
+    // el rastro se marca por distancia (no por tiempo): si te quedás quieto, los amigos no se te suben encima
+    if (!trail.length || trail[0].distanceTo(p) > 0.35) { const q = p.clone(); q.air = beetle.airborne; trail.unshift(q); if (trail.length > 120) trail.pop(); }
     friends.forEach((f) => {
       if (!f.found) {
         f.g.position.y = f.p.y + Math.abs(Math.sin(t * 3 + f.ph)) * 0.03;
@@ -215,19 +224,34 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
           f.found = true; S.cheer(); beetle.cheer(); secret('amigo');
           const n = friends.filter((x) => x.found).length;
           floatText(`¡${f.name}! 🐞 ${n}/${friends.length}`, 'combo');
-          tip('friend' + n, n === friends.length ? '¡Encontraste a todos tus amigos! Ahora el bosque es una caravana.' : `Encontraste a ${f.name}, un escarabajo perdido. Te va a seguir. Hay más escondidos debajo de los sombreros, en los bordes de los claros.`, { repeat: true });
+          tip('friend' + n, n === friends.length ? '¡Encontraste a todos tus amigos! Ahora el bosque es una caravana.' : PH.friend(f.name), { repeat: true });
           if (n === friends.length) { secret('amigos'); unlock('procera'); }
         }
         return;
       }
-      const k = 7 + friends.filter((x) => x.found).indexOf(f) * 7, q = trail[Math.min(trail.length - 1, k)];
+      // cada amigo va unos 2,5 cm detrás del anterior, sobre el camino que hiciste
+      const k = 7 + friends.filter((x) => x.found).indexOf(f) * 6, q = trail[Math.min(trail.length - 1, k)];
       if (!q) return;
-      const prev = f.g.position.clone(); f.g.position.lerp(q, Math.min(1, dt * 6));
+      // si ya aterrizaste, los amigos también bajan: van a la superficie que hay debajo de su punto del camino
+      const tq = beetle.airborne || !q.air ? q : q.clone().setY(walkHeight(q.x, q.z, q.y + 0.5) + 0.18);
+      const prev = f.g.position.clone(); f.g.position.lerp(tq, Math.min(1, dt * (beetle.airborne ? 6 : 4)));
+      // y nunca más cerca que 2 cm de vos ni 1,5 cm de otro amigo
+      const keep = (o, min) => { const dx = f.g.position.x - o.x, dz = f.g.position.z - o.z, d = Math.hypot(dx, dz); if (d < min && d > 1e-4) { f.g.position.x = o.x + (dx / d) * min; f.g.position.z = o.z + (dz / d) * min; } };
+      keep(p, 2);
+      for (const o of friends) if (o !== f && o.found) keep(o.g.position, 1.5);
+      f.g.position.y = Math.max(f.g.position.y, walkHeight(f.g.position.x, f.g.position.z, f.g.position.y + 1) + 0.18);
       const mv = f.g.position.clone().sub(prev); mv.y = 0;
       if (mv.lengthSq() > 1e-6) f.yaw = Math.atan2(mv.x, mv.z);
       f.g.rotation.y += (Math.atan2(Math.sin(f.yaw - f.g.rotation.y), Math.cos(f.yaw - f.g.rotation.y))) * Math.min(1, dt * 8);
       const speed = mv.length() / Math.max(dt, 1e-3);
-      f.legs.forEach((l, j) => (l.rotation.x = Math.sin(t * 18 + j * 2) * 0.5 * Math.min(1, speed / 3)));
+      // ¿Vuela? Si por ese tramo del camino ibas volando (o quedó lejos del piso): abre los élitros y bate las alas
+      const air = (q.air && beetle.airborne) || f.g.position.y - walkHeight(f.g.position.x, f.g.position.z, f.g.position.y + 0.5) > 1.2;
+      f.fly += ((air ? 1 : 0) - f.fly) * Math.min(1, dt * (air ? 8 : 4));
+      for (const e of f.elytra) e.piv.rotation.set(f.fly * 0.72, -e.side * f.fly * 0.5, e.side * f.fly * 0.25);
+      for (const w of f.wings) { w.piv.visible = f.fly > 0.05; w.piv.rotation.set(0.3 * Math.cos(t * 70) * f.fly, w.side * ((1 - f.fly) * 1.4 + 0.15), w.side * (0.12 + Math.sin(t * 70) * 0.8 * f.fly)); }
+      f.g.rotation.x = -0.38 * f.fly; // en vuelo, el cuerpo va erguido, como el tuyo
+      if (f.fly > 0.5) f.g.position.y += Math.sin(t * 9 + f.ph) * 0.02;
+      f.legs.forEach((l, j) => (l.rotation.x = f.fly > 0.5 ? 0.5 : Math.sin(t * 18 + j * 2) * 0.5 * Math.min(1, speed / 3)));
     });
 
     // telas de araña
@@ -264,7 +288,7 @@ export function createAdventures({ scene, beetle, flora, S, tip, floatText, game
     combo(n) { if (n >= 4) unlock('lycoperdon'); },
     // H: el próximo sombrero ganado (o ninguno)
     nextHat() {
-      if (!saved.hats.length) { tip('hat0', `Todavía no ganaste sombreros. Se ganan con ${Object.values(HATS).map((h) => h.how).join(', ')}.`, { repeat: true }); return; }
+      if (!saved.hats.length) { tip('hat0', PH.hat0(), { repeat: true }); return; }
       const list = [null, ...saved.hats], i = list.indexOf(saved.hat), id = list[(i + 1) % list.length];
       wear(id); floatText(id ? HATS[id].name : 'Sin sombrero', 'gain'); S.page();
     }
