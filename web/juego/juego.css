@@ -339,3 +339,14 @@ kbd { font: 500 12px var(--mono); border: 1px solid rgba(255,255,255,.3); border
 .secrets li span { opacity: .8; }
 .secrets li.ok { border-style: solid; background: rgba(120,160,90,.12); }
 .ins-foot .go.alt { margin-left: 10px; background: transparent; color: #ffd59a; border: 1px solid rgba(255,213,154,.5); font-size: 15px; padding: 12px 22px; }
+/* Panel de música y volúmenes */
+.mix { position: fixed; top: 64px; right: 16px; max-height: calc(100vh - 90px); overflow: auto; width: min(360px, calc(100vw - 32px)); pointer-events: auto; background: rgba(20,14,8,.88); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 14px 16px 16px; color: var(--ink); z-index: 20; }
+
+.mix-k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .65; margin: 6px 0 8px; }
+.mix-x { position: absolute; top: 8px; right: 8px; background: none !important; border: 0 !important; color: inherit; font-size: 16px; cursor: pointer; padding: 4px 8px !important; }
+.mix-styles { display: flex; flex-wrap: wrap; gap: 6px; }
+.mix-styles button { font-size: 12.5px !important; padding: 5px 11px !important; }
+.mix-styles button[aria-pressed="true"] { background: #ffd59a !important; color: #24180c !important; border-color: #ffd59a !important; }
+.mix-vols { display: grid; gap: 8px; }
+.mix-vols label { display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 10px; font-size: 13px; }
+.mix-vols input { width: 100%; accent-color: #ffd59a; }

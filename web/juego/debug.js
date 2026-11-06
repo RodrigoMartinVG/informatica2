@@ -24,6 +24,7 @@ export function run(c) {
   if (p.has('sombrero')) c.adv.debug.wear(p.get('sombrero'));
   if (p.has('red')) { const w = c.adv.debug.webs[+p.get('red') || 0]; beetle.place(w.c.x + w.n.x * 6, w.c.z + w.n.z * 6, Math.atan2(-w.n.x, -w.n.z)); c.snapCamera(); }
   if (p.has('amigo')) { const f = c.adv.debug.friends[+p.get('amigo') || 0]; beetle.place(f.p.x + 3, f.p.z + 2, -2); c.snapCamera(); }
+  if (p.has('mezcla')) document.getElementById('b-mus').click(); // abre el panel de música y volúmenes
   if (p.has('noche')) world.setNight(1);
   if (p.has('hora')) world.setTime(+p.get('hora'));
   if (p.has('pajaro')) { state.entered.add('anillo'); c.birdNow(); }

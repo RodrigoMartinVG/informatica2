@@ -3,19 +3,35 @@
 // Ambiente: viento muy suave, pájaros y grillos sintetizados. Efectos: pasos, olfateo, descubrimientos.
 const Tone = window.Tone;
 let ready = false, on = false;
-let master, music, musicF, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step, puffN, rub, whoosh;
+let uAll, uMusic, uSfx, uAmb, master, music, musicF, sfx, amb, pad, lead, bell, pluck, chirp, cricket, thump, windGain, windFilt, step, puffN, rub, whoosh;
 
 function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
+
+// Volúmenes (0 a 1), guardados en el navegador
+const vols = { all: 0.85, music: 0.8, sfx: 0.85, amb: 0.8, voice: 0.9 };
+try { Object.assign(vols, JSON.parse(localStorage.getItem('bajo-el-sombrero:volumen') || '{}')); } catch { /* sin almacenamiento */ }
+const gainOf = (k) => Math.pow(vols[k], 2) * 1.4; // (curva parecida a como oímos)
+export const getVol = (k) => vols[k];
+export const voiceGain = () => gainOf('voice') * gainOf('all');
+export function setVol(k, v) {
+  vols[k] = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('bajo-el-sombrero:volumen', JSON.stringify(vols)); } catch { /* nada */ }
+  if (!ready) return;
+  ({ all: uAll, music: uMusic, sfx: uSfx, amb: uAmb })[k]?.gain.rampTo(gainOf(k), 0.1);
+  if (voiceOut) voiceOut.volume.rampTo(Tone.gainToDb(Math.max(1e-4, voiceGain())) - 2, 0.1);
+}
 
 function setup() {
   Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.15 }));
   master = new Tone.Volume(-10);
-  master.chain(new Tone.Compressor({ threshold: -20, ratio: 3 }), new Tone.Limiter(-3), Tone.getDestination());
+  // volúmenes que elige el jugador: general, música, efectos y ambiente (la voz va aparte)
+  uAll = new Tone.Gain(gainOf('all')); uMusic = new Tone.Gain(gainOf('music')); uSfx = new Tone.Gain(gainOf('sfx')); uAmb = new Tone.Gain(gainOf('amb'));
+  master.chain(uAll, new Tone.Compressor({ threshold: -20, ratio: 3 }), new Tone.Limiter(-3), Tone.getDestination());
   const reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).connect(master);
   musicF = new Tone.Filter(18000, 'lowpass').connect(reverb);
-  music = new Tone.Volume(-4).connect(musicF);
-  sfx = new Tone.Volume(-2).connect(reverb);
-  amb = new Tone.Volume(-8).connect(master);
+  music = new Tone.Volume(-4).connect(uMusic); uMusic.connect(musicF);
+  sfx = new Tone.Volume(-2).connect(uSfx); uSfx.connect(reverb);
+  amb = new Tone.Volume(-8).connect(uAmb); uAmb.connect(master);
 
   const padF = new Tone.Filter(1100, 'lowpass').connect(music);
   pad = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fattriangle', count: 2, spread: 16 }, envelope: { attack: 3, decay: 1, sustain: 0.7, release: 4 }, volume: -20 }).connect(padF);
@@ -66,19 +82,26 @@ export const STYLES = {
   lluvia: { name: 'Lluvia', every: 10, chords: [['A2', 'E3', 'G3', 'B3', 'C4'], ['F2', 'C3', 'E3', 'A3'], ['C3', 'G3', 'B3', 'E4'], ['G2', 'D3', 'E3', 'B3']] },
   lofi: { name: 'Lo-fi', every: 6.67, chords: [['D3', 'F3', 'A3', 'C4', 'E4'], ['G2', 'F3', 'B3', 'E4'], ['C3', 'E3', 'G3', 'B3', 'D4'], ['A2', 'G3', 'C4', 'E4']] },
   noche: { name: 'Noche estrellada', every: 12, chords: [['D2', 'A2', 'E4'], ['Bb1', 'F2', 'D4'], ['G1', 'D2', 'A3'], ['A1', 'E2', 'C#4']] },
+  piano: { name: 'Piano tranquilo', every: 6.4, chords: [['G2', 'D3', 'B3'], ['E2', 'B2', 'G3'], ['C3', 'G3', 'E4'], ['D3', 'A3', 'F#4']] },
+  flauta: { name: 'Flauta del bosque', every: 9, chords: [['D2', 'A2', 'D3'], ['D2', 'A2', 'C3'], ['G2', 'D3', 'B3'], ['A2', 'E3', 'C#4']] },
+  aventura: { name: 'Aventura', every: 5, chords: [['D3', 'F#3', 'A3'], ['B2', 'D3', 'F#3'], ['G2', 'B2', 'D3'], ['A2', 'C#3', 'E3']] },
+  olas: { name: 'Olas', every: 11, chords: [['E2', 'B2', 'G#3', 'D#4'], ['C#2', 'G#2', 'E3', 'B3'], ['A1', 'E2', 'C#3', 'G#3'], ['B1', 'F#2', 'D#3', 'A3']] },
+  cueva: { name: 'Gotas en la cueva', every: 14, chords: [['C2', 'G2'], ['Ab1', 'Eb2'], ['F1', 'C2'], ['G1', 'D2']] },
   nada: { name: 'Solo el bosque', every: 0, chords: [] }
 };
 let style = 'bosque';
 try { const sv = localStorage.getItem('bajo-el-sombrero:musica'); if (STYLES[sv]) style = sv; } catch { /* sin almacenamiento */ }
-let rainGain, padTick = 99, ci = 0;
+let rainGain, seaGain, padTick = 99, ci = 0;
 export const styleName = () => STYLES[style].name;
+export const currentStyle = () => style;
 export function setStyle(key) {
   if (!STYLES[key]) return; style = key; padTick = 99; ci = 0;
   try { localStorage.setItem('bajo-el-sombrero:musica', key); } catch { /* nada */ }
   if (!ready) return;
   pad.releaseAll?.();
-  pad.volume.rampTo(key === 'cajita' ? -28 : key === 'noche' ? -22 : key === 'lofi' ? -21 : -20, 1.5);
+  pad.volume.rampTo({ cajita: -28, noche: -22, lofi: -21, piano: -30, aventura: -24, cueva: -18, flauta: -23 }[key] ?? -20, 1.5);
   rainGain.gain.rampTo(key === 'lluvia' ? 0.07 : 0, 3);
+  seaGain.gain.rampTo(key === 'olas' ? 1 : 0, 3);
   cricket.volume.rampTo(key === 'noche' ? -30 : -40, 2);
 }
 // La próxima (para el botón)
@@ -122,6 +145,53 @@ function scheduleLoops() {
     hat.triggerAttackRelease(0.02, t + (b % 2 ? 0.07 : 0), b % 2 ? 0.4 : 0.7); // (un poco «arrastrado», como el lo-fi)
     if (b === 3 && r() < 0.5) lead.triggerAttackRelease(['A4', 'C5', 'D5', 'E5', 'G4'][Math.floor(r() * 5)], '4n', t, 0.3);
   }, 60 / 72 / 2).start(0.2);
+  // Instrumentos de los estilos nuevos
+  const piano = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 2.2, sustain: 0, release: 1.6 }, volume: -16 }).connect(music);
+  piano.maxPolyphony = 16;
+  const vib = new Tone.Vibrato(5, 0.12).connect(new Tone.FeedbackDelay({ delayTime: 0.45, feedback: 0.35, wet: 0.3 }).connect(music));
+  const flute = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.12, decay: 0.3, sustain: 0.6, release: 0.8 }, portamento: 0.06, volume: -17 }).connect(vib);
+  const bass = new Tone.MonoSynth({ oscillator: { type: 'triangle' }, filter: { Q: 1, type: 'lowpass' }, filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, baseFrequency: 200, octaves: 2 }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.3 }, volume: -16 }).connect(music);
+  const plk = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.12, sustain: 0, release: 0.1 }, volume: -30 }).connect(new Tone.Filter(2400, 'lowpass').connect(music));
+  const drip = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.2 }, volume: -18 }).connect(new Tone.FeedbackDelay({ delayTime: 0.6, feedback: 0.5, wet: 0.5 }).connect(new Tone.Reverb({ decay: 6, wet: 0.6 }).connect(music)));
+  // Olas: ruido que sube y baja despacio, como el mar
+  seaGain = new Tone.Gain(0).connect(amb);
+  const seaAmp = new Tone.Gain(0).connect(seaGain), seaF = new Tone.Filter(600, 'lowpass').connect(seaAmp);
+  new Tone.Noise('brown').connect(seaF).start();
+  new Tone.LFO({ frequency: 0.09, min: 0.0, max: 0.35 }).connect(seaAmp.gain).start();
+  new Tone.LFO({ frequency: 0.09, min: 300, max: 1400 }).connect(seaF.frequency).start();
+  // Piano tranquilo: acordes quebrados, nota por nota
+  new Tone.Loop((t) => {
+    if (style !== 'piano') return;
+    const ch = STYLES.piano.chords[(ci + 3) % 4], i = Math.round(t / 0.8) % 8;
+    const n = [ch[0], ch[1], ch[2], Tone.Frequency(ch[1]).transpose(12).toNote(), ch[2], ch[1], Tone.Frequency(ch[2]).transpose(12).toNote(), ch[1]][i];
+    piano.triggerAttackRelease(n, '2n', t, 0.35 + r() * 0.15);
+    if (i === 0 && r() < 0.5) piano.triggerAttackRelease(Tone.Frequency(ch[2]).transpose(r() < 0.5 ? 12 : 19).toNote(), '2n', t + 0.4, 0.3);
+  }, 0.8).start(0.2);
+  // Flauta del bosque: frases largas sobre un bordón
+  new Tone.Loop((t) => {
+    if (style !== 'flauta' || r() < 0.3) return;
+    const sc = ['D5', 'E5', 'F#5', 'A5', 'B5', 'D6', 'A4', 'B4'], len = 3 + Math.floor(r() * 4); let j = Math.floor(r() * 6), tt = t;
+    for (let k = 0; k < len; k++) { const d = 0.45 + r() * 0.6; flute.triggerAttackRelease(sc[Math.max(0, Math.min(sc.length - 1, j))], d * 0.9, tt, 0.6); tt += d; j += Math.floor(r() * 3) - 1; }
+  }, 7).start(1.5);
+  // Aventura: bajo que camina y un ostinato alegre (96 por minuto)
+  let st8 = 0;
+  new Tone.Loop((t) => {
+    if (style !== 'aventura') { st8 = 0; return; }
+    const ch = STYLES.aventura.chords[(ci + 3) % 4], b = st8++ % 8;
+    if (b % 2 === 0) bass.triggerAttackRelease(Tone.Frequency(ch[b === 6 ? 2 : 0]).transpose(-12).toNote(), '8n', t, 0.7);
+    plk.triggerAttackRelease(Tone.Frequency(ch[[0, 1, 2, 1, 0, 2, 1, 2][b]]).transpose(12).toNote(), '16n', t, 0.5);
+    if (b === 0) kick?.triggerAttackRelease?.('C1', 0.2, t, 0.5);
+  }, 60 / 96 / 2).start(0.25);
+  // Gotas en la cueva: gotas con eco, de a una
+  new Tone.Loop((t) => {
+    if (style !== 'cueva' || r() < 0.35) return;
+    drip.triggerAttackRelease(['C6', 'Eb6', 'G6', 'Bb5', 'F6'][Math.floor(r() * 5)], '32n', t + r() * 0.5, 0.25 + r() * 0.2);
+  }, 1.4).start(0.6);
+  // Olas: alguna gaviota lejana
+  new Tone.Loop((t) => {
+    if (style !== 'olas' || r() < 0.7) return;
+    chirp.triggerAttack(1500, t); chirp.frequency.linearRampToValueAtTime(1100, t + 0.35); chirp.triggerRelease(t + 0.4);
+  }, 6).start(2);
   // Noche estrellada: destellos agudos aislados
   new Tone.Loop((t) => {
     if (style !== 'noche' || r() < 0.45) return;
@@ -219,7 +289,7 @@ export async function playVoice(url, rate = 1) {
   if (!go()) return;
   const ctx = Tone.getContext().rawContext;
   if (ctx.state !== 'running') { try { await ctx.resume(); } catch { return; } }
-  if (!voiceOut) voiceOut = new Tone.Volume(-2).connect(Tone.getDestination());
+  if (!voiceOut) voiceOut = new Tone.Volume(Tone.gainToDb(Math.max(1e-4, voiceGain())) - 2).connect(Tone.getDestination());
   let buf = voiceBuffers.get(url);
   if (!buf) { const ab = await (await fetch(url)).arrayBuffer(); buf = await ctx.decodeAudioData(ab); voiceBuffers.set(url, buf); }
   return new Promise((done) => {

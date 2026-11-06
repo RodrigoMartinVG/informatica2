@@ -830,7 +830,7 @@ function showInsight(L) {
 // se busca el camino más corto sobre una grilla del bosque (A*, de a 3 cm) y después se lo endereza.
 const GRID = { c: 3, map: null };
 function gridBlocked(x, z) {
-  for (const o of obstacles) if (Math.hypot(x - o.x, z - o.z) < (o.climb ? (o.r / 1.3) * 1.7 : o.r) + 3) return true;
+  for (const o of obstacles) if (Math.hypot(x - o.x, z - o.z) < (o.climb ? (o.r / 1.3) * 1.7 : o.r) + 2) return true;
   for (const l of logs) { const rx = x - l.x, rz = z - l.z, t = Math.max(-l.len / 2, Math.min(l.len / 2, rx * l.ax + rz * l.az)); if (Math.hypot(rx - l.ax * t, rz - l.az * t) < l.rad + 3) return true; }
   const h = walkHeight(x, z); return wallTop(x, z, h + 0.3) > h + 2.5;
 }
@@ -887,8 +887,9 @@ function leaveInsight(direct) {
     const lx = b.x, lz = b.z + next.spread + 7, [hex, cname] = TRAILS[LEVELS.indexOf(next) % TRAILS.length];
     if (!direct) {
       // un hilo de esporas de color, desde donde estás hasta el borde del claro siguiente (y adentro)
-      const p0 = beetle.pos, q1 = [p0.x + (lx - p0.x) * 0.33 + (lz - p0.z) * 0.12, p0.z + (lz - p0.z) * 0.33 - (lx - p0.x) * 0.12], q2 = [p0.x + (lx - p0.x) * 0.66 - (lz - p0.z) * 0.08, p0.z + (lz - p0.z) * 0.66 + (lx - p0.x) * 0.08];
-      trail = sporeTrail(scene, routeAround([[p0.x, p0.z], q1, q2, [lx, lz], [b.x, b.z + next.spread * 0.3]]), hex);
+      // de donde estás hasta adentro del claro siguiente, entrando por el lado que da hacia vos (el camino más corto que esquiva todo)
+      const p0 = beetle.pos, ux = p0.x - b.x, uz = p0.z - b.z, ud = Math.hypot(ux, uz) || 1;
+      trail = sporeTrail(scene, routeAround([[p0.x, p0.z], [b.x + (ux / ud) * next.spread * 0.3, b.z + (uz / ud) * next.spread * 0.3]]), hex);
       objective(`Seguí las esporas ${cname} ${toPlace(next.place)}. Sin apuro: mientras tanto podés seguir explorando.`);
       say('trail' + next.id, PH.trail(cname, next.place));
       tip('trail0', 'No hay apuro: podés buscar secretos, esporas doradas o amigos antes de seguir el hilo. Si tocás la lupa de arriba, te doy una pista.');
@@ -989,9 +990,18 @@ const sndLabel = () => ($('#b-snd').textContent = `Sonido: ${S.isOn() ? 'sí' : 
 async function sndToggle() { await S.toggle(); sndLabel(); }
 $('#b-snd').addEventListener('click', sndToggle);
 // Música de fondo: varios estilos generados en el momento (bosque, cajita de música, lluvia, lo-fi, noche, o sin música)
-const musLabel = () => ($('#b-mus').textContent = `Música: ${S.styleName()}`);
+const musLabel = () => { $('#b-mus').textContent = `Música: ${S.styleName()}`; for (const b of document.querySelectorAll('#mix-styles button')) b.setAttribute('aria-pressed', b.dataset.k === S.currentStyle()); };
 function musNext() { const name = S.nextStyle(); musLabel(); floatText(`♪ ${name}`, 'gain'); }
-$('#b-mus').addEventListener('click', musNext); musLabel();
+// Panel de música y volúmenes: el estilo de la música y cuánto suena cada cosa (se guarda en el navegador)
+const VOLS = [['all', 'General'], ['music', 'Música'], ['sfx', 'Efectos'], ['amb', 'Ambiente (viento, pájaros, lluvia)'], ['voice', 'Voz']];
+$('#mix-styles').innerHTML = Object.entries(S.STYLES).map(([k, v]) => `<button type="button" data-k="${k}">${v.name}</button>`).join('');
+$('#mix-vols').innerHTML = VOLS.map(([k, n]) => `<label><span>${n}</span><input type="range" min="0" max="100" value="${Math.round(S.getVol(k) * 100)}" data-k="${k}"></label>`).join('');
+for (const b of document.querySelectorAll('#mix-styles button')) b.addEventListener('click', async () => { await window.__enableAudio(); S.setStyle(b.dataset.k); musLabel(); });
+for (const i of document.querySelectorAll('#mix-vols input')) i.addEventListener('input', () => { S.setVol(i.dataset.k, i.value / 100); if (i.dataset.k === 'sfx') S.ring(Math.round(i.value / 20)); });
+const mixToggle = (show = $('#mix').hidden) => { $('#mix').hidden = !show; $('#b-mus').setAttribute('aria-expanded', show); };
+$('#b-mus').addEventListener('click', () => mixToggle()); $('#mix-x').addEventListener('click', () => mixToggle(false));
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && !$('#mix').hidden) mixToggle(false); });
+musLabel();
 $('#b-voz').addEventListener('click', () => { const on = V.setVoice(!V.hasVoice()); $('#b-voz').textContent = `Voz: ${on ? 'sí' : 'no'}`; });
 
 /* ---------- Cada cuadro ---------- */

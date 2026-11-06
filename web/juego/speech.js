@@ -59,7 +59,7 @@ function sayOne(text) {
   if (!('speechSynthesis' in window)) return Promise.resolve();
   return limit(new Promise((done) => {
     const vs = speechSynthesis.getVoices(), v = vs.find((x) => /es[-_](AR|UY)/i.test(x.lang)) || vs.find((x) => /^es/i.test(x.lang));
-    const u = new SpeechSynthesisUtterance(text); u.lang = v?.lang || 'es-AR'; if (v) u.voice = v; u.rate = rate;
+    const u = new SpeechSynthesisUtterance(text); u.lang = v?.lang || 'es-AR'; if (v) u.voice = v; u.rate = rate; u.volume = Math.min(1, S.voiceGain());
     u.onend = u.onerror = done; speechSynthesis.speak(u);
   }));
 }
