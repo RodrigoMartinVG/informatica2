@@ -1,4 +1,4 @@
-// Vocabulario de la voz: fragmentos que se generan de antemano con Kokoro (ver tools/voz)
+// Vocabulario de la voz: fragmentos que se generan de antemano con Piper, voz rioplatense (ver tools/voz)
 // y que el juego encadena para describir cosas que cambian (rasgos, direcciones, distancias, vidas…).
 // Este archivo no depende del navegador: lo usa también el script que genera los audios (tools/voz/frases.mjs).
 

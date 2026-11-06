@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grabar la voz del tráiler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;1,8..60,500&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #15100b; --panel: #211810; --line: rgba(255,255,255,.12); --ink: #f2ede3; --ink-2: #d2c9b8; --ink-3: #9a917f;
+      --accent: #9fe8c8; --rec: #ff5a4a; --ok: #7fd49a; --serif: "Source Serif 4", Georgia, serif; --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", monospace; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    header { max-width: 980px; margin: 0 auto; padding: 32px 20px 8px; }
+    h1 { font: 700 34px/1.1 var(--serif); } h1 em { color: var(--accent); font-style: italic; }
+    .intro { color: var(--ink-2); margin-top: 10px; max-width: 760px; }
+    .tips { margin-top: 12px; color: var(--ink-3); font-size: 13.5px; }
+    .tips kbd { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+    .bar { position: sticky; top: 0; z-index: 3; background: rgba(21,16,11,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .bar-in { max-width: 980px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .prog { flex: 1; min-width: 160px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .prog i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+    .bar a, .btn { display: inline-block; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 99px; padding: 7px 14px; color: var(--ink); text-decoration: none; font-size: 14px; }
+    .bar a:hover, .btn:hover { border-color: var(--accent); }
+    .meter { width: 120px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+    main { max-width: 980px; margin: 0 auto; padding: 16px 20px 80px; display: grid; gap: 14px; }
+    .line { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; }
+    .line.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .line.done { border-left: 4px solid var(--ok); }
+    .meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-3); }
+    .meta b { font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+    .txt { font: 500 24px/1.35 var(--serif); }
+    .how { font-size: 13.5px; color: var(--ink-2); font-style: italic; }
+    .ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .rec { background: var(--rec); border: 0; color: #fff; border-radius: 99px; padding: 9px 18px; font-weight: 600; }
+    .rec.on { animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(255,90,74,.25); } }
+    .use { background: var(--ok); color: #10241a; border: 0; border-radius: 99px; padding: 9px 18px; font-weight: 600; }
+    .use:disabled, .btn:disabled { opacity: .4; cursor: default; }
+    canvas.wave { width: 100%; height: 56px; display: block; border-radius: 8px; background: rgba(0,0,0,.25); }
+    .st { font: 500 12.5px var(--mono); color: var(--ink-3); }
+    .st.ok { color: var(--ok); }
+    .err { color: var(--rec); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Grabar la voz del <em>tráiler</em></h1>
+    <p class="intro">Grabá cada frase con tu voz. Al tocar «Usar esta toma» se guarda en el tráiler y sus tiempos se acomodan solos a cómo la dijiste. Podés grabar cada una todas las veces que quieras: queda la última que uses.</p>
+    <p class="tips">Consejos: un lugar silencioso, el micrófono a un palmo de la boca, voz tranquila y pausada, como contando algo que te fascina. Los silencios del principio y del final se recortan solos y el volumen se empareja. Teclas: <kbd>R</kbd> grabar / parar · <kbd>Espacio</kbd> escuchar · <kbd>Enter</kbd> usar esta toma · <kbd>↓</kbd> <kbd>↑</kbd> otra frase.</p>
+  </header>
+  <div class="bar"><div class="bar-in">
+    <span id="count">0 de 17 grabadas</span><div class="prog"><i id="prog"></i></div>
+    <span class="st">mic</span><div class="meter"><i id="meter"></i></div>
+    <a href="../promo_v2.html" target="_blank">Ver el tráiler ↗</a>
+  </div></div>
+  <main id="list"></main>
+
+  <script>
+    // Cómo decir cada frase (dirección de voz) y qué se ve en ese momento
+    const HOW = {
+      s1a: ['Apertura · el bosque a ras del suelo', 'Suave, casi en secreto, con asombro. Sin apuro.'],
+      s1b: ['Apertura · la cámara sube y aparecen los hongos gigantes', 'Una pausa antes de «una torre», como quien descubre algo.'],
+      s2: ['Título «Bajo el sombrero»', 'La gran pregunta: intriga, curiosidad. Subí la entonación al final.'],
+      s3a: ['Los datos · la cuenta sube hasta 61.069', 'Claro y firme, de investigador. Los números despacio.'],
+      s3b: ['Los datos · aparece el 55,5 %', 'Remarcá «más de la mitad». Un silencio corto antes del número.'],
+      m1: ['Mito del anillo · un parasol con anillo y una rúsula sin anillo', 'Pregunta curiosa; los números tranquilos; «Casi lo mismo», con un dejo irónico.'],
+      m2: ['Mito de la magulladura', 'Pregunta suelta; «Tampoco» corto y seco.'],
+      m3: ['Mito de los colores', 'Primero la concesión, después el «pero» con peso: es la frase importante.'],
+      m4: ['Mito del tamaño · la curva de GeoGebra baja', 'Acompañá la curva: «baja…» y «nunca llega a cero» más lento.'],
+      m5: ['Mito de las proporciones · dos rectas casi iguales', 'Tranquilo, casi encogiéndote de hombros.'],
+      g1: ['Los gemelos · dos fotos idénticas', 'Bajá el tono, misterio. Una pausa después.'],
+      g2: ['Los gemelos', 'Separá bien las dos partes. «la amanita más mortal del mundo» grave y lento.'],
+      g3: ['El corte bajo tierra · aparece la volva', 'Como revelando un secreto. Pausa antes de «bajo tierra».'],
+      j1: ['El juego · el escarabajo', 'Cambio de clima: cálido, invitando. Sonrisa en la voz.'],
+      j2: ['El juego · olfatear, comer, volar', 'Ritmo de enumeración, con energía; «descubrí» abre el final.'],
+      c1: ['Cierre · la conclusión de la investigación', 'Lento, firme, cada palabra pesa. Es la frase más importante.'],
+      c2: ['Cierre · los códigos QR', 'Cálido, como un consejo de alguien que te cuida.']
+    };
+    const $ = (s, el = document) => el.querySelector(s);
+    let guion = {}, estado = {}, cur = 0, ids = [];
+    let ctx, stream, src, proc, chunks = [], recording = null, analyser;
+    const takes = {}; // id → { pcm: Float32Array, rate }
+
+    async function init() {
+      guion = await (await fetch('guion.json')).json();
+      estado = await (await fetch('/estado')).json().catch(() => ({}));
+      ids = Object.keys(guion);
+      $('#list').innerHTML = ids.map((id, i) => `
+        <section class="line${estado[id] ? ' done' : ''}" data-id="${id}" data-i="${i}">
+          <div class="meta"><b>${i + 1} · ${id}</b><span>${HOW[id]?.[0] || ''}</span></div>
+          <p class="txt">${guion[id]}</p>
+          <p class="how">${HOW[id]?.[1] || ''}</p>
+          <canvas class="wave" width="900" height="56"></canvas>
+          <div class="ctl">
+            <button class="rec" type="button">● Grabar</button>
+            <button class="btn play" type="button" disabled>▶ Escuchar</button>
+            <button class="use" type="button" disabled>✓ Usar esta toma</button>
+            <span class="st">${estado[id] ? `grabada · ${estado[id]} s` : 'sin grabar (suena la voz sintética)'}</span>
+          </div>
+        </section>`).join('');
+      for (const el of document.querySelectorAll('.line')) {
+        const id = el.dataset.id;
+        el.addEventListener('click', () => select(+el.dataset.i));
+        $('.rec', el).onclick = (e) => { e.stopPropagation(); select(+el.dataset.i); toggleRec(id); };
+        $('.play', el).onclick = (e) => { e.stopPropagation(); play(id); };
+        $('.use', el).onclick = (e) => { e.stopPropagation(); save(id); };
+      }
+      select(ids.findIndex((id) => !estado[id]) >= 0 ? ids.findIndex((id) => !estado[id]) : 0);
+      count();
+    }
+    const lineEl = (id) => document.querySelector(`.line[data-id="${id}"]`);
+    function select(i) { cur = Math.max(0, Math.min(ids.length - 1, i)); document.querySelectorAll('.line').forEach((l) => l.classList.toggle('cur', +l.dataset.i === cur)); lineEl(ids[cur]).scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    function count() { const n = ids.filter((id) => estado[id]).length; $('#count').textContent = `${n} de ${ids.length} grabadas`; $('#prog').style.width = `${(n / ids.length) * 100}%`; }
+
+    // ---- Micrófono: se graba el audio crudo (sin compresión) para después limpiarlo ----
+    async function mic() {
+      if (stream) return;
+      ctx = new AudioContext();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false, channelCount: 1 } });
+      src = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+      proc = ctx.createScriptProcessor(4096, 1, 1);
+      proc.onaudioprocess = (e) => { if (recording) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+      src.connect(proc); proc.connect(ctx.destination);
+      const buf = new Float32Array(1024);
+      (function level() { analyser.getFloatTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v)); $('#meter').style.width = `${Math.min(100, p * 140)}%`; $('#meter').style.background = p > 0.95 ? 'var(--rec)' : 'var(--accent)'; requestAnimationFrame(level); })();
+    }
+    async function toggleRec(id) {
+      try { await mic(); } catch { $('.st', lineEl(id)).innerHTML = '<span class="err">No se pudo usar el micrófono: dale permiso al navegador.</span>'; return; }
+      const el = lineEl(id), btn = $('.rec', el);
+      if (recording === id) { // parar
+        recording = null; btn.classList.remove('on'); btn.textContent = '● Grabar de nuevo';
+        const raw = concat(chunks); chunks = [];
+        const pcm = clean(raw, ctx.sampleRate);
+        takes[id] = { pcm, rate: ctx.sampleRate };
+        draw(el, pcm); $('.play', el).disabled = false; $('.use', el).disabled = false;
+        $('.st', el).textContent = `toma nueva · ${(pcm.length / ctx.sampleRate).toFixed(1)} s · sin guardar`;
+        play(id);
+        return;
+      }
+      if (recording) return;
+      chunks = []; recording = id; btn.classList.add('on'); btn.textContent = '■ Parar';
+      $('.st', el).textContent = 'grabando…';
+    }
+    const concat = (list) => { const out = new Float32Array(list.reduce((s, c) => s + c.length, 0)); let o = 0; for (const c of list) { out.set(c, o); o += c.length; } return out; };
+    // Limpieza: recorta silencios del principio y del final, empareja el volumen y suaviza bordes
+    function clean(a, rate) {
+      const win = Math.round(rate * 0.02), env = [];
+      for (let i = 0; i < a.length; i += win) { let s = 0; for (let j = i; j < Math.min(a.length, i + win); j++) s += a[j] * a[j]; env.push(Math.sqrt(s / win)); }
+      const peak = Math.max(...env), th = Math.max(0.01, peak * 0.08);
+      let st = env.findIndex((v) => v > th), en = env.length - 1 - [...env].reverse().findIndex((v) => v > th);
+      if (st < 0) return new Float32Array(rate * 0.3);
+      const from = Math.max(0, (st - 6) * win), to = Math.min(a.length, (en + 10) * win);
+      let b = a.slice(from, to);
+      let sum = 0, n = 0; for (const v of b) if (Math.abs(v) > th * 0.5) { sum += v * v; n++; }
+      const g = 0.12 / Math.max(1e-4, Math.sqrt(sum / Math.max(1, n)));
+      let mx = 0; for (let i = 0; i < b.length; i++) { b[i] *= g; mx = Math.max(mx, Math.abs(b[i])); }
+      if (mx > 0.95) for (let i = 0; i < b.length; i++) b[i] *= 0.95 / mx;
+      const f = Math.round(rate * 0.02); for (let i = 0; i < f; i++) { b[i] *= i / f; b[b.length - 1 - i] *= i / f; }
+      const pad = Math.round(rate * 0.12), out = new Float32Array(b.length + pad * 2); out.set(b, pad); return out;
+    }
+    function draw(el, pcm) {
+      const c = $('.wave', el), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.fillStyle = '#9fe8c8';
+      const step = Math.ceil(pcm.length / c.width);
+      for (let x = 0; x < c.width; x++) { let m = 0; for (let j = x * step; j < Math.min(pcm.length, (x + 1) * step); j++) m = Math.max(m, Math.abs(pcm[j])); const h = m * c.height; g.fillRect(x, (c.height - h) / 2, 1, Math.max(1, h)); }
+    }
+    let playing = null;
+    async function play(id) {
+      if (!takes[id]) { const a = new Audio(`voz/${id}.m4a?${Date.now()}`); a.play(); return; } // la guardada
+      if (!ctx) await mic();
+      playing?.stop();
+      const t = takes[id], b = ctx.createBuffer(1, t.pcm.length, t.rate); b.copyToChannel(t.pcm, 0);
+      const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(); playing = s;
+    }
+    async function save(id) {
+      const t = takes[id]; if (!t) return;
+      const el = lineEl(id); $('.st', el).textContent = 'guardando…';
+      try {
+        const r = await fetch(`/guardar?id=${id}`, { method: 'POST', body: wav(t.pcm, t.rate) }).then((x) => x.json());
+        if (!r.ok) throw new Error(r.error);
+        estado[id] = r.dur; el.classList.add('done'); $('.use', el).disabled = true;
+        $('.st', el).className = 'st ok'; $('.st', el).textContent = `guardada en el tráiler · ${r.dur} s`;
+        delete takes[id]; count(); setTimeout(() => select(cur + 1), 500);
+      } catch (e) { $('.st', el).innerHTML = `<span class="err">No se guardó: ¿está corriendo grabar_server.py? (${e.message})</span>`; }
+    }
+    function wav(pcm, rate) {
+      const buf = new ArrayBuffer(44 + pcm.length * 2), v = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+      w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, pcm.length * 2, true);
+      for (let i = 0; i < pcm.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 32767, true);
+      return new Blob([buf], { type: 'audio/wav' });
+    }
+    addEventListener('keydown', (e) => {
+      const id = ids[cur]; if (!id) return;
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); toggleRec(id); }
+      if (e.code === 'Space') { e.preventDefault(); play(id); }
+      if (e.key === 'Enter') { e.preventDefault(); save(id); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); select(cur + 1); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); select(cur - 1); }
+    });
+    init();
+  </script>
+</body>
+</html>

@@ -61,7 +61,7 @@ Se ejecuta desde la raíz del repo y después se abre http://localhost:8765 (red
 | `promo_v2.html`, `promo2-2d.js` | **Tráiler v2** (~2 min, liviano): fotos reales de las especies, imágenes del bosque del juego, los mitos con sus datos y gráficos de GeoGebra, los gemelos y su volva, voz en off y música. `?formato=vertical` para la versión 9:16 de redes; botón para grabar el video |
 | `promo_v2_3d.html`, `promo2-3d.js` | El mismo tráiler con el bosque 3D del juego en vivo (pesado); con `?limpio&t=segundos` sirve para sacar las imágenes de `promo2/img/` |
 | `promo-audio.js` | Música y sonidos de las animaciones (Tone.js) y la voz en off |
-| `promo2/` | Guion del tráiler (`guion.json`), voz (`voz/`) e imágenes del bosque (`img/`) |
+| `promo2/` | Guion del tráiler (`guion.json`), voz (`voz/`), imágenes del bosque (`img/`) y `grabar.html`: la página para grabar la voz en off con tu propia voz (con `tools/voz/grabar_server.py`) |
 | `styles.css` | Estilos (claro y oscuro, adaptado a celulares) |
 | `corr.js` | Contenido de las 14 correlaciones (textos, pasos en Excel, matemática) |
 | `app.js` | Navegación, gráficos de cada correlación, explorador y sonificación |
@@ -94,7 +94,7 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/audio.js` | Música y sonidos generativos con Tone.js |
 | `juego/config.js` | Mapa del bosque, claros y altura del terreno |
 | `juego/surfaces.js` | Superficies: suelo, ramas, troncos caídos, piedras, hojas y repisas, con su altura sólida (para caminar por debajo, chocar o caer encima) |
-| `juego/narrator.js` | Narración en off: subtítulos + voz neural pregenerada con Kokoro (`juego/voz/`, ver `tools/voz/`) |
+| `juego/narrator.js` | Narración en off: subtítulos + voz rioplatense pregenerada con Piper (`juego/voz/`, ver `tools/voz/`) |
 | `juego/species.js` | Especies reales: nombre, peligrosidad, nota y crédito de cada foto |
 | `juego/access.js` | Accesibilidad: modo audio (descripciones habladas), sonidos espaciales, texto grande y teclas reasignables |
 | `juego/debug.js` | Herramientas de prueba: solo se cargan con `?debug` |

@@ -1,5 +1,5 @@
 // Narración en off: subtítulos que cuentan la historia y orientan al jugador,
-// con voz pregenerada (Kokoro, voz em_santa) en voz/*.m4a.
+// con voz rioplatense pregenerada (Piper, voz es_AR «daniela») en voz/*.m4a.
 // Usa la cola única de voz (speech.js), compartida con la accesibilidad.
 import * as S from './audio.js';
 import * as Speech from './speech.js';
