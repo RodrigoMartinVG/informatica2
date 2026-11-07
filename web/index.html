@@ -402,6 +402,24 @@ p(x) = FitLog(Prob)</pre>
   </div>
   <div class="seg" id="shape-view"><button data-v="img" class="on">Modelo</button><button data-v="plate">Lámina con medidas</button></div>
 
+  <h3>Del promedio a las especies: 18 hongos reales en 3D</h3>
+  <div class="story">
+    <p>El hongo “típico” es un promedio: ningún hongo es exactamente así. Para el juego construimos <b>18 especies reales</b> en 3D. Cada modelo combina el aspecto de la especie (sus verrugas, su anillo, sus láminas o poros, como en la foto) con las medidas y los rasgos de <b>una fila verdadera del Excel</b>: diámetro, alto y grosor del tallo, forma, color, superficie, anillo, si se mancha, hábitat y temporada.</p>
+    <p>El Excel no dice a qué especie pertenece cada fila. Por eso, para cada especie elegimos filas compatibles: la misma clase (venenoso o comestible), una forma y un color que la especie puede tener, y proporciones parecidas a las suyas.</p>
+  </div>
+  <div class="shape-bar"><div class="shape-tabs" id="sp-tabs" role="tablist" aria-label="Especies"></div></div>
+  <div class="shape-card three sp-card">
+    <figure class="real-photo" id="sp-photo"></figure>
+    <div class="sp-3d" id="sp-3d"><p class="viewer-hint">Arrastrá para girar · rueda para acercar</p></div>
+    <div class="shape-info">
+      <p class="mono" id="sp-tag"></p>
+      <h3 id="sp-name"></h3>
+      <p class="sp-note" id="sp-note"></p>
+      <dl class="sh-dl" id="sp-dl"></dl>
+    </div>
+  </div>
+  <p class="caption">El modelo 3D es el mismo que se usa en el juego. La ficha de la derecha es su fila del Excel, tal como está. Como los datos son simulados, algunas filas tienen rasgos que la especie real no muestra (por ejemplo, láminas o anillo en un bejín): el modelo sigue a la especie de la foto.</p>
+
   <h3>De un dibujo a un objeto: el sólido de revolución</h3>
   <div class="story">
     <p>Los hongos con tallo son casi simétricos alrededor de un eje. Por eso alcanza con dibujar <b>la mitad del perfil</b> (en color en la lámina) y hacerla girar una vuelta completa: se obtiene el hongo en 3D. Es la misma idea que usa OpenSCAD con <code>rotate_extrude()</code> y la que se estudia en análisis matemático como <b>sólido de revolución</b>. Con esos modelos se puede imprimir cada hongo a escala real.</p>
@@ -453,6 +471,17 @@ p(x) = FitLog(Prob)</pre>
     <li><b>Las señales fuertes suelen estar en grupos chicos.</b> Lo común es lo difícil.</li>
     <li><b>Un modelo resume, pero tiene límites.</b> La curva de GeoGebra da probabilidades imposibles en los bordes.</li>
   </ul>
+
+  <h3>Lo que nos enseñó el juego</h3>
+  <div class="story">
+    <p>Convertir la investigación en un juego (<a href="juego/">Bajo el sombrero</a>) nos obligó a mirar los hongos de otra manera. Aparecieron tres ideas que el Excel solo no muestra.</p>
+  </div>
+  <div class="proposals">
+    <div><span class="pn">1</span><h3>Un comestible pasado también hace mal</h3><p>El Excel describe hongos sanos: no tiene una columna para la edad ni para el estado. En la naturaleza, un hongo de una especie comestible que ya está viejo o podrido también enferma, porque lo descomponen bacterias y mohos. Es un dato que importa y que la tabla no tiene.</p></div>
+    <div><span class="pn">2</span><h3>Los gemelos</h3><p>La amanita mortal y el champiñón de campo pueden tener la misma forma, el mismo color y el mismo anillo. Las diferencias son la bolsa en la base (la volva) y el color de las láminas, justo lo que no se ve si se corta el hongo a ras del suelo. Ninguna regla de la Etapa I los separa.</p>
+      <div class="twins"><img src="img/fotos/phalloides.jpg" alt="Amanita phalloides, mortal" loading="lazy"><img src="img/fotos/campestris.jpg" alt="Agaricus campestris, comestible" loading="lazy"></div></div>
+    <div><span class="pn">3</span><h3>Averiguar tiene un costo</h3><p>En el juego, olfatear un hongo te dice si es venenoso, pero cansa: no se pueden olfatear todos. Para descubrir si una creencia funciona hay que conocer varios hongos de cada grupo y recién ahí comparar, igual que en el Excel con la línea de base del 55,5 %. Comer “por el aspecto” es tirar una moneda.</p></div>
+  </div>
 
   <h3>Los límites de este trabajo</h3>
   <p class="story-p">Los datos son simulados a partir de 173 especies, así que los porcentajes no reflejan la naturaleza. Los pasos siguientes serían usar datos reales de campo, trabajar con la especie como unidad y reemplazar la curva logarítmica por un modelo que siempre quede entre 0 y 1.</p>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Especie en 3D</title>
+  <!-- Visor 3D de una especie (lo usa la web dentro de un recuadro). Los modelos son los del juego:
+       cada uno con una fila real del Excel. ?id=muscaria elige la especie; la web cambia la especie con postMessage. -->
+  <script type="importmap">{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  } }</script>
+  <style>
+    html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+  </style>
+</head>
+<body>
+  <canvas id="c" aria-label="Modelo 3D del hongo: arrastrá para girarlo"></canvas>
+  <script type="module">
+    import * as THREE from 'three/webgpu';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { buildMushroom, pickRow, LOOKS } from './juego/hongos3d.js';
+    import { rng } from './juego/config.js';
+    import { SPECIES } from './juego/species.js';
+    const p = new URLSearchParams(location.search), canvas = document.getElementById('c');
+    const renderer = new THREE.WebGPURenderer({ canvas, antialias: true, alpha: true, forceWebGL: p.has('gl') });
+    renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
+    await renderer.init();
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight('#fff1dc', '#6a5238', 1.8));
+    const sun = new THREE.DirectionalLight('#ffe6c2', 2.3); sun.position.set(-20, 40, 30); sun.castShadow = true;
+    Object.assign(sun.shadow.camera, { left: -25, right: 25, top: 30, bottom: -10 }); sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
+    // un poco de suelo (solo la sombra, para que el hongo no flote)
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 48), new THREE.ShadowMaterial({ opacity: 0.25 }));
+    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 1000);
+    const controls = new OrbitControls(cam, canvas); controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 1.2;
+    controls.maxPolarAngle = Math.PI * 0.55;
+    canvas.addEventListener('pointerdown', () => (controls.autoRotate = false));
+    let current = null;
+    function show(id) {
+      if (!LOOKS[id]) return;
+      if (current) { scene.remove(current); current.traverse((o) => o.geometry?.dispose()); }
+      // siempre la misma fila para cada especie (así la ficha de la web coincide con el modelo)
+      const sp = SPECIES[id] || {}, seed = [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
+      const row = pickRow(rng(seed), LOOKS[id], { tox: !!sp.tox });
+      const b = buildMushroom(id, row, seed, { perfect: true });
+      current = b.group; scene.add(current);
+      const size = Math.max(b.D, b.H), cy = b.H * 0.5;
+      controls.target.set(0, cy, 0); cam.position.set(size * 1.6, cy + size * 0.6, size * 2.3);
+      controls.minDistance = size * 0.8; controls.maxDistance = size * 6; controls.update();
+      parent.postMessage({ especie: id, fila: row }, '*');
+    }
+    function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+    addEventListener('resize', resize); resize();
+    addEventListener('message', (e) => { if (e.data?.mostrar) { controls.autoRotate = true; show(e.data.mostrar); } });
+    show(p.get('id') || 'muscaria');
+    renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, cam); });
+  </script>
+</body>
+</html>

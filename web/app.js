@@ -2,6 +2,7 @@
 import { plateAll, plateOne, plateMini } from './plates.js';
 import { profile } from './profiles.js';
 import { CORR, VEREDICTOS } from './corr.js';
+import { SPECIES } from './juego/species.js';
 
 const R = RESEARCH, E = EXPLORER, BASE = R.stats.toxicos;
 const $ = (id) => document.getElementById(id);
@@ -435,7 +436,7 @@ const inits = {
         scales: { x: pctAxis(), y: { grid: { display: false }, border: { display: false } } } }
     }));
     $('sonify').onclick = sonify;
-    const ESP = { phalloides: 'Amanita phalloides', campestris: 'Agaricus campestris', pulverulentus: 'Boletus pulverulentus', galerina: 'Galerina marginata', procera: 'Macrolepiota procera', muscaria: 'Amanita muscaria', cantharellus: 'Cantharellus cibarius', mycena: 'Mycena galericulata', conica: 'Hygrocybe conica', gibba: 'Clitocybe gibba', edulis: 'Boletus edulis' };
+    const ESP = Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.name]));
     fetch('img/fotos/creditos.json').then((r) => r.json()).then((cr) => {
       $('credits').innerHTML = Object.entries(cr).map(([k, c]) => `<li><i>${ESP[k] || k}</i>: ${c.autor || 'autor sin dato'} · ${c.licenciaUrl ? `<a href="${c.licenciaUrl}" target="_blank" rel="noopener">${c.licencia}</a>` : c.licencia} · <a href="${c.fuente}" target="_blank" rel="noopener">original</a></li>`).join('');
     }).catch(() => {});
@@ -489,8 +490,48 @@ const inits = {
     };
     $('tink-table').innerHTML = '<thead><tr><th>Forma</th><th>Sombrero en Tinkercad</th><th>Tallo</th><th>OpenSCAD</th></tr></thead><tbody>' +
       R.arquetipos.map((a) => `<tr><td>${a.nombre}</td><td>${tink[a.id][0]}</td><td>${tink[a.id][1]}</td><td><code>${tink[a.id][2]}</code></td></tr>`).join('') + '</tbody>';
+    renderSpecies();
   }
 };
+
+/* ================= Las 18 especies en 3D (los modelos del juego, cada uno con una fila del Excel) ================= */
+const SP_ORDER = ['phalloides', 'campestris', 'muscaria', 'edulis', 'galerina', 'procera', 'conica', 'cantharellus', 'russula', 'suillus', 'mycena', 'coprinus', 'hypholoma', 'lactarius', 'gibba', 'pulverulentus', 'lycoperdon', 'pleurotus'];
+const HAB = ['bosques', 'hojas', 'pastos', 'prados', 'caminos', 'matorrales', 'zonas urbanas', 'desechos'];
+const LAM = { Blanco: 'blancas', Crema: 'crema', Marrón: 'marrones', Gris: 'grises', Negro: 'negras', Amarillo: 'amarillas', Naranja: 'naranjas', Rojo: 'rojas', Rosa: 'rosadas', Verde: 'verdes', Púrpura: 'púrpuras', Azul: 'azules' };
+function renderSpecies() {
+  const tabs = $('sp-tabs'); if (!tabs || tabs.dataset.done) return; tabs.dataset.done = '1';
+  let cur = 'phalloides';
+  const frame = document.createElement('iframe');
+  frame.src = `especies.html?id=${cur}${new URLSearchParams(location.search).has('gl') ? '&gl' : ''}`; frame.title = 'Modelo 3D de la especie elegida'; frame.loading = 'lazy';
+  $('sp-3d').appendChild(frame);
+  const low = (v) => (v ? v.toLowerCase() : '');
+  addEventListener('message', (e) => {
+    const d = e.data; if (!d?.especie || d.especie !== cur) return;
+    const f = d.fila;
+    const rows = [
+      ['Clase en el Excel', `<b class="${f.tox ? 'tox' : 'ed'}">${f.tox ? 'venenoso' : 'comestible'}</b>`],
+      ['Sombrero', `${num(f.d, 1)} cm · ${low(f.shape)} · ${low(f.color)}${f.sup ? ' · ' + low(f.sup) : ''}`],
+      ['Tallo', `${num(f.h, 1)} cm de alto · ${num(f.w, 1)} mm de ancho${f.tal ? ' · ' + low(f.tal) : ''}${f.base ? ' · base ' + low(f.base) : ''}`],
+      f.lam || f.esp ? ['Láminas', [LAM[f.lam], low(f.esp)].filter(Boolean).join(' · ')] : null,
+      ['Anillo', f.ring ? `sí${f.ani ? ' (' + low(f.ani) + ')' : ''}` : 'no'],
+      ['Se mancha', f.bruise ? 'sí' : 'no'],
+      ['Dónde y cuándo', `${HAB[f.hab] || '—'}${f.temp ? ' · ' + low(f.temp) : ''}`]
+    ].filter(Boolean);
+    $('sp-dl').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  });
+  const draw = () => {
+    const sp = SPECIES[cur];
+    tabs.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.id === cur); b.setAttribute('aria-selected', b.dataset.id === cur); });
+    $('sp-photo').innerHTML = `<img src="img/fotos/${cur}.jpg" alt="Foto de ${sp.name}" loading="lazy"><figcaption>${sp.name} (foto real)</figcaption>`;
+    $('sp-name').innerHTML = `<i>${sp.name}</i>`;
+    $('sp-tag').innerHTML = `<span class="${sp.tox ? 'tox' : 'ed'}">${sp.tag}</span>`;
+    $('sp-note').textContent = sp.note;
+    $('sp-dl').innerHTML = '';
+    frame.contentWindow?.postMessage({ mostrar: cur }, '*');
+  };
+  SP_ORDER.forEach((id) => { const b = document.createElement('button'); b.dataset.id = id; b.setAttribute('role', 'tab'); b.textContent = SPECIES[id].name.split(' ')[0] + ' ' + SPECIES[id].name.split(' ')[1].slice(0, 1) + '.'; b.title = SPECIES[id].name; b.onclick = () => { cur = id; draw(); }; tabs.appendChild(b); });
+  draw();
+}
 
 /* ================= Los seis hongos típicos en fila ================= */
 function renderLineup() {

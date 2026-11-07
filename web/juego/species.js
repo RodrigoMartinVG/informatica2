@@ -23,6 +23,6 @@ export const SPECIES = {
 };
 
 let credits = {};
-fetch('../img/fotos/creditos.json').then((r) => r.json()).then((c) => (credits = c)).catch(() => {});
+fetch(new URL('../img/fotos/creditos.json', import.meta.url)).then((r) => r.json()).then((c) => (credits = c)).catch(() => {});
 export const photo = (id) => `../img/fotos/${id}.jpg`;
 export function credit(id) { const c = credits[id]; return c ? `Foto: ${c.autor.replace(/^This image was created by user ([^ ]+).*/, '$1')} · ${c.licencia} · Wikimedia Commons` : 'Foto: Wikimedia Commons'; }

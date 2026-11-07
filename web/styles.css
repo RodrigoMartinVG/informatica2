@@ -614,3 +614,14 @@ button.toc-dl { font: inherit; font-size: .84rem; background: transparent; curso
   .act + .act { break-before: page; }
   .more { border: 0; }
 }
+
+/* Las especies en 3D (los modelos del juego) */
+.sp-3d { position: relative; aspect-ratio: 1; background: radial-gradient(circle at 50% 40%, var(--sunk), var(--panel)); border-radius: 4px; overflow: hidden; }
+.sp-3d iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sp-3d .viewer-hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; z-index: 1; pointer-events: none; }
+.sp-note { font: .9rem/1.5 var(--sans); color: var(--ink-2); margin: 0 0 12px; }
+#sp-tag .tox, .sh-dl .tox { color: var(--tox); font-weight: 600; } #sp-tag .ed, .sh-dl .ed { color: var(--ed); font-weight: 600; }
+#sp-tabs button { font-style: italic; }
+.twins { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.twins img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; display: block; }
+@media print { .sp-3d { display: none; } }

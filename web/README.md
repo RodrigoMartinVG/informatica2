@@ -13,14 +13,14 @@ La web es una sola página que se lee de arriba abajo, como una historia. La lí
 | 3 | Etapa I · Excel | Cuatro hipótesis populares (anillo/color al cortar, tamaño, colores, lugar y época) con fotos reales, el gráfico del Excel, un veredicto y un concepto |
 | 4 | Etapa II · Todo junto | Color × forma, el giro del 99,8 % (combinar rasgos = reconocer la especie), el explorador |
 | 5 | Etapa III · GeoGebra | Dos conjeturas escritas como funciones (recta y curva) |
-| 6 | Complementaria · 3D | El hongo típico de cada forma junto a una foto real, el sólido de revolución |
-| 7 | La respuesta | Conclusión, aprendizajes, límites, personas ciegas, fuentes y créditos |
+| 6 | Complementaria · 3D | El hongo típico de cada forma junto a una foto real, las 18 especies del juego en 3D (cada una con su fila del Excel, en `especies.html`), el sólido de revolución |
+| 7 | La respuesta | Conclusión, aprendizajes, lo que enseñó el juego (hongos pasados, los gemelos, el costo de averiguar), límites, personas ciegas, fuentes y créditos |
 
 La parte técnica (cómo se armó cada tabla en Excel, su matemática y las precauciones) queda en las secciones "Para quien quiera más detalle", con las 14 correlaciones completas.
 
 ## Fotos reales
 
-`img/fotos/` tiene 11 fotos de Wikimedia Commons (dominio público o Creative Commons). `img/fotos/creditos.json` guarda el autor, la licencia y el link de cada una, y la web los muestra al final.
+`img/fotos/` tiene 19 fotos de Wikimedia Commons (dominio público o Creative Commons). `img/fotos/creditos.json` guarda el autor, la licencia y el link de cada una, y la web los muestra al final.
 
 ## Funciones de lectura
 
