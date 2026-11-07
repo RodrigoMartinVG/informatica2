@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hongo 3D y foto</title>
+  <!-- Herramienta de prueba: cada especie del juego en 3D al lado de su foto real, para comparar.
+       ?solo=muscaria,edulis elige especies · ?semilla=N cambia la fila del Excel · ?gl usa WebGL -->
+  <script type="importmap">{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  } }</script>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #1d1813; color: #efe6d6; font: 13px/1.4 system-ui, sans-serif; padding: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, 520px); gap: 12px; }
+    figure { margin: 0; background: #2a231b; border-radius: 8px; padding: 6px; }
+    figure div { display: flex; gap: 6px; }
+    img, canvas { width: 250px; height: 250px; object-fit: cover; border-radius: 4px; }
+    figcaption { padding: 4px 2px 0; font-size: 12px; opacity: .85; }
+  </style>
+</head>
+<body>
+  <div class="grid" id="grid"></div>
+  <script src="../data.js"></script>
+  <script type="module">
+    import * as THREE from 'three/webgpu';
+    import { buildMushroom, pickRow, LOOKS } from './hongos3d.js';
+    import { rng } from './config.js';
+    import { SPECIES, photo } from './species.js';
+    const p = new URLSearchParams(location.search);
+    const W = 500;
+    const renderer = new THREE.WebGPURenderer({ antialias: true, forceWebGL: p.has('gl'), preserveDrawingBuffer: true });
+    renderer.setSize(W, W); renderer.setPixelRatio(1);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
+    await renderer.init();
+    const scene = new THREE.Scene(); scene.background = new THREE.Color('#3a3024');
+    scene.add(new THREE.HemisphereLight('#ffe6c4', '#5a4026', 1.7));
+    const sun = new THREE.DirectionalLight('#ffe2b8', 2.4); sun.position.set(-20, 40, 30); sun.castShadow = true;
+    Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 30, bottom: -5 }); sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: '#5a4630', roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 1000);
+    const ids = (p.get('solo') || Object.keys(LOOKS).join(',')).split(','), r = rng(+(p.get('semilla') || 3));
+    const grid = document.getElementById('grid');
+    for (const id of ids) {
+      const look = LOOKS[id], sp = SPECIES[id] || {};
+      const row = pickRow(r, look, { tox: !!sp.tox && id !== 'gemelo' });
+      const b = buildMushroom(id, row, 7, { perfect: p.has('perfecto') });
+      scene.add(b.group);
+      // encuadre como una foto: a la altura del hongo, un poco desde arriba
+      const size = Math.max(b.D, b.H), cy = b.H * 0.55;
+      cam.position.set(size * 1.9, cy + size * 0.55, size * 2.6); cam.lookAt(0, cy, 0);
+      renderer.render(scene, cam);
+      const fig = document.createElement('figure');
+      fig.innerHTML = `<div><img src="${photo(id)}" alt=""><canvas width="${W}" height="${W}"></canvas></div><figcaption><b>${id}</b> · ${sp.name || ''} · fila: ${row.d} cm, ${row.shape}, ${row.color}${row.sup ? ', ' + row.sup : ''}</figcaption>`;
+      fig.querySelector('canvas').getContext('2d').drawImage(renderer.domElement, 0, 0);
+      grid.appendChild(fig);
+      scene.remove(b.group);
+    }
+    document.title = 'listo';
+  </script>
+</body>
+</html>

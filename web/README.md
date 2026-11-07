@@ -85,6 +85,7 @@ Una forma distinta de recorrer la investigación: manejás a un escarabajo por e
 | `juego/main.js` | Render (WebGPU con respaldo WebGL 2), postprocesado (profundidad de campo + bloom), cámara, controles y la lógica del mito |
 | `juego/world.js` | Terreno, pasto con viento (shader TSL), hojas, musgo, árboles trepables con hongos repisa, troncos caídos, rayos de sol, polvo, esporas guía |
 | `juego/beetle.js` | Escarabajo procedural: marcha en trípode, cinemática inversa de las patas, gravedad, salto, caídas, vuelo libre, picada y planeo, rebotes en los bejines, trepar tallos y troncos, y conductas en reposo (se limpia las antenas y las patas, estira las alas, mira alrededor, festeja, estornuda) |
+| `juego/comparar.html` | Herramienta de prueba: cada especie en 3D al lado de su foto real (`?solo=muscaria,edulis`, `?semilla=N`, `?gl`) |
 | `juego/aventuras.js` | Lo que se suma para jugar: esporas doradas escondidas en cada claro, un circuito de aros de vuelo con cronómetro y medallas, cinco escarabajos amigos perdidos que te siguen, telas de araña que frenan y sombreritos para el escarabajo (tecla H) |
 | `juego/secretos.js` | Secretos del bosque: 20 cosas para descubrir (rebotar, la picada, el pájaro, las repisas…), con pistas en el cuaderno y en el botón 🔍; si pasa un rato sin descubrir nada, el juego sopla una pista |
 | `juego/flora.js` | Dónde crece cada hongo: claros de los niveles, grupos sueltos y racimos sobre los troncos caídos |

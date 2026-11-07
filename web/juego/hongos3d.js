@@ -30,7 +30,7 @@ export const LOOKS = {
   phalloides: { shapes: ['Convexa', 'Plana'], colors: ['Verde', 'Amarillo', 'Blanco', 'Crema'], d: [5, 15], hr: 1.05,
     cap: { Verde: ['#6d7240', '#b8b882'], Amarillo: ['#8f8a46', '#cfc896'], Blanco: ['#a9ad86', '#e6e4cc'], Crema: ['#9a9a6a', '#ddd9b8'] }, style: 'fibrils', gloss: 0.45,
     under: 'gills', gill: '#f3f0e6', stem: '#eeeadc', stemStyle: 'zigzag', ring: 'skirt', ringAt: 0.8, base: 'volva', bulb: 1.3 },
-  galerina: { shapes: ['Convexa', 'Campana', 'Plana'], colors: ['Marrón', 'Amarillo', 'Naranja'], d: [1.5, 5],
+  galerina: { shapes: ['Convexa', 'Campana'], colors: ['Marrón', 'Amarillo', 'Naranja'], d: [1.5, 5],
     cap: { Marrón: ['#8a4e1c', '#c48a4a'], Amarillo: ['#a8661e', '#d6a458'], Naranja: ['#a4521a', '#d8904a'] }, style: 'hygro', gloss: 0.4,
     under: 'gills', gill: '#b98448', stem: '#a07448', stemStyle: 'fibrous-dark', ring: 'thin', ringColor: '#7a5432', ringAt: 0.72, wood: true, wr: 1.4, hr: 1.4 },
   conica: { shapes: ['Cónica', 'Campana'], colors: ['Rojo', 'Naranja', 'Amarillo'], d: [1.5, 6],
@@ -71,18 +71,30 @@ export const LOOKS = {
     under: 'gills', gill: '#e8904a', stem: '#e9a468', stemStyle: 'smooth', wmin: 1.8, hmax: 0.6 },
   lycoperdon: { shapes: ['Esférica'], colors: ['Blanco', 'Crema', 'Marrón'], d: [2, 6], puff: true, warts: '#fbf8f0', wartSize: 0.45,
     cap: { Blanco: ['#efe8da', '#e2d8c4'], Crema: ['#e6d8bc', '#d6c6a6'], Marrón: ['#cdb894', '#bca582'] }, style: 'spiny', gloss: 0.9,
-    under: 'none', gill: '#e2d8c4', stem: '#e2d6c0', stemStyle: 'smooth', wmin: 5, hmax: 0.55, bulb: 1.15 },
+    under: 'none', gill: '#e2d8c4', stem: '#e2d6c0', stemStyle: 'smooth', wmin: 5.5, hmax: 0.5, taper: 0.62 }, // (como una pera: el pie se afina hacia abajo)
   hypholoma: { shapes: ['Convexa', 'Campana'], colors: ['Amarillo', 'Naranja'], d: [2, 6],
     cap: { Amarillo: ['#c8761e', '#ecd452'], Naranja: ['#c0601a', '#e8c048'] }, style: 'smooth', gloss: 0.45,
     under: 'gills', gill: '#9fa858', stem: '#e2cc6a', stemStyle: 'fibrous-dark', wood: true, wr: 1.3, hr: 1.6 },
   pleurotus: { shapes: ['Plana', 'Convexa', 'Hundida'], colors: ['Gris', 'Marrón', 'Blanco', 'Crema'], d: [5, 15], tilt: 0.35,
     cap: { Gris: ['#5e5852', '#a29c94'], Marrón: ['#6a5a4a', '#ad9c88'], Blanco: ['#a8a29a', '#e4e0d8'], Crema: ['#9c9080', '#dcd2c2'] }, style: 'silky', gloss: 0.5,
-    under: 'gills', gill: '#efe9de', stem: '#ece6da', stemStyle: 'smooth', decurrent: true, taper: 0.7, hmax: 0.3, wood: true },
+    under: 'gills', gill: '#efe9de', stem: '#ece6da', stemStyle: 'smooth', decurrent: true, taper: 0.7, hmax: 0.3, wood: true, lateral: 0.55 }, // (el pie, a un costado)
   // Los gemelos: a simple vista iguales (blancos, con anillo, del mismo tamaño). La diferencia no se ve.
   gemelo: { shapes: ['Convexa', 'Plana'], colors: ['Blanco', 'Crema'], d: [6, 10],
     cap: { Blanco: ['#e9e4d6', '#f6f2ea'], Crema: ['#e4dccb', '#f4efe4'] }, style: 'silky', gloss: 0.5,
     under: 'gills', gill: '#efe8dc', stem: '#f0ebe0', ring: 'skirt', ringAt: 0.7 }
 };
+
+// Proporciones típicas de cada especie (para elegir, entre las filas reales del Excel, las que se le parecen):
+// [alto del tallo / diámetro del sombrero (mín, máx), ancho del tallo / diámetro (mín, máx)]
+const PROP = {
+  muscaria: [0.8, 1.6, 0.1, 0.25], phalloides: [0.8, 1.5, 0.1, 0.22], galerina: [0.9, 2.6, 0.07, 0.2], conica: [1.1, 3, 0.1, 0.32],
+  mycena: [1.8, 5, 0.05, 0.16], campestris: [0.4, 0.95, 0.14, 0.32], procera: [1.1, 2.6, 0.05, 0.13], cantharellus: [0.5, 1.3, 0.18, 0.45],
+  edulis: [0.5, 1.3, 0.25, 0.65], pulverulentus: [0.5, 1.3, 0.18, 0.45], gibba: [0.7, 1.6, 0.08, 0.22], russula: [0.5, 1.1, 0.18, 0.38],
+  suillus: [0.4, 1, 0.14, 0.32], coprinus: [1.4, 3.6, 0.12, 0.32], lactarius: [0.35, 0.95, 0.15, 0.38], hypholoma: [1.1, 2.6, 0.08, 0.22],
+  pleurotus: [0.05, 0.45, 0.08, 0.3], gemelo: [0.7, 1.4, 0.1, 0.22]
+};
+for (const [k, v] of Object.entries(PROP)) if (LOOKS[k]) LOOKS[k].prop = v;
+const propOk = (row, look) => !look.prop || (row.h / row.d >= look.prop[0] && row.h / row.d <= look.prop[1] && row.w / 10 / row.d >= look.prop[2] && row.w / 10 / row.d <= look.prop[3]);
 
 /* ---------- Elegir una fila real del Excel ---------- */
 // need: { tox, trait, yes } · look: la especie. Prueba filtros de más estricto a menos estricto.
@@ -107,6 +119,8 @@ export function pickRow(r, look, { tox, trait = null, yes = false }) {
   const gillOk = look.gill ? nearNames(look.gill) : null, stemOk = look.stem ? nearNames(look.stem) : null;
   const colorsOk = (row) => (!row.lam || !gillOk || look.under !== 'gills' || gillOk.includes(row.lam)) && (!row.tal || !stemOk || stemOk.includes(row.tal));
   const tries = [
+    (row) => traitOk(row, trait, yes) && look.shapes.includes(row.shape) && look.colors.includes(row.color) && inD(row) && colorsOk(row) && propOk(row, look),
+    (row) => traitOk(row, trait, yes) && look.colors.includes(row.color) && inD(row) && propOk(row, look),
     (row) => traitOk(row, trait, yes) && look.shapes.includes(row.shape) && look.colors.includes(row.color) && inD(row) && colorsOk(row),
     (row) => traitOk(row, trait, yes) && look.shapes.includes(row.shape) && look.colors.includes(row.color) && inD(row),
     (row) => traitOk(row, trait, yes) && look.colors.includes(row.color) && inD(row),
@@ -160,7 +174,7 @@ function capTexture(look, id, colorName) {
       const gr = g.createLinearGradient(0, h * 0.82, 0, h); gr.addColorStop(0, 'rgba(40,30,30,0)'); gr.addColorStop(1, 'rgba(40,30,30,0.85)'); g.fillStyle = gr; g.fillRect(0, h * 0.82, w, h * 0.18);
     }
     if (look.style === 'zoned') for (let y = h * 0.15; y < h; y += 14 + r() * 10) { g.fillStyle = `rgba(150,60,20,${0.18 + r() * 0.2})`; g.fillRect(0, y, w, 5 + r() * 6); }
-    if (look.style === 'spiny') for (let i = 0; i < 2200; i++) { g.fillStyle = `rgba(${r() < 0.6 ? '120,100,70' : '255,255,250'},${0.25 + r() * 0.35})`; g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 2.2, 0, 7); g.fill(); }
+    if (look.style === 'spiny') for (let i = 0; i < 2200; i++) { g.fillStyle = `rgba(${r() < 0.3 ? '150,130,100' : '255,255,250'},${0.25 + r() * 0.35})`; g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 2.2, 0, 7); g.fill(); }
     if (look.style === 'bun') { const gr = g.createLinearGradient(0, h * 0.85, 0, h); gr.addColorStop(0, 'rgba(255,240,210,0)'); gr.addColorStop(1, 'rgba(255,240,210,0.45)'); g.fillStyle = gr; g.fillRect(0, h * 0.85, w, h * 0.15); }
   });
 }
@@ -198,11 +212,12 @@ function surfTex(kind) {
   if (surfCache.has(kind)) return surfCache.get(kind);
   const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d'), r = rng(kind.length * 17), w = 512, h = 256;
   g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
-  if (kind === 'escamas') for (let i = 0; i < 900; i++) { const y = h * (0.12 + r() * 0.85), x = r() * w, sz = 3 + r() * 5; g.fillStyle = `rgba(${r() < 0.5 ? '40,40,40' : '210,210,210'},0.7)`; g.beginPath(); g.ellipse(x, y, sz * 1.3, sz * 0.7, 0, 0, 7); g.fill(); }
-  if (kind === 'fibras') for (let i = 0; i < 700; i++) { const x = r() * w; g.strokeStyle = `rgba(${r() < 0.5 ? '50,50,50' : '200,200,200'},0.55)`; g.lineWidth = 1 + r() * 1.5; g.beginPath(); g.moveTo(x, r() * h * 0.4); g.lineTo(x + (r() - 0.5) * 6, h); g.stroke(); }
+  // (manchas irregulares y suaves, más ralas hacia el centro: nada de patrones repetidos, que parecen tejidos)
+  if (kind === 'escamas') for (let i = 0; i < 260; i++) { const y = h * (0.25 + Math.pow(r(), 0.7) * 0.72), x = r() * w, sz = 2 + r() * 4; g.fillStyle = `rgba(${r() < 0.6 ? '70,70,70' : '180,180,180'},${0.25 + r() * 0.3})`; g.beginPath(); g.ellipse(x, y, sz * (1 + r()), sz * (0.5 + r() * 0.4), r() * 3, 0, 7); g.fill(); }
+  if (kind === 'fibras') for (let i = 0; i < 220; i++) { const x = r() * w; g.strokeStyle = `rgba(${r() < 0.5 ? '70,70,70' : '180,180,180'},${0.2 + r() * 0.25})`; g.lineWidth = 0.8 + r(); g.beginPath(); g.moveTo(x, h * (0.2 + r() * 0.4)); g.lineTo(x + (r() - 0.5) * 6, h); g.stroke(); }
   if (kind === 'surcos') {
-    for (let i = 0; i < 70; i++) { const x = (i / 70) * w; g.strokeStyle = 'rgba(30,30,30,0.8)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, h * 0.45); g.lineTo(x, h); g.stroke(); }
-    for (let i = 0; i < 160; i++) { const x = r() * w, y = r() * h * 0.6; g.strokeStyle = 'rgba(40,40,40,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 10, y + 6, x + 20, y + (r() - 0.5) * 8); g.stroke(); }
+    for (let i = 0; i < 60; i++) { const x = (i / 60) * w + (r() - 0.5) * 4; g.strokeStyle = `rgba(40,40,40,${0.35 + r() * 0.3})`; g.lineWidth = 1.5 + r(); g.beginPath(); g.moveTo(x, h * (0.6 + r() * 0.15)); g.lineTo(x, h); g.stroke(); } // surcos solo en el borde
+    for (let i = 0; i < 50; i++) { const x = r() * w, y = h * (0.2 + r() * 0.4); g.strokeStyle = 'rgba(60,60,60,0.3)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 12, y + 8, x + 24, y + (r() - 0.5) * 10); g.stroke(); }
   }
   const t = new THREE.CanvasTexture(c); t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
   surfCache.set(kind, t); return t;
@@ -234,13 +249,13 @@ function materials(look, id, colorName, rot = 0, xl = {}) {
   const R = (t, k) => (rot ? rotTex(t, rot, k) : t);
   const rough = rot ? 0.95 : xl.surf === 'brillo' ? look.gloss * 0.35 : xl.surf === 'mate' ? Math.min(1, look.gloss + 0.25) : look.gloss;
   const capBase = new THREE.MeshStandardMaterial({ map: R(capTexture(look, id, colorName), `cap|${id}|${colorName}`), roughness: rough, side: THREE.DoubleSide });
-  if (xl.surf && xl.surf !== 'brillo' && xl.surf !== 'mate') { capBase.bumpMap = surfTex(xl.surf); capBase.bumpScale = xl.surf === 'surcos' ? 2.2 : 1.4; }
+  if (xl.surf && xl.surf !== 'brillo' && xl.surf !== 'mate') { capBase.bumpMap = surfTex(xl.surf); capBase.bumpScale = xl.surf === 'surcos' ? 0.7 : 0.45; }
   const tint = (name, k) => new THREE.Color('#ffffff').lerp(new THREE.Color(NAMED[name]).multiplyScalar(1.15), k);
   const underBase = new THREE.MeshStandardMaterial({ map: R(underTexture(look, id), `under|${id}`), roughness: 0.95, side: THREE.DoubleSide });
-  if (xl.lam) underBase.color = tint(xl.lam, 0.4);
+  if (xl.lam) underBase.color = tint(xl.lam, 0.2);
   const stem = new THREE.MeshStandardMaterial({ map: R(stemTexture(look, id), `stem|${id}`), roughness: 0.92 });
-  if (xl.tal) stem.color = tint(xl.tal, 0.35);
-  const gillHex = xl.lam ? mixHex(look.gill, NAMED[xl.lam], 0.45) : look.gill;
+  if (xl.tal) stem.color = tint(xl.tal, 0.2);
+  const gillHex = xl.lam ? mixHex(look.gill, NAMED[xl.lam], 0.2) : look.gill;
   const out = {
     cap: translucent(capBase, '#ffb470', 1.1), under: translucent(underBase, '#ffc58a', 0.9), stem,
     plate: translucent(new THREE.MeshStandardMaterial({ color: new THREE.Color(gillHex).lerp(new THREE.Color('#3a2c20'), rot * 0.35), roughness: 0.95, side: THREE.DoubleSide }), '#ffc58a', 0.9),
@@ -282,7 +297,8 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const p = profile({ id: shape, cap: D, alto: H, grosor: Wmm, ring: false }); // en mm
   // La fila del Excel también decide el relieve del sombrero (si la especie no tiene uno propio), el tono de láminas y tallo,
   // cuán apretadas van las láminas, el tipo de anillo y la base del tallo
-  const ownSurf = look.puff || look.warts || ['scales', 'shaggy', 'spiny'].includes(look.style);
+  // (el relieve del Excel solo se suma si la especie no tiene una superficie propia muy marcada: escamas, verrugas, ceras brillantes…)
+  const ownSurf = look.puff || look.warts || ['scales', 'shaggy', 'spiny', 'striate', 'hygro'].includes(look.style) || look.gloss < 0.4;
   const xl = { surf: ownSurf ? null : SURF[row.sup] || null, lam: look.under === 'gills' ? row.lam : null, tal: row.tal };
   const mats = materials(look, id, colorName, rot, xl);
   const bulbK = look.bulb || (look.base === 'volva' ? 0 : row.base === 'Bulbosa' ? 1.32 : row.base === 'Hinchada' ? 1.16 : row.base === 'En maza' ? 1.22 : 0);
@@ -295,6 +311,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
     const u = sy / (H * 10);
     let f = 1;
     if (bulbK) f *= 1 + (bulbK - 1) * Math.exp(-(((u - 0.06) / (clubK ? 0.32 : 0.12)) ** 2));
+    if (look.puff) f /= 1 + 0.55 * Math.exp(-(((u - 0.1) / 0.14) ** 2)); // el bejín no tiene bulbo abajo: es una pera
     if (look.taper) f *= look.taper + (1 - look.taper) * u;
     if (rot) f *= 1 - 0.18 * rot * Math.sin(Math.PI * u); // marchito: más fino en el medio
     return [sr * f * k, sy * k];
@@ -308,6 +325,10 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
   const ageK = perfect || look.funnel || shape === 'conica' ? 1 : 1.25 - 0.5 * age;
   const hk = (look.thick || 1) * (look.stretch || 1) * ageK;
   const topPts = p.capTop.map(([cr, cy]) => [cr * k, (capBase + (cy - capBase) * hk) * k]);
+  { // un sombrero nunca es un disco de papel: en el centro tiene, por lo menos, un 15 % de su diámetro de alto (salvo los embudos)
+    const R0 = topPts[topPts.length - 1][0], base = capBase * k, hTop = Math.max(...topPts.map((q) => q[1])) - base, need = R0 * 0.3;
+    if (!look.funnel && !look.puff && hTop > 1e-3 && hTop < need) { const f = need / hTop; for (const q of topPts) q[1] = base + (q[1] - base) * f; }
+  }
   if (!perfect && age > 0.75 && !look.funnel && !rot) { const R0 = topPts[topPts.length - 1][0]; for (const q of topPts) q[1] += Math.max(0, q[0] / R0 - 0.75) * (age - 0.75) * R0 * 0.5; }
   if (rot) { // pasado: se aplana y el borde se cae; muerto: se hunde
     const R0 = topPts[topPts.length - 1][0], base = capBase * k;
@@ -338,7 +359,7 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
         pos.push(c * rr, y - 0.02, s * rr, c * rr, y - 0.02 - depth, s * rr);
         if (q < steps) { const b = q * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
       }
-      if (look.decurrent || look.under === 'ridges') { // bajan por el tallo
+      if ((look.decurrent || look.under === 'ridges') && !look.lateral) { // bajan por el tallo
         const top = und[0][1], sr = lerpTable(stemR, top), drop = Math.min(H * 0.35, D * 0.3), b = (steps + 1) * 2;
         pos.push(c * sr, top - drop, s * sr, c * (sr + depthMax * 0.6), top - drop * 0.5, s * (sr + depthMax * 0.6));
         idx.push(0, 1, b, 1, b + 1, b);
@@ -418,13 +439,16 @@ export function buildMushroom(what, row, seed, { segs = 40, age: forceAge = null
     if (!look.tilt && Math.hypot(g.rotation.x, g.rotation.z) > 0.03) flaws.push('torcido');
   }
 
+  // Pie a un costado (gírgola): el sombrero se corre y el tallo queda cerca del borde
+  const offX = look.lateral ? maxR * look.lateral : 0;
+  if (offX) for (const o of g.children.slice(1)) o.position.x += offX;
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const under0 = p.capUnder[p.capUnder.length - 1][1] * k;
   return {
     group: g, colorName, shape, D, H, W: Wmm, age, flaws, rot,
     climb: {
       stemR: (h) => lerpTable(stemR, h), capY: (rr) => lerpTable(top, rr), Rw: maxR,
-      climbTop: Math.min(under0, H) - 0.2, top: Math.max(...top.map((t) => t[1]))
+      climbTop: Math.min(under0, H) - 0.2, top: Math.max(...top.map((t) => t[1])), offX
     }
   };
 }

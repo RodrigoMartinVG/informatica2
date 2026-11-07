@@ -29,6 +29,7 @@ function plant(scene, list, { x, z, species, look = species, row, toxic, base = 
   // Si está torcido (o es de los que crecen inclinados), el tallo se corre: cuánto por cada cm de altura, y dónde queda el sombrero
   mesh.updateMatrix(); const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(mesh.quaternion);
   m.tx = ax.x / ax.y; m.tz = ax.z / ax.y; m.cx = x + m.tx * m.climbTop; m.cz = z + m.tz * m.climbTop;
+  if (m.offX) { const o = new THREE.Vector3(m.offX, 0, 0).applyQuaternion(mesh.quaternion); m.cx += o.x; m.cz += o.z; } // (pie a un costado)
   list.push(m);
   return m;
 }
